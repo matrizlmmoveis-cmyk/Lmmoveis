@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+/* Custom fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime&display=swap');
+
+body { font-family: 'Inter', sans-serif; }
+.font-mono-receipt { font-family: 'Courier Prime', monospace; }
+
+@media print {
+    .no-print { display: none !important; }
+    body { background: white !important; padding: 0 !important; }
+    .print-only { display: block !important; }
+    .shadow-lg { shadow: none !important; }
+    .border-slate-200 { border-color: black !important; }
+}

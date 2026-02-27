@@ -1,0 +1,51 @@
+{
+  "found": 659,
+  "notFound": 9,
+  "missingSamples": [
+    {
+      "sku": "TEC",
+      "qty": 504,
+      "originalLine": "TEC 504 MEL 1,60X0,80 CANTO COPO PRETO"
+    },
+    {
+      "sku": "78999311433",
+      "qty": 1,
+      "originalLine": "1                         Roupeiro recife 6Pts Branco"
+    },
+    {
+      "sku": "27052410025",
+      "qty": 3,
+      "originalLine": "3                       Balcão Macadamia 80 Freijo Grafite"
+    },
+    {
+      "sku": "7d29726f",
+      "qty": 4,
+      "originalLine": "7d29726f     4                    3634 - ARM-120 3PT VD NEW PREMIUM GRAF"
+    },
+    {
+      "sku": "e1b91488",
+      "qty": 4,
+      "originalLine": "e1b91488     4                  1488 - CAMA BOX NOSSO SONHO SOLTEIRO MARROM"
+    },
+    {
+      "sku": "df30f2a9",
+      "qty": 11,
+      "originalLine": "df30f2a9     11      RUFATO     4259 - ROUPEIRO ESPANHA 6 PORTAS - NATURE/OFF WHITE -"
+    },
+    {
+      "sku": "c4d90f54",
+      "qty": 31,
+      "originalLine": "c4d90f54     31                   4265 - MULTIUSO CALIFORNIA C/ PES - NATUR"
+    },
+    {
+      "sku": "lc202518",
+      "qty": 7,
+      "originalLine": "lc202518     7      EVIDENCIA         236 - ROUPEIRO SEVILHA 6 PORTAS 3 GAV"
+    },
+    {
+      "sku": "CRU",
+      "qty": 8,
+      "originalLine": "CRU 08 SEM CORINO - INOVE"
+    }
+  ]
+}

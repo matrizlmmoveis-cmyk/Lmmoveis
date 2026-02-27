@@ -1,0 +1,8 @@
+{
+  "name": "Móveis LM ERP Pro",
+  "description": "Comprehensive ERP for furniture retail with multi-store support, multi-warehouse inventory, delivery routes, and assembly tracking.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ]
+}

@@ -1,0 +1,3347 @@
+[
+  {
+    "sku": "3005",
+    "qty": 8,
+    "originalLine": "3005      8                    3005 - COMODA DUBAI C/ SAP PLUS CACAU"
+  },
+  {
+    "sku": "3010",
+    "qty": 2,
+    "originalLine": "3010      2                 3010 - ROUPEIRO VERONA PLUS 2PTS ESPELHADO - AME"
+  },
+  {
+    "sku": "4492",
+    "qty": 4,
+    "originalLine": "4492      4     RONDOMOVEIS   CONJUTO SOFA 175 3X2 LG - VEL.JURERE (MARROM) PE IMB"
+  },
+  {
+    "sku": "3032",
+    "qty": 6,
+    "originalLine": "3032      6                3032 - ROUPEIRO VERONA 4 PORTAS C/ESPELHO -BRANCO"
+  },
+  {
+    "sku": "3049",
+    "qty": 1,
+    "originalLine": "3049      1               3049 - GUARDA ROUPA HERCULES 6PTS C/ESP GOLD FAMILIA 3"
+  },
+  {
+    "sku": "3055",
+    "qty": 5,
+    "originalLine": "3055      5                  3055 - AEREO TRIPLO COZINHA VALENCIA - CAR/GRAF"
+  },
+  {
+    "sku": "3067",
+    "qty": 4,
+    "originalLine": "3067      4                 3067 - CX 04 CADEIRAS 078 BASIC - BRANCO 13 - PRETO"
+  },
+  {
+    "sku": "3084",
+    "qty": 1,
+    "originalLine": "3084      1     VALDEMOVEIS    3084 - HOME SUSPENSO VALDEMOVEIS INTERATIVO - IPE"
+  },
+  {
+    "sku": "3096",
+    "qty": 9,
+    "originalLine": "3096      9                  3096 - AEREO TRIPLO COZINHA VALENCIA -CIN/PRETO"
+  },
+  {
+    "sku": "3119",
+    "qty": 1,
+    "originalLine": "3119      1                        3119 - FRUTEIRA 062 BRANCO"
+  },
+  {
+    "sku": "3152",
+    "qty": 1,
+    "originalLine": "3152      1                   3152 - GUARDA ROUPA CLARA PLUS FAM3 - BR-BR"
+  },
+  {
+    "sku": "3165",
+    "qty": 5,
+    "originalLine": "3165      5                      3165 - SALA LARI N C/4 CAD NAPOLI"
+  },
+  {
+    "sku": "3191",
+    "qty": 2,
+    "originalLine": "3191      2                  3191 - ESCRIVANINHA ATENAS MASTER - IPE a WHITE"
+  },
+  {
+    "sku": "3236",
+    "qty": 8,
+    "originalLine": "3236      8                   3236 - COMODA VENEZA PLUS REF 0079 - BCO B"
+  },
+  {
+    "sku": "3237",
+    "qty": 6,
+    "originalLine": "3237      6                  3237 - COMODA VENEZA PLUS REF 0079 - AVELA IPE"
+  },
+  {
+    "sku": "3253",
+    "qty": 2,
+    "originalLine": "3253      2                    3253 - RACK REQUINTE REF 0081 - AVELA IPE"
+  },
+  {
+    "sku": "3257",
+    "qty": 4,
+    "originalLine": "3257      4                     3257 - APARADOR RAVENA - CHOCOLATE"
+  },
+  {
+    "sku": "3258",
+    "qty": 4,
+    "originalLine": "3258      4                       3258 - APARADOR RAVENA - YPE"
+  },
+  {
+    "sku": "3268",
+    "qty": 3,
+    "originalLine": "3268      3      ORTOBOM     COLCHÃO SOLTEIRO AIRTECH SPRINGPOCKET ORTOBOM"
+  },
+  {
+    "sku": "3269",
+    "qty": 2,
+    "originalLine": "3269      2                    3269 - ISO SUPERPOCKET02500X1880X1380"
+  },
+  {
+    "sku": "3272",
+    "qty": 1,
+    "originalLine": "3272      1                       3272 - LIGHT D3301700X1880X1380"
+  },
+  {
+    "sku": "3274",
+    "qty": 1,
+    "originalLine": "3274      1                    3274 - LIGHT D3301400X1880X0880 ORTOBOM"
+  },
+  {
+    "sku": "3287",
+    "qty": 20,
+    "originalLine": "3287      20                   3287 - AEREO TRIPLO COZINHA VALENCIA - BCO"
+  },
+  {
+    "sku": "3297",
+    "qty": 6,
+    "originalLine": "3297      6     VALDEMOVEIS     3297 - ARMARIO PORTA BASCULA VIDRO VALDEMOVEIS"
+  },
+  {
+    "sku": "3309",
+    "qty": 4,
+    "originalLine": "3309      4     VALDEMOVEIS   3309 - PANELEIRO NICHO GAVETA VALDEMOVEIS TARANTELA -"
+  },
+  {
+    "sku": "3312",
+    "qty": 6,
+    "originalLine": "3312      6     VALDEMOVEIS      3312 - ARMARIO 2PTS SEM VIDRO 800 VALDEMOVEIS"
+  },
+  {
+    "sku": "3336",
+    "qty": 4,
+    "originalLine": "3336      4                 3336 - COZINHA 5 PECAS LETICIA - CARVALHO/GRAFITE"
+  },
+  {
+    "sku": "3337",
+    "qty": 4,
+    "originalLine": "3337      4                    3337 - COZINHA LIZ - CARVALHO/OFF WHITE"
+  },
+  {
+    "sku": "3355",
+    "qty": 2,
+    "originalLine": "3355      2                3355 - AEREO PORTA DE VIDRO LETICIA - CARVALHO/GRAFITE"
+  },
+  {
+    "sku": "3359",
+    "qty": 1,
+    "originalLine": "3359      1                    3359 - COZINHA ESMERALDA 2020 - BCO/GRAF"
+  },
+  {
+    "sku": "3360",
+    "qty": 3,
+    "originalLine": "3360      3                    3360 - BALCAO COZINHA PARIS 0,80 - CAR/OFF"
+  },
+  {
+    "sku": "3365",
+    "qty": 1,
+    "originalLine": "3365      1                       3365 - COMODA SAFIRA - BRANCO"
+  },
+  {
+    "sku": "3366",
+    "qty": 1,
+    "originalLine": "3366      1                    3366 - COMODA SAFIRA - CINAMOMO D’DORO"
+  },
+  {
+    "sku": "3397",
+    "qty": 1,
+    "originalLine": "3397      1               3397 - SOFA CANTO VENEZA 1,90X2,00 MTS PRATA - B10 (CINZA)"
+  },
+  {
+    "sku": "3422",
+    "qty": 1,
+    "originalLine": "3422      1                     3422 - RACK GASPAR OFF WHITE/SAVANA"
+  },
+  {
+    "sku": "3425",
+    "qty": 3,
+    "originalLine": "3425      3               3425 - COLCHÃO SOLTEIRO FALCON FIRME CINZA - PLUMATEX"
+  },
+  {
+    "sku": "3448",
+    "qty": 13,
+    "originalLine": "3448      13                         3448 - BANCADA NT 1180"
+  },
+  {
+    "sku": "3450",
+    "qty": 1,
+    "originalLine": "3450      1                    3450 - BANCADA NT 1175 FREIJO TREN/ OFF"
+  },
+  {
+    "sku": "3457",
+    "qty": 4,
+    "originalLine": "3457      4                      3457 - TABUA DE PASSAR FLORENCE"
+  },
+  {
+    "sku": "3460",
+    "qty": 3,
+    "originalLine": "3460      3                         3460 - COMODA NT 5165"
+  },
+  {
+    "sku": "3461",
+    "qty": 1,
+    "originalLine": "3461      1                         3461 - COMODA NT 5055"
+  },
+  {
+    "sku": "3464",
+    "qty": 1,
+    "originalLine": "3464      1                    3464 - GUARDA ROUPA NT 5170 FREIJO OFF"
+  },
+  {
+    "sku": "3489",
+    "qty": 1,
+    "originalLine": "3489      1                   3489 - GUARDA-ROUPA DIPLOMATA 911331 CAS W"
+  },
+  {
+    "sku": "3491",
+    "qty": 6,
+    "originalLine": "3491      6                     3491 - COMODA DHARA 997022 NATURALE"
+  },
+  {
+    "sku": "3495",
+    "qty": 6,
+    "originalLine": "3495      6                   3495 - GUARDA-ROUPA NEW AVAI 896331 CAS W"
+  },
+  {
+    "sku": "3496",
+    "qty": 7,
+    "originalLine": "3496      7                  3496 - GUARDA-ROUPA NEW AVAI 896391 CAS W/BAU"
+  },
+  {
+    "sku": "3497",
+    "qty": 7,
+    "originalLine": "3497      7                    3497 - RACK ACORD BRANCO - VIERO MOVEIS"
+  },
+  {
+    "sku": "3501",
+    "qty": 5,
+    "originalLine": "3501      5                3501 - PANELEIRO 4 PORTAS 1 GAVETA NESHER BURGUESA"
+  },
+  {
+    "sku": "3503",
+    "qty": 4,
+    "originalLine": "3503      4                     3503 - BANCADA JB 5085 LUXO PEROLA"
+  },
+  {
+    "sku": "3505",
+    "qty": 11,
+    "originalLine": "3505      11                  3505 - ADEGA JB 4009 LUXO PRETO FOSC PE:PRETO"
+  },
+  {
+    "sku": "3514",
+    "qty": 2,
+    "originalLine": "3514      2                     3514 - ARMARIO 2 PTS 4 GAV ITALIA - BCA"
+  },
+  {
+    "sku": "3549",
+    "qty": 3,
+    "originalLine": "3549      3                   3549 - BANCADA FRIZZ 1.5 NATURALE/OFF WHITE"
+  },
+  {
+    "sku": "3555",
+    "qty": 3,
+    "originalLine": "3555      3                  3555 - BALCAO ZURIQUE FOGAO 4 BOCAS - BRANCO"
+  },
+  {
+    "sku": "3556",
+    "qty": 1,
+    "originalLine": "3556      1                  3556 - BALCAO ZURIQUE FOGAO 5 BOCAS - BRANCO"
+  },
+  {
+    "sku": "3560",
+    "qty": 6,
+    "originalLine": "3560      6                 3560 - RACK MALIBU WOOD RIPADO NATURE/OFF - GIGA"
+  },
+  {
+    "sku": "3561",
+    "qty": 31,
+    "originalLine": "3561      31                 3561 - RACK MALBEC WOOD RIPADO OFF WHITE/FREIJO"
+  },
+  {
+    "sku": "3562",
+    "qty": 1,
+    "originalLine": "3562      1                 3562 - PANELEIRO 2 PORTAS 1 GAVETA TORRE QUENTE"
+  },
+  {
+    "sku": "3563",
+    "qty": 2,
+    "originalLine": "3563      2                3563 - ARMARIO 2 PORTAS NICHO NESHER PRINCESA 200CM"
+  },
+  {
+    "sku": "3564",
+    "qty": 3,
+    "originalLine": "3564      3                3564 - BALCAO 1 PORTA 2 GAVETAS COM CAIXA ORGANIZA"
+  },
+  {
+    "sku": "3571",
+    "qty": 1,
+    "originalLine": "3571      1                      3571 - ARMARIO 300 REF 7300 - BCO B"
+  },
+  {
+    "sku": "3578",
+    "qty": 1,
+    "originalLine": "3578      1        JCM        3578 - RACK SELETO CANDIAN - CINAMOMO.OFF WHITE"
+  },
+  {
+    "sku": "3586",
+    "qty": 6,
+    "originalLine": "3586      6                3586 - COZINHA ANTONELA C/ ESPELHO CIN/GRAFITE - IMOP"
+  },
+  {
+    "sku": "3588",
+    "qty": 4,
+    "originalLine": "3588      4                  3588 - COMODA NEW FLORENCA BRANCO - BENETIL"
+  },
+  {
+    "sku": "3589",
+    "qty": 12,
+    "originalLine": "3589      12                       3589 - MULTIUSO SPARTA BCO B"
+  },
+  {
+    "sku": "3607",
+    "qty": 8,
+    "originalLine": "3607      8                    3607 - HOME MACEIO - FREIJO / CINZA FOSCO"
+  },
+  {
+    "sku": "3613",
+    "qty": 7,
+    "originalLine": "3613      7                    3613 - BALCAO P/ FORNO HELENA - BRANCO"
+  },
+  {
+    "sku": "3614",
+    "qty": 10,
+    "originalLine": "3614      10                 3614 - BALCAO P/ FORNO HELENA-CANELA/OFF WHITE"
+  },
+  {
+    "sku": "3615",
+    "qty": 8,
+    "originalLine": "3615      8                       3615 - BALCAO SOFIA - BRANCO"
+  },
+  {
+    "sku": "3616",
+    "qty": 7,
+    "originalLine": "3616      7                       3616 - BALCAO SOFIA - CANELA"
+  },
+  {
+    "sku": "3617",
+    "qty": 7,
+    "originalLine": "3617      7                   3617 - COMODA DUBAI C/ SAP PLUS - BCO-NEVE"
+  },
+  {
+    "sku": "3623",
+    "qty": 9,
+    "originalLine": "3623      9               3623 - GUARDA-ROUPA ENCANT 4 PTS 3GAV E 6 PES - BRANCO"
+  },
+  {
+    "sku": "3628",
+    "qty": 5,
+    "originalLine": "3628      5                  3628 - COLCHAO GAZIN ESPUMA DREAM D33 ALT:170"
+  },
+  {
+    "sku": "3635",
+    "qty": 2,
+    "originalLine": "3635      2                      3635 - PAN-80 6PT NEW PREMIUM BRA"
+  },
+  {
+    "sku": "3639",
+    "qty": 7,
+    "originalLine": "3639      7                      3639 - ARM-80 2PT NEW PREMIUM GFT"
+  },
+  {
+    "sku": "3640",
+    "qty": 1,
+    "originalLine": "3640      1                     BALCÃO 120 3PT VD NEW PREMIUM GFT"
+  },
+  {
+    "sku": "3641",
+    "qty": 1,
+    "originalLine": "3641      1                      3641 - PAN-80 6PT NEW PREMIUM GFT"
+  },
+  {
+    "sku": "3655",
+    "qty": 13,
+    "originalLine": "3655      13               3655 - HOME SUSPENSO JURITI 1.5 - OFF WHITE MATTE / FREIJO"
+  },
+  {
+    "sku": "3660",
+    "qty": 7,
+    "originalLine": "3660      7       GIGA      3660 - BUFFET IARIS COM ADEGA OFF WHITE/FREIJO - GIGA"
+  },
+  {
+    "sku": "3662",
+    "qty": 6,
+    "originalLine": "3662      6                     3662 - COMODA MILAO CINAMOMO - IMOP"
+  },
+  {
+    "sku": "3666",
+    "qty": 1,
+    "originalLine": "3666      1               3666 - MESA TUB 010 PEDRA 120X75CM - BRANCO ARD IND PTO"
+  },
+  {
+    "sku": "3670",
+    "qty": 12,
+    "originalLine": "3670      12                     COZINHA SOFIA CIN/OFF WHITE - IMOP"
+  },
+  {
+    "sku": "3672",
+    "qty": 6,
+    "originalLine": "3672      6                      3672 - ARM-105 3PT FLORENCA BRA"
+  },
+  {
+    "sku": "3693",
+    "qty": 1,
+    "originalLine": "3693      1               3693 - CAD JULIANA PRETO ASS PRETO SIMPLES (EMBAL 4 UND)"
+  },
+  {
+    "sku": "3697",
+    "qty": 14,
+    "originalLine": "3697      14               3697 - ROUPEIRO AREZZO MADEIRA MDP 2PT CORR. 4GV C/PES"
+  },
+  {
+    "sku": "3704",
+    "qty": 3,
+    "originalLine": "3704      3                3704 - ROUPEIRO LOTUS MADEIRA MDP 6PT 2GV C/ PES COR:"
+  },
+  {
+    "sku": "3705",
+    "qty": 5,
+    "originalLine": "3705      5                3705 - ROUPEIRO LOTUS MADEIRA MDP 6PT 2GV C/ PES COR:"
+  },
+  {
+    "sku": "3714",
+    "qty": 5,
+    "originalLine": "3714      5                   3714 - ARMARIO DE COZINHA CATAR - CAR/GRAF"
+  },
+  {
+    "sku": "3715",
+    "qty": 5,
+    "originalLine": "3715      5                    3715 - ARMARIO DE COZINHA CATAR - CIN/OFF"
+  },
+  {
+    "sku": "3716",
+    "qty": 5,
+    "originalLine": "3716      5                        3716 - BALCAO PEROLA - BCO"
+  },
+  {
+    "sku": "3729",
+    "qty": 14,
+    "originalLine": "3729      14     VALDEMOVEIS       RACK DETROIT CIN/OFF WHITE - VALDEMOVEIS"
+  },
+  {
+    "sku": "3732",
+    "qty": 9,
+    "originalLine": "3732      9                   3732 - COMODA DUBAI C/ SAP PLUS - CINAM/OFF"
+  },
+  {
+    "sku": "3733",
+    "qty": 1,
+    "originalLine": "3733      1                     3733 - COMODA VERSALES - BCO-NEVE"
+  },
+  {
+    "sku": "3738",
+    "qty": 4,
+    "originalLine": "3738      4                   3738 - RACK PRISM 1.6 OFF CIN/OFF - PATRIMAR"
+  },
+  {
+    "sku": "3739",
+    "qty": 6,
+    "originalLine": "3739      6                    3739 - BALCAO PRISM OFF WHITE/CINAMOMO"
+  },
+  {
+    "sku": "3742",
+    "qty": 23,
+    "originalLine": "3742      23                  3742 - CONJUNTO 2 MESAS CANTO/LAT SLIM PRETO"
+  },
+  {
+    "sku": "3746",
+    "qty": 3,
+    "originalLine": "3746      3               3746 - KIT COZINHA ATHENA 140 - CARV NAT/CARV NAT/RIPADO"
+  },
+  {
+    "sku": "3751",
+    "qty": 1,
+    "originalLine": "3751      1               3751 - KIT COZINHA HORTELA - FREIJO/OFF WHITE CRISTAL PTA"
+  },
+  {
+    "sku": "3755",
+    "qty": 18,
+    "originalLine": "3755      18                   3755 - COMODA CRONUS 4 GAVETAS - BRANCO"
+  },
+  {
+    "sku": "3766",
+    "qty": 18,
+    "originalLine": "3766      18                     3766 - COMODA IPANEMA - CINAM/OFF"
+  },
+  {
+    "sku": "3768",
+    "qty": 6,
+    "originalLine": "3768      6                 3768 - BANCADA CAIOBA - NOCE MILANO / PRETO FOSCO"
+  },
+  {
+    "sku": "3773",
+    "qty": 7,
+    "originalLine": "3773      7                  3773 - RP SAMIRA 02 PTS - BRAN/ROSA/AZUL/LILAS"
+  },
+  {
+    "sku": "3774",
+    "qty": 5,
+    "originalLine": "3774      5                    3774 - RP SAMIRA 02 PTS - CAFE/OFF WHITE"
+  },
+  {
+    "sku": "3775",
+    "qty": 8,
+    "originalLine": "3775      8                   3775 - RP SAMIRA 02 PTS - NATURE/OFF WHITE"
+  },
+  {
+    "sku": "3779",
+    "qty": 7,
+    "originalLine": "3779      7                 ARMARIO DE COZINHA DUBAI CIN/OFF WHITE - SALETO"
+  },
+  {
+    "sku": "3782",
+    "qty": 22,
+    "originalLine": "3782      22                    3782 - BALCAO COZINHA MADRI - CIN/PRETO"
+  },
+  {
+    "sku": "3783",
+    "qty": 9,
+    "originalLine": "3783      9                     3783 - BALCAO COZINHA MADRI - CIN/OFF"
+  },
+  {
+    "sku": "3784",
+    "qty": 5,
+    "originalLine": "3784      5                       3784 - KIT LIA CIN/OFF - SALLETO"
+  },
+  {
+    "sku": "3785",
+    "qty": 2,
+    "originalLine": "3785      2                      3785 - COZINHA MADRI - CIN/PRETO"
+  },
+  {
+    "sku": "3786",
+    "qty": 1,
+    "originalLine": "3786      1                       3786 - COZINHA MADRI - CIN/OFF"
+  },
+  {
+    "sku": "3796",
+    "qty": 1,
+    "originalLine": "3796      1                       3796 - BELICHE PORTO BRANCO"
+  },
+  {
+    "sku": "3805",
+    "qty": 10,
+    "originalLine": "3805      10                     3805 - BALCAO JET PEROLA/MEL LUXO"
+  },
+  {
+    "sku": "3814",
+    "qty": 1,
+    "originalLine": "3814      1                    3814 - MULTI USO CORDOBA BRANCO LUXO"
+  },
+  {
+    "sku": "3827",
+    "qty": 22,
+    "originalLine": "3827      22                 3827 - ROUPEIRO SERGIPE 06 PTS - NATURE/OFF WHITE"
+  },
+  {
+    "sku": "3831",
+    "qty": 6,
+    "originalLine": "3831      6       Benetil     3831 - COMODA NEW FLORENCA REF 0134 - CINAMOMO OF -"
+  },
+  {
+    "sku": "3832",
+    "qty": 6,
+    "originalLine": "3832      6                 3832 - COMODA NEW FLORENCA CINAMOMO - BENETIL"
+  },
+  {
+    "sku": "3835",
+    "qty": 14,
+    "originalLine": "3835      14       IMOP            3835 - COMODA MILAO CIN/OFF - IMOP"
+  },
+  {
+    "sku": "3848",
+    "qty": 5,
+    "originalLine": "3848      5                       AEREO 2PT FLORENCA BRANCO"
+  },
+  {
+    "sku": "3864",
+    "qty": 4,
+    "originalLine": "3864      4                   3864 - ROUPEIRO MASTER TOP 8PTS - CINAM/OFF"
+  },
+  {
+    "sku": "3867",
+    "qty": 3,
+    "originalLine": "3867      3                     3867 - COMODA 012 NO CORDAO BRANCO"
+  },
+  {
+    "sku": "3870",
+    "qty": 4,
+    "originalLine": "3870      4               3870 - ROUPEIRO IRIS MADEIRA MDP 3PT 2GV C/PE COR: NOCE"
+  },
+  {
+    "sku": "3879",
+    "qty": 8,
+    "originalLine": "3879      8        JCM      3879 - HOME SERRANO CANDIAN - CNM.OFF/CNM.ONX - FLEX -"
+  },
+  {
+    "sku": "3881",
+    "qty": 2,
+    "originalLine": "3881      2        JCM       3881 - RACK ILUSTRE CANDIAN - CINAMOMO.OFF WHITE"
+  },
+  {
+    "sku": "3884",
+    "qty": 1,
+    "originalLine": "3884      1        JCM       3884 - HOME CONCEITO CANDIAN - CINAMOMO.OFF WHITE"
+  },
+  {
+    "sku": "3885",
+    "qty": 4,
+    "originalLine": "3885      4                     3885 - BANCADA VITTA OFF WHITE/MATTE"
+  },
+  {
+    "sku": "3914",
+    "qty": 1,
+    "originalLine": "3914      1                         3914 - COZINHA MONTESA"
+  },
+  {
+    "sku": "3915",
+    "qty": 13,
+    "originalLine": "3915      13                   3915 - KIT_S STYLE FREIJO SUPREMO RIPADO"
+  },
+  {
+    "sku": "3916",
+    "qty": 15,
+    "originalLine": "3916      15                     KIT GOLDEN 6 PORTAS NOGUEIRA - OFF"
+  },
+  {
+    "sku": "3925",
+    "qty": 4,
+    "originalLine": "3925      4     RONDOMOVEIS   CONJUNTO SOFA 175 3X2L - CH.LINHO CHADE (CINZA) PE IMB"
+  },
+  {
+    "sku": "3927",
+    "qty": 8,
+    "originalLine": "3927      8                   3927 - CABECEIRA IRIS 1.40 & 1.60- CIN/OFF/RIP"
+  },
+  {
+    "sku": "3933",
+    "qty": 8,
+    "originalLine": "3933      8                   3933 - COMODA IPANEMA - CASTANHO D’DORO"
+  },
+  {
+    "sku": "3934",
+    "qty": 7,
+    "originalLine": "3934      7                      3934 - COMODA IPANEMA - BRANCO"
+  },
+  {
+    "sku": "3939",
+    "qty": 35,
+    "originalLine": "3939      35                      3939 - CRIADO FIRENZE - CINAM/OFF"
+  },
+  {
+    "sku": "3940",
+    "qty": 70,
+    "originalLine": "3940      70                      3940 - CRIADO FIRENZE - CINAMOMO"
+  },
+  {
+    "sku": "3941",
+    "qty": 27,
+    "originalLine": "3941      27                      3941 - CRIADO FIRENZE - BRANCO"
+  },
+  {
+    "sku": "3959",
+    "qty": 2,
+    "originalLine": "3959      2                     3959 - COMODA 10 GAVETAS OFF/WHITE"
+  },
+  {
+    "sku": "3960",
+    "qty": 6,
+    "originalLine": "3960      6                      3960 - COMODA 10 GAVETAS BRANCO"
+  },
+  {
+    "sku": "3963",
+    "qty": 1,
+    "originalLine": "3963      1                3963 - ROUPEIRO BERGAMO 6 PORTAS E 9 GAV OFF/WHITE"
+  },
+  {
+    "sku": "3964",
+    "qty": 1,
+    "originalLine": "3964      1                  3964 - ROUPEIRO TREVISO 4 PORTAS E 6 GAVETAS"
+  },
+  {
+    "sku": "3968",
+    "qty": 1,
+    "originalLine": "3968      1                    3968 - ROUPEIRO SERGIPE 06 PTS - BRANCO"
+  },
+  {
+    "sku": "3972",
+    "qty": 12,
+    "originalLine": "3972      12       Bianchi    3972 - ROUPEIRO SIENA 06 PTS - NATURE/OFF WHITE - BIANCHI"
+  },
+  {
+    "sku": "3974",
+    "qty": 23,
+    "originalLine": "3974      23                ROUPEIRO TURIM PLUS 03 PTS C/ ESP. - NATURE/OFF WHITE"
+  },
+  {
+    "sku": "3981",
+    "qty": 5,
+    "originalLine": "3981      5                      3981 - ESC. SLIM OFF WHITE/FREIJO"
+  },
+  {
+    "sku": "4007",
+    "qty": 2,
+    "originalLine": "4007      2                    4007 - MESA COMPUTADOR VICENZA BRANCA"
+  },
+  {
+    "sku": "4008",
+    "qty": 1,
+    "originalLine": "4008      1                4008 - MESA COMPUTADOR VICENZA AMENDOA TOQUE BP"
+  },
+  {
+    "sku": "4011",
+    "qty": 3,
+    "originalLine": "4011      3                  4011 - HOME DAKAR FREIJO/OFF WHITE PEROLIZADO"
+  },
+  {
+    "sku": "4060",
+    "qty": 1,
+    "originalLine": "4060      1                     4060 - ORGANIZADOR MASTER 4 PTS - CIN"
+  },
+  {
+    "sku": "4061",
+    "qty": 5,
+    "originalLine": "4061      5                    4061 - ORGANIZADOR MASTER 4 PTS - weng"
+  },
+  {
+    "sku": "4065",
+    "qty": 9,
+    "originalLine": "4065      9                       4065 - COMODA CARIBE 508 FLEX"
+  },
+  {
+    "sku": "4066",
+    "qty": 10,
+    "originalLine": "4066      10                   4066 - GUARDA ROUPA RIVEIRA 30206 BRANCO"
+  },
+  {
+    "sku": "4067",
+    "qty": 5,
+    "originalLine": "4067      5                   4067 - GUARDA ROUPA RIVEIRA 30206 CASTANHO"
+  },
+  {
+    "sku": "4069",
+    "qty": 16,
+    "originalLine": "4069      16               4069 - GUARDA ROUPA MARBELLA 5804 OFF WHITE NOGUEIRA"
+  },
+  {
+    "sku": "4072",
+    "qty": 4,
+    "originalLine": "4072      4               4072 - GUARDA ROUPA CATALUNHA 58808 08 PORTAS BRANCO"
+  },
+  {
+    "sku": "4073",
+    "qty": 3,
+    "originalLine": "4073      3                  4073 - GUARDA ROUPA CATALUNHA 58808 08 PORTAS"
+  },
+  {
+    "sku": "4074",
+    "qty": 7,
+    "originalLine": "4074      7                     4074 - COMODA CARIBE 508 AMARULA TX"
+  },
+  {
+    "sku": "4077",
+    "qty": 4,
+    "originalLine": "4077      4                    4077 - GUARDA ROUPA MARBELLA 5804 FLEX"
+  },
+  {
+    "sku": "4091",
+    "qty": 14,
+    "originalLine": "4091      14                     4091 - AEREO GELADEIRA PEROLA - CIN"
+  },
+  {
+    "sku": "4097",
+    "qty": 5,
+    "originalLine": "4097      5                4097 - ROUPEIRO TURIM PLUS 03 PTS C/ ESPELHO - NATURE"
+  },
+  {
+    "sku": "4106",
+    "qty": 5,
+    "originalLine": "4106      5                   4106 - COMODA HAVANA MASTER C/PES JTB/ARE"
+  },
+  {
+    "sku": "4108",
+    "qty": 13,
+    "originalLine": "4108      13               4108 - ROUPEIRO CAIRO 6 PORTAS - NATUR/OFF WHITE/NATUR"
+  },
+  {
+    "sku": "4113",
+    "qty": 9,
+    "originalLine": "4113      9                 4113 - ROUPEIRO ATHENAS 03 PTS C/ ESPELHO - NATURE"
+  },
+  {
+    "sku": "4114",
+    "qty": 11,
+    "originalLine": "4114      11               4114 - ROUPEIRO ATHENAS 03 PTS C/ ESPELHO - NATURE/OFF"
+  },
+  {
+    "sku": "4117",
+    "qty": 4,
+    "originalLine": "4117      4                   4117 - KIT LUCCA 4 PORTAS - CINAMOMO/GRAFITE"
+  },
+  {
+    "sku": "4131",
+    "qty": 2,
+    "originalLine": "4131      2                     4131 - ADEGA DAKAR OFF WHITE/NATURE"
+  },
+  {
+    "sku": "4132",
+    "qty": 7,
+    "originalLine": "4132      7                      4132 - AUXILIAR BARCELONA NATURE"
+  },
+  {
+    "sku": "4133",
+    "qty": 6,
+    "originalLine": "4133      6                      4133 - AUXILIAR BARCELONA BRANCO"
+  },
+  {
+    "sku": "4137",
+    "qty": 4,
+    "originalLine": "4137      4                  4137 -MESA CLASSIC 3 TAMPOS OFF WHITE/NATURE"
+  },
+  {
+    "sku": "4138",
+    "qty": 5,
+    "originalLine": "4138      5                    4138 - APARADOR IBIZA OFF WHITE/NATURE"
+  },
+  {
+    "sku": "4139",
+    "qty": 1,
+    "originalLine": "4139      1                      4139 - CABECEIRA DETROIT NATURE"
+  },
+  {
+    "sku": "4141",
+    "qty": 1,
+    "originalLine": "4141      1                  4141 - RP HELENA PRIME 2 PTS - NATURE/OFF WHITE"
+  },
+  {
+    "sku": "4143",
+    "qty": 1,
+    "originalLine": "4143      1       RUFATO          4143 - ROUPEIRO CAIRO 6 PORTAS C/ PES -"
+  },
+  {
+    "sku": "4151",
+    "qty": 2,
+    "originalLine": "4151      2                   4151 - ROUPEIRO MASTER TOP 8PTS - CINAMOMO"
+  },
+  {
+    "sku": "4179",
+    "qty": 5,
+    "originalLine": "4179      5                          4179 - PAINEL NT 1280"
+  },
+  {
+    "sku": "4180",
+    "qty": 11,
+    "originalLine": "4180      11                        4180 - PAINEL EROS BRANCO"
+  },
+  {
+    "sku": "4182",
+    "qty": 6,
+    "originalLine": "4182      6                       4182 - BALCAO NT 3070 BRANCO"
+  },
+  {
+    "sku": "4183",
+    "qty": 7,
+    "originalLine": "4183      7                     4183 - BALCAO NT 3070 FREIJÓ/BRANCO"
+  },
+  {
+    "sku": "4186",
+    "qty": 13,
+    "originalLine": "4186      13                  4186 - ROUPEIRO NINA 06 PTS C/ESPELHO C/KIT PE -"
+  },
+  {
+    "sku": "4192",
+    "qty": 4,
+    "originalLine": "4192      4                    4192 - COL MOLA KYOTO 138 X 188 X 35 PLUS"
+  },
+  {
+    "sku": "4196",
+    "qty": 2,
+    "originalLine": "4196      2                     4196 - BALC-120 1PT3G C/T ESSENCE FND"
+  },
+  {
+    "sku": "4197",
+    "qty": 2,
+    "originalLine": "4197      2                     4197 - ARM-120 3PT ESSENCE FND/CDR"
+  },
+  {
+    "sku": "4214",
+    "qty": 2,
+    "originalLine": "4214      2                4214 - CONJ. PEDRO C/06 CAD GENOVA C/ PEGADOR PLUS -"
+  },
+  {
+    "sku": "TEC",
+    "qty": 504,
+    "originalLine": "TEC 504 MEL 1,60X0,80 CANTO COPO PRETO"
+  },
+  {
+    "sku": "4233",
+    "qty": 3,
+    "originalLine": "4233      3                    4233 - COMODA ORION REF 0156 - CINAMOMO"
+  },
+  {
+    "sku": "4251",
+    "qty": 1,
+    "originalLine": "4251      1                4251 - GUARDA ROUPA HERCULES 4PTS C/ESP GOLD FAM 3 -"
+  },
+  {
+    "sku": "4259",
+    "qty": 1,
+    "originalLine": "4259      1       RUFATO      4259 - ROUPEIRO ESPANHA 6 PORTAS NATURE/NATURE -"
+  },
+  {
+    "sku": "4265",
+    "qty": 64,
+    "originalLine": "4265      64                  4265 - MULTIUSO CALIFORNIA C/ PES - NATUR/OFF"
+  },
+  {
+    "sku": "4266",
+    "qty": 3,
+    "originalLine": "4266      3                          4266 - HOME NT 1340"
+  },
+  {
+    "sku": "4267",
+    "qty": 6,
+    "originalLine": "4267      6                       4267 - PAINEL EROS FREIJO OFF"
+  },
+  {
+    "sku": "4278",
+    "qty": 5,
+    "originalLine": "4278      5                4278 - BANCADA JURERE 1500 - FREIJO / OFF WHITE MATTE"
+  },
+  {
+    "sku": "4282",
+    "qty": 3,
+    "originalLine": "4282      3                  4282 - HOME THEATER FOX 2.0 LAMINA MEL/CHUMBO"
+  },
+  {
+    "sku": "4285",
+    "qty": 16,
+    "originalLine": "4285      16                       4285 - PAINEL DENVER BRANCO"
+  },
+  {
+    "sku": "4286",
+    "qty": 13,
+    "originalLine": "4286      13                       4286 - PAINEL TUCSON FREIJO"
+  },
+  {
+    "sku": "4287",
+    "qty": 4,
+    "originalLine": "4287      4                     4287 - RACK CHICAGO FREIJO/OFF WHITE"
+  },
+  {
+    "sku": "78999311433",
+    "qty": 1,
+    "originalLine": "1                         Roupeiro recife 6Pts Branco"
+  },
+  {
+    "sku": "12800",
+    "qty": 3,
+    "originalLine": "12800      3                   ROUPEIRO GEOM GOLD 2P C/ESPELHO BRANCO"
+  },
+  {
+    "sku": "637488",
+    "qty": 4,
+    "originalLine": "637488     4       Bianchi     ROUPEIRO CAPRI 3 PORTAS C/ESPELHO NATURE - BIANCHI"
+  },
+  {
+    "sku": "309699",
+    "qty": 5,
+    "originalLine": "309699     5                      MULTI CÔMODA MARABA 1.6 EBN/RBN"
+  },
+  {
+    "sku": "470897",
+    "qty": 7,
+    "originalLine": "470897     7                          HOME LOVE CACAU"
+  },
+  {
+    "sku": "2024",
+    "qty": 11,
+    "originalLine": "2024      11                      LIVREIRO C 2 PORTAS DEMOLIÇÃO"
+  },
+  {
+    "sku": "27052410025",
+    "qty": 3,
+    "originalLine": "3                       Balcão Macadamia 80 Freijo Grafite"
+  },
+  {
+    "sku": "91400301",
+    "qty": 3,
+    "originalLine": "91400301     3                     BALCÃO MACADAMIA 120 FREIJÓ /GRAFIT"
+  },
+  {
+    "sku": "309643",
+    "qty": 5,
+    "originalLine": "309643     5                       CÔMODA MARABÁ 1.6 JTB/ARE"
+  },
+  {
+    "sku": "74792",
+    "qty": 3,
+    "originalLine": "74792      3                          HOM.NTL/OFF WHITE"
+  },
+  {
+    "sku": "18157",
+    "qty": 2,
+    "originalLine": "18157      2                   ORGANIZADOR MASTER 4 PORTAS CINAMOMO"
+  },
+  {
+    "sku": "60003",
+    "qty": 7,
+    "originalLine": "60003      7                     KIT MOSCATO 06PTS AMENDOIM/CHUMBO"
+  },
+  {
+    "sku": "60004",
+    "qty": 24,
+    "originalLine": "60004     24                     KIT Moscato 6 6PTS Amendoim/Off White"
+  },
+  {
+    "sku": "60007",
+    "qty": 10,
+    "originalLine": "60007     10                         Esc XP 1000 Gamer Black"
+  },
+  {
+    "sku": "60009",
+    "qty": 1,
+    "originalLine": "60009      1                         Kit Nice - Carvalho/Grafite"
+  },
+  {
+    "sku": "60010",
+    "qty": 6,
+    "originalLine": "60010      6                            Esc Office Ipe"
+  },
+  {
+    "sku": "8558388",
+    "qty": 1,
+    "originalLine": "8558388     1                       CÔMODA CHICAGO NEVE/NEVE"
+  },
+  {
+    "sku": "4866",
+    "qty": 1,
+    "originalLine": "4866      1                          Beliche Vegas Branco"
+  },
+  {
+    "sku": "60012",
+    "qty": 5,
+    "originalLine": "60012      5                           Painel astro cacau"
+  },
+  {
+    "sku": "60020",
+    "qty": 2,
+    "originalLine": "60020      2                          Fogão Wavea 4q Branco"
+  },
+  {
+    "sku": "60017",
+    "qty": 4,
+    "originalLine": "60017      4                        Armário cozinha Acácia cin/off"
+  },
+  {
+    "sku": "60030",
+    "qty": 7,
+    "originalLine": "60030      7                         PAINEL FREVO ROVERE"
+  },
+  {
+    "sku": "60033",
+    "qty": 5,
+    "originalLine": "60033      5                           Armário 082 Branco"
+  },
+  {
+    "sku": "60044",
+    "qty": 7,
+    "originalLine": "60044      7                   COZINHA ANTONELA C/ESPELHO CIN/OFF - IMOP"
+  },
+  {
+    "sku": "40044",
+    "qty": 4,
+    "originalLine": "40044      4                           Cab Palma Casal"
+  },
+  {
+    "sku": "40045",
+    "qty": 1,
+    "originalLine": "40045      1                          Rack Bancada Florenca"
+  },
+  {
+    "sku": "40061",
+    "qty": 2,
+    "originalLine": "40061      2                       Aéreo vitória 2 pt Ipe rústico white"
+  },
+  {
+    "sku": "40068",
+    "qty": 1,
+    "originalLine": "40068      1                         Painel Stilo Rovere Rústica"
+  },
+  {
+    "sku": "60071",
+    "qty": 8,
+    "originalLine": "60071      8                     ROUPEIRO HERVAL PH1717 - NOGUEIRA"
+  },
+  {
+    "sku": "60077",
+    "qty": 5,
+    "originalLine": "60077      5                        Vol 1/2 Kit Havaí amêndoa bco"
+  },
+  {
+    "sku": "60078",
+    "qty": 13,
+    "originalLine": "60078     13                           Aux box plus 2 gav"
+  },
+  {
+    "sku": "500000",
+    "qty": 1,
+    "originalLine": "500000     1                            Rack bem ti vi"
+  },
+  {
+    "sku": "50000",
+    "qty": 6,
+    "originalLine": "50000      6                     Multiuso Londres c/ chave whengue Nature"
+  },
+  {
+    "sku": "10000",
+    "qty": 4,
+    "originalLine": "10000      4                           Kit genova freijó gris"
+  },
+  {
+    "sku": "60001",
+    "qty": 4,
+    "originalLine": "60001      4                           Painel Sion cacau"
+  },
+  {
+    "sku": "6002",
+    "qty": 4,
+    "originalLine": "6002      4                           Painel Sion nobre"
+  },
+  {
+    "sku": "30000",
+    "qty": 4,
+    "originalLine": "30000      4                        Cômoda New athos cronus ipê"
+  },
+  {
+    "sku": "6004",
+    "qty": 7,
+    "originalLine": "6004      7                           Escri.prism cedro"
+  },
+  {
+    "sku": "40009",
+    "qty": 9,
+    "originalLine": "40009      9                        Estrutura cadeira napole imbuia"
+  },
+  {
+    "sku": "20001",
+    "qty": 13,
+    "originalLine": "20001     13                        Aéreo triplo valência cina/off"
+  },
+  {
+    "sku": "2002",
+    "qty": 7,
+    "originalLine": "2002      7                           Cama auxiliar ipê"
+  },
+  {
+    "sku": "2005",
+    "qty": 10,
+    "originalLine": "2005      10                     MESA DE CENTRO JADE - VALDEMOVEIS"
+  },
+  {
+    "sku": "20002",
+    "qty": 3,
+    "originalLine": "20002      3                          Balcão Letícia grafite"
+  },
+  {
+    "sku": "70000",
+    "qty": 3,
+    "originalLine": "70000      3                        Home Toronto macasino/NAT/off"
+  },
+  {
+    "sku": "7005",
+    "qty": 8,
+    "originalLine": "7005      8                        Painel Sion Noronha off white"
+  },
+  {
+    "sku": "7006",
+    "qty": 4,
+    "originalLine": "7006      4                       BALCAO 120 NAPOLES GRAFITE"
+  },
+  {
+    "sku": "7007",
+    "qty": 2,
+    "originalLine": "7007      2                        Balcão NAPOLES 120 Cin off"
+  },
+  {
+    "sku": "7010",
+    "qty": 2,
+    "originalLine": "7010      2                        Rack bário nobre soft Nature off"
+  },
+  {
+    "sku": "7011",
+    "qty": 1,
+    "originalLine": "7011      1                           Rack bário off white"
+  },
+  {
+    "sku": "3000",
+    "qty": 7,
+    "originalLine": "3000      7                          Painel frevo off white"
+  },
+  {
+    "sku": "1002",
+    "qty": 1,
+    "originalLine": "1002      1                          Cama solteiro invicta jtb"
+  },
+  {
+    "sku": "90002",
+    "qty": 2,
+    "originalLine": "90002      2                         Cristaleira ballet Rovere off"
+  },
+  {
+    "sku": "90003",
+    "qty": 5,
+    "originalLine": "90003      5       Itatiaia            BALCÃO 120 NEW PORTO CIN OFF"
+  },
+  {
+    "sku": "600009",
+    "qty": 9,
+    "originalLine": "600009     9                          Cozinha Havaí branco"
+  },
+  {
+    "sku": "40003",
+    "qty": 4,
+    "originalLine": "40003      4       Itatiaia              Pan.80 New Premium grafite"
+  },
+  {
+    "sku": "202004",
+    "qty": 1,
+    "originalLine": "202004     1                           Painel sabia branco"
+  },
+  {
+    "sku": "2000005",
+    "qty": 4,
+    "originalLine": "2000005     4                         Cozinha esmeralda branco"
+  },
+  {
+    "sku": "20005",
+    "qty": 4,
+    "originalLine": "20005      4                        AÉREO 80 NAPOLES CINA/OFF"
+  },
+  {
+    "sku": "200005",
+    "qty": 1,
+    "originalLine": "200005     1                          Camarim Berlim branco"
+  },
+  {
+    "sku": "2000008",
+    "qty": 5,
+    "originalLine": "2000008     5                            Tabua branca"
+  },
+  {
+    "sku": "2000009",
+    "qty": 12,
+    "originalLine": "2000009     12                            Móveis Borsari"
+  },
+  {
+    "sku": "200003",
+    "qty": 14,
+    "originalLine": "200003     14                       AÉREO 120 NAPOLES CINA/OFF"
+  },
+  {
+    "sku": "20007",
+    "qty": 22,
+    "originalLine": "20007     22                      AÉREO 120 NAPOLES CINA/ GRAFIT"
+  },
+  {
+    "sku": "2000013",
+    "qty": 18,
+    "originalLine": "2000013     18                        Balcão 80 napoles cina/gráfi"
+  },
+  {
+    "sku": "2000014",
+    "qty": 18,
+    "originalLine": "2000014     18                         Balcão 80 napoles cina/off"
+  },
+  {
+    "sku": "600001",
+    "qty": 13,
+    "originalLine": "600001     13                       Painel louvor candian Cinamomo off"
+  },
+  {
+    "sku": "600002",
+    "qty": 6,
+    "originalLine": "600002     6                       Painel louvor candian preto relevo"
+  },
+  {
+    "sku": "600003",
+    "qty": 7,
+    "originalLine": "600003     7        JCM               Painel agrado candian off Cin"
+  },
+  {
+    "sku": "600004",
+    "qty": 4,
+    "originalLine": "600004     4        JCM                Painel alívio cnm/off flex"
+  },
+  {
+    "sku": "70000005",
+    "qty": 24,
+    "originalLine": "70000005     24                     MESA DE CABECEIRA MAVIE CINAMOMO"
+  },
+  {
+    "sku": "70000006",
+    "qty": 77,
+    "originalLine": "70000006     77                     MESA DE CABECEIRA MAVIE - BRANCO"
+  },
+  {
+    "sku": "7000007",
+    "qty": 34,
+    "originalLine": "7000007     34                 MESA DE CABECEIRA MAVIE - CINAMOMO OFF WHITE"
+  },
+  {
+    "sku": "700009",
+    "qty": 1,
+    "originalLine": "700009     1                        Kit cabernet/ concord amêndoa"
+  },
+  {
+    "sku": "8000001",
+    "qty": 7,
+    "originalLine": "8000001     7                        Roupeiro estrela 6 portas branco"
+  },
+  {
+    "sku": "80002",
+    "qty": 15,
+    "originalLine": "80002     15                       Roupeiro estrela 6 portas cina off"
+  },
+  {
+    "sku": "8000070",
+    "qty": 3,
+    "originalLine": "8000070     3                         Kit frança 4 portas grafite"
+  },
+  {
+    "sku": "800030",
+    "qty": 1,
+    "originalLine": "800030     1                      Kit moscato 4 portas amêndoa off WHITE"
+  },
+  {
+    "sku": "8000040",
+    "qty": 3,
+    "originalLine": "8000040     3                        BASE BAU QUEEN BI PARTIDA"
+  },
+  {
+    "sku": "900045",
+    "qty": 12,
+    "originalLine": "900045     12                        Cômoda vitória branco brilho"
+  },
+  {
+    "sku": "900050",
+    "qty": 5,
+    "originalLine": "900050     5                     MULTIUSO ARMÁRIO NINA CEDRO/AREIA"
+  },
+  {
+    "sku": "900053",
+    "qty": 2,
+    "originalLine": "900053     2                        Multiuso NT 4040 Branco / Rosa"
+  },
+  {
+    "sku": "900056",
+    "qty": 8,
+    "originalLine": "900056     8                      Mesa Office freijó Trend / freijó NT 2000"
+  },
+  {
+    "sku": "80000095",
+    "qty": 1,
+    "originalLine": "80000095     1                        ROUPEIRO ORION CIN/OFF"
+  },
+  {
+    "sku": "900038",
+    "qty": 1,
+    "originalLine": "900038     1                     CÔMODA MADRI PLUS 5G - ACP MOVEIS"
+  },
+  {
+    "sku": "80000013",
+    "qty": 10,
+    "originalLine": "80000013     10                        Cômoda Madri 8 gav branco"
+  },
+  {
+    "sku": "7900000",
+    "qty": 6,
+    "originalLine": "7900000     6                      Cômoda Rayane prime c/sap Cinamomo"
+  },
+  {
+    "sku": "730000",
+    "qty": 5,
+    "originalLine": "730000     5                          Cômoda Diana branca"
+  },
+  {
+    "sku": "52000009",
+    "qty": 2,
+    "originalLine": "52000009     2                     HOME CAMPECHE FREIJO CINZA FOSCO"
+  },
+  {
+    "sku": "202400001",
+    "qty": 2,
+    "originalLine": "202400001     2                    HOME JURERE 1.8 FREIJÓ OFF WHITE MATTE"
+  },
+  {
+    "sku": "20240002",
+    "qty": 7,
+    "originalLine": "20240002     7                      HOME MACEIO FREIJO OFF WHITE"
+  },
+  {
+    "sku": "20240005",
+    "qty": 1,
+    "originalLine": "20240005     1       Bianchi        ROUPEIRO CAPRI NATURE OFF WHITE - BIANCHI"
+  },
+  {
+    "sku": "20240009",
+    "qty": 2,
+    "originalLine": "20240009     2                       MULTIUSO ARMÁRIO NINA CEDRO"
+  },
+  {
+    "sku": "202400010",
+    "qty": 8,
+    "originalLine": "202400010     8                    MULTIUSO ARMÁRIO NINA BRANCO BRILHO"
+  },
+  {
+    "sku": "202400016",
+    "qty": 6,
+    "originalLine": "202400016     6                     CABICEIRA DUBAI CINAMOMO OFF WHITE"
+  },
+  {
+    "sku": "202400078",
+    "qty": 1,
+    "originalLine": "202400078     1       IMOP         ROUPEIRO PORTUGAL 6 PORTAS CINAMOMO OFF"
+  },
+  {
+    "sku": "2024000086",
+    "qty": 1,
+    "originalLine": "2024000086    1                    ROUPEIRO RECIFE 06 PORTAS CINAMOMO"
+  },
+  {
+    "sku": "262645ec",
+    "qty": 22,
+    "originalLine": "262645ec    22                     COLCHAO LISBOA SOLTEIRO - ECOTEC"
+  },
+  {
+    "sku": "0196ce48",
+    "qty": 5,
+    "originalLine": "0196ce48     5                   COLCHÃO ORTOBOM EXCLUSIVE CASAL FOAM"
+  },
+  {
+    "sku": "d66a8bbf",
+    "qty": 1,
+    "originalLine": "d66a8bbf     1                      COLCHÃO GOLD D33 ECO TEC CASAL"
+  },
+  {
+    "sku": "038f781c",
+    "qty": 3,
+    "originalLine": "038f781c     3                      COLCHÃO ORTHOSONO D33 CASAL"
+  },
+  {
+    "sku": "fd0029f0",
+    "qty": 1,
+    "originalLine": "fd0029f0     1                   COLCHÃO KING BEST CASAL MOLAS ENSACADAS"
+  },
+  {
+    "sku": "ee82a98b",
+    "qty": 9,
+    "originalLine": "ee82a98b     9                       AÉREO NEW PORTO 80 CINA OFF"
+  },
+  {
+    "sku": "e6cd3da9",
+    "qty": 7,
+    "originalLine": "e6cd3da9     7                       Colchao de Berço Ortobom 130x60"
+  },
+  {
+    "sku": "27249101",
+    "qty": 3,
+    "originalLine": "27249101     3                     ROUPEIRO COLIBRI 6 PORTAS CINAMOMO"
+  },
+  {
+    "sku": "be3331f8",
+    "qty": 1,
+    "originalLine": "be3331f8     1                 SOFÁ ALEMANHA 2 METROS MARROM MOSTRUARIO SEM"
+  },
+  {
+    "sku": "ad91c4a0",
+    "qty": 1,
+    "originalLine": "ad91c4a0     1                     COLCHÃO CASAL LIGHT D33 - ORTOBOM"
+  },
+  {
+    "sku": "caa67ff2",
+    "qty": 2,
+    "originalLine": "caa67ff2     2                      CAMA BOX CASAL - NOSSO SONHO"
+  },
+  {
+    "sku": "68b1f976",
+    "qty": 455,
+    "originalLine": "68b1f976    455                          MONTAGEM MEGA"
+  },
+  {
+    "sku": "c6703e7a",
+    "qty": 1,
+    "originalLine": "c6703e7a     1                    MESA PEDRO C 6 CADEIRAS CINZA DO MEGA"
+  },
+  {
+    "sku": "7f25f670",
+    "qty": 1,
+    "originalLine": "7f25f670     1                     COLCHÃO CASAL ORTOBOM EXCLUSIVE"
+  },
+  {
+    "sku": "2bcccab1",
+    "qty": 1,
+    "originalLine": "2bcccab1     1                          HOME ULTIMA PEÇA"
+  },
+  {
+    "sku": "946f3b4f",
+    "qty": 1,
+    "originalLine": "946f3b4f     1                          SOFA MONTANO AZUL"
+  },
+  {
+    "sku": "b18f8335",
+    "qty": 5,
+    "originalLine": "b18f8335     5                         Multiuso evidencia Branco"
+  },
+  {
+    "sku": "cfa55dbc",
+    "qty": 1,
+    "originalLine": "cfa55dbc     1                      CONJUNTO MESA DUBAI 6 CADEIRAS"
+  },
+  {
+    "sku": "36d64a7e",
+    "qty": 2,
+    "originalLine": "36d64a7e     2                          Conj Mesa Dubai 6 Cad"
+  },
+  {
+    "sku": "ff8683d6",
+    "qty": 2,
+    "originalLine": "ff8683d6     2                       AÉREO SÁLVIA 80 FREIJÓ FREIJÓ"
+  },
+  {
+    "sku": "80b38ec5",
+    "qty": 6,
+    "originalLine": "80b38ec5     6                       AEREO NEW PORTO 1.20 CIN OFF"
+  },
+  {
+    "sku": "82ee37dc",
+    "qty": 13,
+    "originalLine": "82ee37dc    13                     AÉREO NEW PORTO 1.20CM (CIN/GRA)"
+  },
+  {
+    "sku": "55e5da60",
+    "qty": 5,
+    "originalLine": "55e5da60     5                    MULTIUSO EVIDENCIA CINAMOMO /BRANCO"
+  },
+  {
+    "sku": "bba901b9",
+    "qty": 4,
+    "originalLine": "bba901b9     4                     PANELEIRO MACADAMIA CINA /GRAFIT"
+  },
+  {
+    "sku": "d705ea17",
+    "qty": 5,
+    "originalLine": "d705ea17     5                              Sofa"
+  },
+  {
+    "sku": "40ce6331",
+    "qty": 6,
+    "originalLine": "40ce6331     6                      PANELEIRO 70 NAPOLES CINA/OFF"
+  },
+  {
+    "sku": "6484c4a9",
+    "qty": 7,
+    "originalLine": "6484c4a9     7                      PANELEIRO 70 NAPOLES CINA/GRAFIT"
+  },
+  {
+    "sku": "dee488e8",
+    "qty": 1,
+    "originalLine": "dee488e8     1                         Cozinha Completa telasul"
+  },
+  {
+    "sku": "f0d54944",
+    "qty": 3,
+    "originalLine": "f0d54944     3                        Cabeceira com prateleiras ypê"
+  },
+  {
+    "sku": "26811b0d",
+    "qty": 3,
+    "originalLine": "26811b0d     3                        AÉREO MACADÂMIA 1.20 Freijó"
+  },
+  {
+    "sku": "0a873e8e",
+    "qty": 1,
+    "originalLine": "0a873e8e     1                       BALCÃO NAMUR 70 MEGA FEIRÃO"
+  },
+  {
+    "sku": "d4e035a1",
+    "qty": 9,
+    "originalLine": "d4e035a1     9                         CÔMODA 013 CINAMOMO"
+  },
+  {
+    "sku": "7d29726f",
+    "qty": 4,
+    "originalLine": "7d29726f     4                    3634 - ARM-120 3PT VD NEW PREMIUM GRAF"
+  },
+  {
+    "sku": "79b111a5",
+    "qty": 8,
+    "originalLine": "79b111a5     8                   1521- BALCÃO NEW PORTO CINA/GRAFITE 0.80"
+  },
+  {
+    "sku": "7c9d5b45",
+    "qty": 14,
+    "originalLine": "7c9d5b45     14                   1522- AÉREO NEW PORTO CINA/GRAFITE 0.80"
+  },
+  {
+    "sku": "87f9b1fb",
+    "qty": 1,
+    "originalLine": "87f9b1fb     1                    Colchao Casal Guardiao do Sono d20 12cm Black"
+  },
+  {
+    "sku": "4447",
+    "qty": 14,
+    "originalLine": "4447      14     VALDEMOVEIS         MULTI-USO VALDEMOVEIS FLEX - BCO"
+  },
+  {
+    "sku": "4450",
+    "qty": 16,
+    "originalLine": "4450      16     VALDEMOVEIS   PANELEIRO PROF.TORRE QUENTE 1N VALDEMOVEIS SALVADOR"
+  },
+  {
+    "sku": "4451",
+    "qty": 8,
+    "originalLine": "4451      8     VALDEMOVEIS   PANELEIRO PROF.TORRE QUENTE 1N VALDEMOVEIS SALVADOR"
+  },
+  {
+    "sku": "4452",
+    "qty": 17,
+    "originalLine": "4452      17     VALDEMOVEIS   ARMARIO 1P C/VIDRO E NICHO 1200 VALDEMOVEIS SALVADOR -"
+  },
+  {
+    "sku": "4453",
+    "qty": 6,
+    "originalLine": "4453      6     VALDEMOVEIS   ARMARIO 1P C/VIDRO E NICHO 1200 VALDEMOVEIS SALVADOR -"
+  },
+  {
+    "sku": "4454",
+    "qty": 14,
+    "originalLine": "4454      14     VALDEMOVEIS    BALCAO 2GAV 3P 120cm VALDEMOVEIS SALVADOR - CIN/OFF"
+  },
+  {
+    "sku": "4455",
+    "qty": 7,
+    "originalLine": "4455      7     VALDEMOVEIS    BALCAO 2GAV 3P 1200 VALDEMOVEIS SALVADOR - CIN/GRA"
+  },
+  {
+    "sku": "4456",
+    "qty": 13,
+    "originalLine": "4456      13     VALDEMOVEIS   ARMARIO AEREO 2P 80cm VALDEMOVEIS SALVADOR - CIN/OFF"
+  },
+  {
+    "sku": "4457",
+    "qty": 10,
+    "originalLine": "4457      10     VALDEMOVEIS   ARMARIO AEREO 2P 80cm VALDEMOVEIS SALVADOR - CIN/GRA"
+  },
+  {
+    "sku": "4458",
+    "qty": 17,
+    "originalLine": "4458      17     VALDEMOVEIS     BALCAO 2P 80cm VALDEMOVEIS SALVADOR - CIN/OFF"
+  },
+  {
+    "sku": "4459",
+    "qty": 13,
+    "originalLine": "4459      13     VALDEMOVEIS      BALCAO 2P 800 VALDEMOVEIS SALVADOR - CIN/GRA"
+  },
+  {
+    "sku": "4463",
+    "qty": 9,
+    "originalLine": "4463      9                     MULTIUSO SAPATEIRA SAMANTA CEDRO"
+  },
+  {
+    "sku": "4464",
+    "qty": 15,
+    "originalLine": "4464      15                   MULTIUSO SAPATEIRA SAMANTA CEDRO/AREIA"
+  },
+  {
+    "sku": "4465",
+    "qty": 38,
+    "originalLine": "4465      38                  MULTIUSO SAPATEIRA SAMANTA BRANCO BRILHO"
+  },
+  {
+    "sku": "4467",
+    "qty": 6,
+    "originalLine": "4467      6                   MULTIUSO SAPATEIRA ISABELA BRANCO BRILHO"
+  },
+  {
+    "sku": "4473",
+    "qty": 1,
+    "originalLine": "4473      1                      ROUPEIRO LONDRINA (8 PTS) CEDRO"
+  },
+  {
+    "sku": "1033f914",
+    "qty": 1,
+    "originalLine": "1033f914     1                   COZINHA 6 PORTAS 3 GAV NESHER REALEZA 220"
+  },
+  {
+    "sku": "92b042ac",
+    "qty": 1,
+    "originalLine": "92b042ac     1                         Poltrona de almofada solta"
+  },
+  {
+    "sku": "2b8f1927",
+    "qty": 8,
+    "originalLine": "2b8f1927     8                         Home Atila Off White / Cedro"
+  },
+  {
+    "sku": "0038b372",
+    "qty": 11,
+    "originalLine": "0038b372     11                  ROUPEIRO DENVER 6 Pts Nature/OFF White- RUFATO"
+  },
+  {
+    "sku": "745d44de",
+    "qty": 2,
+    "originalLine": "745d44de     2                      Penteadeira Realeza Rip C/ Esp e Led"
+  },
+  {
+    "sku": "58389e9e",
+    "qty": 1,
+    "originalLine": "58389e9e     1                    Mesa Luna Tampo Off White 4 Cad BEGE LINHO"
+  },
+  {
+    "sku": "3593d494",
+    "qty": 8,
+    "originalLine": "3593d494     8                        Painel Maxi EDN OFF/CEDRO"
+  },
+  {
+    "sku": "54348f72",
+    "qty": 13,
+    "originalLine": "54348f72     13                        SOFA PARIS 3/2 LUG CINZA"
+  },
+  {
+    "sku": "5a312b97",
+    "qty": 6990,
+    "originalLine": "5a312b97    6.990      GAZIN                TAXA DE ENTREGA"
+  },
+  {
+    "sku": "621c6b3c",
+    "qty": 1,
+    "originalLine": "621c6b3c     1                          Colchão pampa mega"
+  },
+  {
+    "sku": "c30bb2b6",
+    "qty": 11,
+    "originalLine": "c30bb2b6     11                      ROUPEIRO VIENA NAT/OFF - BIANCHI"
+  },
+  {
+    "sku": "1650c226",
+    "qty": 1,
+    "originalLine": "1650c226     1                        Roupeiro Aries S Esp Cinamomo"
+  },
+  {
+    "sku": "1c379197",
+    "qty": 1,
+    "originalLine": "1c379197     1                          Colchão Plumatex casal"
+  },
+  {
+    "sku": "30845a54",
+    "qty": 4,
+    "originalLine": "30845a54     4                COLCHAO CASAL CLASSIC SOLARIS D33 138X188X16 FLORAL"
+  },
+  {
+    "sku": "5a7d9bb7",
+    "qty": 2,
+    "originalLine": "5a7d9bb7     2                      MX PUFF LUXO 451 - VELUDO PRETO"
+  },
+  {
+    "sku": "e6ef3c8c",
+    "qty": 1,
+    "originalLine": "e6ef3c8c     1                POLTRONA DO PAPAI MX-14 TURIM 255 - VELUDO CAPUCCINO"
+  },
+  {
+    "sku": "4480",
+    "qty": 4,
+    "originalLine": "4480      4                     CABC REF 014 1,40 VELUDO 106 TOP LINE"
+  },
+  {
+    "sku": "4481",
+    "qty": 11,
+    "originalLine": "4481      11                    CABC. REF 014 1.40 ANIMALE 97 TOP LINE"
+  },
+  {
+    "sku": "4482",
+    "qty": 4,
+    "originalLine": "4482      4                    CABEC REF 017 140 ANIMALE 097 TOP LINE"
+  },
+  {
+    "sku": "6a3076ef",
+    "qty": 1,
+    "originalLine": "6a3076ef     1                  COLCHAO SUPREME D33 138X188X17 LUCKSPUMA"
+  },
+  {
+    "sku": "da74b395",
+    "qty": 5,
+    "originalLine": "da74b395     5                POLTRONA OPALA TECIDO 1051 - PRETO MOSTRUARIO SEM"
+  },
+  {
+    "sku": "050d8490",
+    "qty": 1,
+    "originalLine": "050d8490     1                          ROUPEIRO ORION CIN"
+  },
+  {
+    "sku": "91d9bca4",
+    "qty": 7,
+    "originalLine": "91d9bca4     7                      Roupeiro Maldivas cina/off - MINASPLAC"
+  },
+  {
+    "sku": "e98d3514",
+    "qty": 5,
+    "originalLine": "e98d3514     5                      CAMA CASAL RONDOLIVE 138X32/28"
+  },
+  {
+    "sku": "1701bc14",
+    "qty": 6,
+    "originalLine": "1701bc14     6                    CABECEIRA LONDRES-RA 1,4 COR 53 CINZA"
+  },
+  {
+    "sku": "2e9e7e8b",
+    "qty": 3,
+    "originalLine": "2e9e7e8b     3                   CABECEIRA LONDRES-RA 1,4 COR PAVIA MARRON"
+  },
+  {
+    "sku": "e1f4d377",
+    "qty": 1,
+    "originalLine": "e1f4d377     1                    CABECEIRA ESLOVENIA 0,90 COR 53 CINZA"
+  },
+  {
+    "sku": "9c66f86b",
+    "qty": 2,
+    "originalLine": "9c66f86b     2                      Mesa Luna off/white C/4 cadeiras marrom"
+  },
+  {
+    "sku": "39dd72e7",
+    "qty": 5,
+    "originalLine": "39dd72e7     5                     KIT GOLDEN 8 PORTAS NOGUEIRA / OFF"
+  },
+  {
+    "sku": "6d5d498f",
+    "qty": 11,
+    "originalLine": "6d5d498f    11                      KIT GOLDEN 8 PORTAS FREIJO/GRIS"
+  },
+  {
+    "sku": "c9683dd5",
+    "qty": 2,
+    "originalLine": "c9683dd5     2                    COZINHA SOFIA PRIME CIN/GRAFITE - IMOP"
+  },
+  {
+    "sku": "5415b581",
+    "qty": 1,
+    "originalLine": "5415b581     1                       SOFA DE CANTO TUNISIA CINZA"
+  },
+  {
+    "sku": "db247663",
+    "qty": 11,
+    "originalLine": "db247663     11                     MULTIUSO SAPATEIRA ANNA BRANCO"
+  },
+  {
+    "sku": "ac0f54bd",
+    "qty": 6,
+    "originalLine": "ac0f54bd     6                       CÔMODA PAOLA BRANCO BRILHO"
+  },
+  {
+    "sku": "e1b91488",
+    "qty": 4,
+    "originalLine": "e1b91488     4                  1488 - CAMA BOX NOSSO SONHO SOLTEIRO MARROM"
+  },
+  {
+    "sku": "b7fc900e",
+    "qty": 8,
+    "originalLine": "b7fc900e     8                          Multiuso Spazio Cin Off"
+  },
+  {
+    "sku": "24c15825",
+    "qty": 1,
+    "originalLine": "24c15825     1                          SOFA PALERMO 2,5"
+  },
+  {
+    "sku": "bedda4e0",
+    "qty": 1,
+    "originalLine": "bedda4e0     1                            Sofá 3 lugares"
+  },
+  {
+    "sku": "d60db125",
+    "qty": 4,
+    "originalLine": "d60db125     4       RUFATO      MESA LONDRINA 120 TP VIDRO CANTO RETO C/ CADEIRA"
+  },
+  {
+    "sku": "00a3e54a",
+    "qty": 1,
+    "originalLine": "00a3e54a     1       RUFATO      MESA LONDRINA 120 TP VIDRO CANTO RETO C/ CADEIRA"
+  },
+  {
+    "sku": "f76ac4fc",
+    "qty": 10,
+    "originalLine": "f76ac4fc     10                MESA ALICE NEW 120 X 90 OFF WHITE TAMPO CINAMOMO"
+  },
+  {
+    "sku": "996c63e3",
+    "qty": 1,
+    "originalLine": "996c63e3     1                 MESA SOCHI NEW 160X90 OFF WHITE TAMPO CINAMOMO"
+  },
+  {
+    "sku": "df30f2a9",
+    "qty": 11,
+    "originalLine": "df30f2a9     11      RUFATO     4259 - ROUPEIRO ESPANHA 6 PORTAS - NATURE/OFF WHITE -"
+  },
+  {
+    "sku": "a009695f",
+    "qty": 1,
+    "originalLine": "a009695f     1                           Sofá grafite 2.30"
+  },
+  {
+    "sku": "d868743d",
+    "qty": 9,
+    "originalLine": "d868743d     9                         Cozinha Amora RBL Branco"
+  },
+  {
+    "sku": "cc771c0c",
+    "qty": 1,
+    "originalLine": "cc771c0c     1                        Cômoda BH Canela Volume 1/2"
+  },
+  {
+    "sku": "4346",
+    "qty": 5,
+    "originalLine": "4346      5                       ARM-80 2PT NAPOLES CNM/GFI"
+  },
+  {
+    "sku": "f45ddc41",
+    "qty": 2,
+    "originalLine": "f45ddc41     2                   Paneleiro Simone Mendes Carvalho Greice Nescher"
+  },
+  {
+    "sku": "869f86d8",
+    "qty": 1,
+    "originalLine": "869f86d8     1                 CONJ DE MESA COM CADEIRAS PRETA FORTPLAST MEGA"
+  },
+  {
+    "sku": "8f0bbdee",
+    "qty": 4,
+    "originalLine": "8f0bbdee     4               BALCAO 2 PORTAS 1 GAVETA NESHER SIMONE MENDES 80CM"
+  },
+  {
+    "sku": "bb29a81b",
+    "qty": 1,
+    "originalLine": "bb29a81b     1                ARMARIO AEREO 2 PORTAS NESHER SIMONE MENDES 80CM"
+  },
+  {
+    "sku": "bc591add",
+    "qty": 1,
+    "originalLine": "bc591add     1                         COLCHÃO CARIBE MEGA"
+  },
+  {
+    "sku": "7b5b6594",
+    "qty": 9,
+    "originalLine": "7b5b6594     9       IMOP            COZINHA LARA PRIME CIN/OFF - IMOP"
+  },
+  {
+    "sku": "92f30a34",
+    "qty": 12,
+    "originalLine": "92f30a34     12                    COZINHA LARA PRIME CIN/GRAFITE - IMOP"
+  },
+  {
+    "sku": "0f701909",
+    "qty": 2,
+    "originalLine": "0f701909     2                      COMODA DUBAI C/ SAP PLUS - CINAM"
+  },
+  {
+    "sku": "11d15873",
+    "qty": 3,
+    "originalLine": "11d15873     3                      Cozinha Angelina Pime Frisada - Cin OFF"
+  },
+  {
+    "sku": "0cdb70d9",
+    "qty": 5,
+    "originalLine": "0cdb70d9     5                     Cozinha Angelina Pime Frisada - Cin/Grafite"
+  },
+  {
+    "sku": "c8fada01",
+    "qty": 8,
+    "originalLine": "c8fada01     8                       Comoda JL 1003 - Corrediça Cin/Off"
+  },
+  {
+    "sku": "c0cfe844",
+    "qty": 3,
+    "originalLine": "c0cfe844     3               ROUPEIRO TORONTO 3P COM ESPELHO NATURE/OFF - BIANCHI"
+  },
+  {
+    "sku": "15a8a7d5",
+    "qty": 66,
+    "originalLine": "15a8a7d5     66                    MULTIUSO NEW ATACAMA/OFF - ARAMOVEIS"
+  },
+  {
+    "sku": "c4d90f54",
+    "qty": 31,
+    "originalLine": "c4d90f54     31                   4265 - MULTIUSO CALIFORNIA C/ PES - NATUR"
+  },
+  {
+    "sku": "a1f9d6f5",
+    "qty": 3,
+    "originalLine": "a1f9d6f5     3                     MESA BERLIM 120 OFF- 4 CADEIRAS BEGE"
+  },
+  {
+    "sku": "a2e96786",
+    "qty": 1,
+    "originalLine": "a2e96786     1                      POLTRONA VENUS SATURNO 04 LiNho"
+  },
+  {
+    "sku": "b2cae7f5",
+    "qty": 5,
+    "originalLine": "b2cae7f5     5                     POLTRONA VENUS SATURNO 07 PRATA"
+  },
+  {
+    "sku": "e5a63b25",
+    "qty": 7,
+    "originalLine": "e5a63b25     7                     POLTRONA BELISSIMA INCA 07 MARRON"
+  },
+  {
+    "sku": "bcb2fefa",
+    "qty": 3,
+    "originalLine": "bcb2fefa     3                          Home Berlim Cin Off"
+  },
+  {
+    "sku": "ee37c44f",
+    "qty": 3,
+    "originalLine": "ee37c44f     3        JCM             ESC ALICE CANDIAN CIN OFF - JCM"
+  },
+  {
+    "sku": "8f9f70d8",
+    "qty": 4,
+    "originalLine": "8f9f70d8     4        JCM             ESC GABY CANDI - CIN OFF - JCM"
+  },
+  {
+    "sku": "5d3827df",
+    "qty": 24,
+    "originalLine": "5d3827df    24     VALDEMOVEIS         PAINEL ATENA VALDEMOVEIS CIN OFF"
+  },
+  {
+    "sku": "3f242532",
+    "qty": 3,
+    "originalLine": "3f242532     3                         HOME BERLIM CIN GRAF"
+  },
+  {
+    "sku": "7801319e",
+    "qty": 11,
+    "originalLine": "7801319e     11                  HOME SANTIAGO CIN/OFF WHITE - VALDEMOVEIS"
+  },
+  {
+    "sku": "64612696",
+    "qty": 1,
+    "originalLine": "64612696     1                     ARMARIO COZINHA CANASTRA CIN OFF"
+  },
+  {
+    "sku": "199c5294",
+    "qty": 1,
+    "originalLine": "199c5294     1                         SOFÁ HUG 2.50 NO PRETO"
+  },
+  {
+    "sku": "36dcbde8",
+    "qty": 8,
+    "originalLine": "36dcbde8     8                      KIT COZINHA MELISSA FREIJO/OFF"
+  },
+  {
+    "sku": "cdc54a24",
+    "qty": 6,
+    "originalLine": "cdc54a24     6                       KIT COZINHA EMILIA FREIJO/OFF"
+  },
+  {
+    "sku": "c2643c25",
+    "qty": 1,
+    "originalLine": "c2643c25     1                             Puff Madri"
+  },
+  {
+    "sku": "4517",
+    "qty": 1,
+    "originalLine": "4517      1                  COLCHÃO CASAL GOLD EXTRA RUSTICO PRATA 2025"
+  },
+  {
+    "sku": "4519",
+    "qty": 1,
+    "originalLine": "4519      1                  COLCHÃO CASAL LEGACY BRANCO 2025 188X138X28"
+  },
+  {
+    "sku": "a39d7f2c",
+    "qty": 1,
+    "originalLine": "a39d7f2c     1                          CAMA CASAL BLACK"
+  },
+  {
+    "sku": "ace80e77",
+    "qty": 14,
+    "originalLine": "ace80e77     14               CONJ MESA MACIÇA SIMPATIA S/VIDRO 90X90 AMADEIRADO/CIN"
+  },
+  {
+    "sku": "3c7f8dd4",
+    "qty": 1,
+    "originalLine": "3c7f8dd4     1               CONJ MESA MACIÇA FINEZA S/VIDRO 180X90 AMADEIRADO/CIN -"
+  },
+  {
+    "sku": "4532",
+    "qty": 1,
+    "originalLine": "4532      1                   CONJ.MESA HOLANDA C/3 TAMBORETES PANAMA"
+  },
+  {
+    "sku": "a9357d9b",
+    "qty": 3,
+    "originalLine": "a9357d9b     3                   CONJ MESA KARLA FREIJO/OFF - 4CAD 797 LINHO"
+  },
+  {
+    "sku": "c9804b85",
+    "qty": 3,
+    "originalLine": "c9804b85     3                    COLCHÃO MOLA ENSAC IPANEMA 138X188X25"
+  },
+  {
+    "sku": "def04fb2",
+    "qty": 4,
+    "originalLine": "def04fb2     4       DDORO          ROUPEIRO LEBLON PLUS 6 PTS BRANCO"
+  },
+  {
+    "sku": "74434fcd",
+    "qty": 6,
+    "originalLine": "74434fcd     6                      ROUPEIRO COLIBRI 6 PTS BRANCO"
+  },
+  {
+    "sku": "48501f4c",
+    "qty": 6,
+    "originalLine": "48501f4c     6                  CABECEIRA IRIS 1.40 & 1.60CASTANHO/OFF/RIPADO"
+  },
+  {
+    "sku": "186a860d",
+    "qty": 2,
+    "originalLine": "186a860d     2               MESA CATIVA 1,08 REDONDA SV TAMPO AMAD. CIN - 4 CAD JADE"
+  },
+  {
+    "sku": "0bb1492b",
+    "qty": 14,
+    "originalLine": "0bb1492b     14                   BANCADA 1380 OFF WHITE TX/FREIJO TREND"
+  },
+  {
+    "sku": "fcda0a83",
+    "qty": 15,
+    "originalLine": "fcda0a83     15                 GUARDA ROUPA NT 6035 - FREIJO TREND/OFF WHITE TX"
+  },
+  {
+    "sku": "937eae6c",
+    "qty": 11,
+    "originalLine": "937eae6c     11      NOTAVEL      GUARDA ROUPA NT 6030 - FREIJO TREND/OFF WHITE TX -"
+  },
+  {
+    "sku": "2b21e44f",
+    "qty": 8,
+    "originalLine": "2b21e44f     8                 GUARDA ROUPA NT 6010 - FREIJO TREND/OFF WHITE TX"
+  },
+  {
+    "sku": "f14122d1",
+    "qty": 7,
+    "originalLine": "f14122d1     7                     GUARDA ROUPA NT 6010 - BRANCO/ROSA"
+  },
+  {
+    "sku": "758d3207",
+    "qty": 8,
+    "originalLine": "758d3207     8                 GUARDA ROUPA NT 6015 - FREIJO TREND/OFF WHITE TX"
+  },
+  {
+    "sku": "c710754f",
+    "qty": 1,
+    "originalLine": "c710754f     1                     GUARDA ROUPA NT 6015 - BRANCO/ROSA"
+  },
+  {
+    "sku": "4581",
+    "qty": 5,
+    "originalLine": "4581      5                  CABECEIRA CINTIA 140 X 123 X 10 VELUDO MARROM"
+  },
+  {
+    "sku": "4582",
+    "qty": 3,
+    "originalLine": "4582      3                   CABECEIRA CINTIA 140 X 123 X 10 VELUDO CINZA"
+  },
+  {
+    "sku": "4583",
+    "qty": 9,
+    "originalLine": "4583      9                 COLCHÃO CASAL MOLAS ENSAC SENSYS COM PILLOW"
+  },
+  {
+    "sku": "4586",
+    "qty": 3,
+    "originalLine": "4586      3                  CABECEIRA MARCELA 140 X 123 X 19 VELUDO CINZA"
+  },
+  {
+    "sku": "4588",
+    "qty": 3,
+    "originalLine": "4588      3                 CABECEIRA MARCELA 140 X 123 X 19 VELUDO MARROM"
+  },
+  {
+    "sku": "0c96da6b",
+    "qty": 10,
+    "originalLine": "0c96da6b     10                     BASE SOLTEIRO COMUM LINHAO PRETO"
+  },
+  {
+    "sku": "aeed1569",
+    "qty": 1,
+    "originalLine": "aeed1569     1                         MESA BAHIA 6 CADEIRAS"
+  },
+  {
+    "sku": "5fbf8808",
+    "qty": 5,
+    "originalLine": "5fbf8808     5       COLIBRI         HOME CANCUN - FREIJO /OFF WHITE MATE"
+  },
+  {
+    "sku": "d1353a52",
+    "qty": 4,
+    "originalLine": "d1353a52     4                   HOME SUSPENSO LOA - FEIJO / OFF WHITE MATE"
+  },
+  {
+    "sku": "20fb420c",
+    "qty": 6,
+    "originalLine": "20fb420c     6                        CABECEIRA LUANDA COR 111"
+  },
+  {
+    "sku": "0ace911c",
+    "qty": 8,
+    "originalLine": "0ace911c     8                        CABECEIRA LUANDA COR 113"
+  },
+  {
+    "sku": "fd60b4ca",
+    "qty": 20,
+    "originalLine": "fd60b4ca     20       Bianchi       ROUPEIRO CABO FRIO BIANCHI - NATURE/OFF WHITE"
+  },
+  {
+    "sku": "9c67086f",
+    "qty": 1,
+    "originalLine": "9c67086f     1                         BELICHE INDY - CIN OFF"
+  },
+  {
+    "sku": "f4628feb",
+    "qty": 4,
+    "originalLine": "f4628feb     4      CONQUISTA           BELICHE INDY - BR - CONQUISTA"
+  },
+  {
+    "sku": "4f39d873",
+    "qty": 1,
+    "originalLine": "4f39d873     1                      BANCADA OTAWA FREIJOR - COLIBRI"
+  },
+  {
+    "sku": "9ad49c04",
+    "qty": 1,
+    "originalLine": "9ad49c04     1                 BANCADA OTWA - OFF WHITE MATTE FREIJOR - COLIBRI"
+  },
+  {
+    "sku": "a5a960ce",
+    "qty": 7,
+    "originalLine": "a5a960ce     7               PAINEL EXTENSIVO LEME FREIJOR OFF WHITE MATTE - COLIBRI"
+  },
+  {
+    "sku": "e7e9ff9e",
+    "qty": 3,
+    "originalLine": "e7e9ff9e     3                  HOME SUSPENSO EGEU OFF WHITE FREIJO - COLIBRI"
+  },
+  {
+    "sku": "4543fd84",
+    "qty": 8,
+    "originalLine": "4543fd84     8                MESA DE CABECEIRA VALENTE BRANCO BRILHO - RUD RACK"
+  },
+  {
+    "sku": "e3be6783",
+    "qty": 1,
+    "originalLine": "e3be6783     1                ROUPEIRO CAPELINHA LYON BRANCO BRILHO - RUD RACK"
+  },
+  {
+    "sku": "2daf5ff0",
+    "qty": 26,
+    "originalLine": "2daf5ff0     26      RUFATO       ROUPEIRO GRECIA 6 PTS NATURE/NATURE- RUFATO"
+  },
+  {
+    "sku": "78c6b201",
+    "qty": 26,
+    "originalLine": "78c6b201     26      RUFATO       ROUPEIRO GRECIA 6 PORTAS - NAITURE/OFF - RUFATO"
+  },
+  {
+    "sku": "c5abcca1",
+    "qty": 4,
+    "originalLine": "c5abcca1     4               MESA RECIFE 1,20X0,80 SV TAMPO LONDRES - 4 CAD COR 168-"
+  },
+  {
+    "sku": "mf1005",
+    "qty": 4,
+    "originalLine": "mf1005     4               KIT COZINHA ERVA DOCE 120 - FREIJO/OFF WHITE CRISTAL PTA"
+  },
+  {
+    "sku": "mf1006",
+    "qty": 1,
+    "originalLine": "mf1006     1                 KIT COZINHA ERVA DOCE 120 - FREIJO/PTO ESFERA PTA"
+  },
+  {
+    "sku": "mf1007",
+    "qty": 5,
+    "originalLine": "mf1007     5                COMBO LEMON - FREIJO/OFF WHITE CRISTAL PTA FECHADA"
+  },
+  {
+    "sku": "mf1008",
+    "qty": 6,
+    "originalLine": "mf1008     6                   COMBO LEMON - FREIJO/CHUMBO PTA FECHADA"
+  },
+  {
+    "sku": "mf1010",
+    "qty": 3,
+    "originalLine": "mf1010     3               BALCAO NT 3075 - BCO NEW/BCO NEW BRANCO NEW BRANCO"
+  },
+  {
+    "sku": "mf1011",
+    "qty": 8,
+    "originalLine": "mf1011     8                BALCAO NT 3075 - FREIJO TREND/BCO NEW FREIJO TREND"
+  },
+  {
+    "sku": "mf1012",
+    "qty": 1,
+    "originalLine": "mf1012     1     VALDEMOVEIS    BALCAO 1200 COZINHA VALDEMOVEIS DAKOTA - CIN/OFF"
+  },
+  {
+    "sku": "mf1013",
+    "qty": 2,
+    "originalLine": "mf1013     2     VALDEMOVEIS    BALCAO 1200 COZINHA VALDEMOVEIS DAKOTA - CIN/GRA"
+  },
+  {
+    "sku": "mf1015",
+    "qty": 6,
+    "originalLine": "mf1015     6     VALDEMOVEIS        BANCADA VALDEMOVEIS MARIANA - CIN/OFF"
+  },
+  {
+    "sku": "mf021",
+    "qty": 6,
+    "originalLine": "mf021      6     VALDEMOVEIS          COMODA SAPATEIRA DUDA - CANELA"
+  },
+  {
+    "sku": "mf1016",
+    "qty": 1,
+    "originalLine": "mf1016     1                   COMODA SAPATEIRA DUDA - CANELA/OFF WHITE"
+  },
+  {
+    "sku": "mf1017",
+    "qty": 10,
+    "originalLine": "mf1017     10                     HOME OFFICE HANNA PLUS - CANELA"
+  },
+  {
+    "sku": "mf1018",
+    "qty": 13,
+    "originalLine": "mf1018     13                    MESA DE CABECEIRA LONDRES - BRANCO"
+  },
+  {
+    "sku": "mf1019",
+    "qty": 15,
+    "originalLine": "mf1019     15                    MESA DE CABECEIRA LONDRES - CANELA"
+  },
+  {
+    "sku": "mf1020",
+    "qty": 10,
+    "originalLine": "mf1020     10                     HOME OFFICE HANNA PLUS - BRANCO"
+  },
+  {
+    "sku": "324296cb",
+    "qty": 1,
+    "originalLine": "324296cb     1                      CANTINHO DO CAFÉ MANTIQUEIRA"
+  },
+  {
+    "sku": "mf1021",
+    "qty": 4,
+    "originalLine": "mf1021     4     VALDEMOVEIS    ROUPEIRO VALDEMOVEIS BEM TE VI 10 PTS 3GAV C/PES -"
+  },
+  {
+    "sku": "mf1023",
+    "qty": 3,
+    "originalLine": "mf1023     3     VALDEMOVEIS    ROUPEIRO VALDEMOVEIS ANDORINHA 6 PTS 2GAV C/PES -"
+  },
+  {
+    "sku": "mf1025",
+    "qty": 3,
+    "originalLine": "mf1025     3     VALDEMOVEIS   ROUPEIRO VALDEMOVEIS QUERO QUERO 4 PTS 2GAV C/PES -"
+  },
+  {
+    "sku": "e247c0ee",
+    "qty": 19,
+    "originalLine": "e247c0ee     19                   COLCHAO SANTE D33 CASAL - NOSSO SONHO"
+  },
+  {
+    "sku": "435984ce",
+    "qty": 18,
+    "originalLine": "435984ce     18                  COLCHÃO SANTÉ D33 SOLTEIRO - NOSSO SONHO"
+  },
+  {
+    "sku": "aa8fb22a",
+    "qty": 14,
+    "originalLine": "aa8fb22a     14                  ARMARIO DE COZINHA DUBAI CIN/PRETO - SALETO"
+  },
+  {
+    "sku": "b6560310",
+    "qty": 6,
+    "originalLine": "b6560310     6       IMOP           ROUPEIRO POTENZA 6P CIN/OFF - IMOP"
+  },
+  {
+    "sku": "3b5820ec",
+    "qty": 19,
+    "originalLine": "3b5820ec    19    EXATA COMERCIO           SOFA PARIS 3/2 LUG MARRON"
+  },
+  {
+    "sku": "367d0c35",
+    "qty": 21,
+    "originalLine": "367d0c35     21                    COLCHAO CASAL LOTUS D20 138X188X18"
+  },
+  {
+    "sku": "15a32e82",
+    "qty": 11,
+    "originalLine": "15a32e82     11      ORTOBOM           COLCHAO SOLTEIRO ORTOBOM D20"
+  },
+  {
+    "sku": "4eda098c",
+    "qty": 1,
+    "originalLine": "4eda098c     1                  ROUPEIRO VENEZA PLUS 3P CINAMOMO - CARIOCA"
+  },
+  {
+    "sku": "mf400",
+    "qty": 10,
+    "originalLine": "mf400     10                 ROUPEIRO NEW ALPINIA MADEIRA MDP 4PT 2GV C/PES"
+  },
+  {
+    "sku": "mf401",
+    "qty": 8,
+    "originalLine": "mf401      8                 ROUPEIRO NEW ALPINIA MADEIRA MDP 4PT 2GV C/PES"
+  },
+  {
+    "sku": "mf402",
+    "qty": 12,
+    "originalLine": "mf402     12               ROUPEIRO ISIS MADEIRA MDP 3PT 2GV COR: NOCE / PEROLA"
+  },
+  {
+    "sku": "mf403",
+    "qty": 9,
+    "originalLine": "mf403      9                 ROUPEIRO ISIS MADEIRA MDP 3PT 2GV COR: BRANCO"
+  },
+  {
+    "sku": "mf404",
+    "qty": 10,
+    "originalLine": "mf404     10                 ROUPEIRO VITORIA MADEIRA MDP 4PT 2GV COR: NOCE /"
+  },
+  {
+    "sku": "mf406",
+    "qty": 23,
+    "originalLine": "mf406     23               ARMARIO MULTIFUNCIONAL VEGAS MADEIRA MDP 2PT C/PES"
+  },
+  {
+    "sku": "mf407",
+    "qty": 23,
+    "originalLine": "mf407     23               ARMARIO MULTIFUNCIONAL VEGAS MADEIRA MDP 2PT C/PES"
+  },
+  {
+    "sku": "75e216ba",
+    "qty": 10,
+    "originalLine": "75e216ba     10      MB MOVEI        MESA DE CABECEIRA LONDRES - CANELA OFF"
+  },
+  {
+    "sku": "6f62e879",
+    "qty": 3,
+    "originalLine": "6f62e879     3                   SOFA RETRATIL CUIABA 2,50 PILOW 319 MARRON"
+  },
+  {
+    "sku": "764b1370",
+    "qty": 5,
+    "originalLine": "764b1370     5                    SOFA RETRATIL CUIABA 2,50 PILOW 330 CINZA"
+  },
+  {
+    "sku": "f7d5e5f2",
+    "qty": 7,
+    "originalLine": "f7d5e5f2     7     ART ASSENTOS   CONJ. PEDRO C/06 CAD GENOVA CINZA CHUMBO C/ PEGADOR"
+  },
+  {
+    "sku": "172b6f29",
+    "qty": 1,
+    "originalLine": "172b6f29     1     ART ASSENTOS   CONJ. PEDRO C/06 CAD AZUL GENOVA C/ PEGADOR PLUS - TEC"
+  },
+  {
+    "sku": "0c0a43bf",
+    "qty": 8,
+    "originalLine": "0c0a43bf     8       Itatiaia           BALCÃO 120 NEW PORTO CIN GRAFITE"
+  },
+  {
+    "sku": "b3d95ebb",
+    "qty": 5,
+    "originalLine": "b3d95ebb     5       Itatiaia           PANELEIRO 70 NEW PORTO CIN GRAFITE"
+  },
+  {
+    "sku": "46d1e5fb",
+    "qty": 1,
+    "originalLine": "46d1e5fb     1       Itatiaia            PANELEIRO 70 NEW PORTO CIN OFF"
+  },
+  {
+    "sku": "a62b4134",
+    "qty": 2,
+    "originalLine": "a62b4134     2                     SOFA BARCELONA 2,50 COR 319 MARROM"
+  },
+  {
+    "sku": "498001da",
+    "qty": 1,
+    "originalLine": "498001da     1                     SOFA BARCELONA 2,50 COR 330 CINZA"
+  },
+  {
+    "sku": "cd926df2",
+    "qty": 1,
+    "originalLine": "cd926df2     1                   MESA ALTA COM 3 BANQUETAS ÚNICAS PEÇAS"
+  },
+  {
+    "sku": "7f85065f",
+    "qty": 5,
+    "originalLine": "7f85065f     5        TCIL              COMODA PREMIUM - CIN - TCIL"
+  },
+  {
+    "sku": "d9bc7f1c",
+    "qty": 5,
+    "originalLine": "d9bc7f1c     5        TCIL            COMODA PREMIUM - CIN/OFF - TCIL"
+  },
+  {
+    "sku": "c71b86ed",
+    "qty": 5,
+    "originalLine": "c71b86ed     5        TCIL         ROUPEIRO 6 PORTAS REALEZA - CIN/OFF - TCIL"
+  },
+  {
+    "sku": "0fc54ee1",
+    "qty": 3,
+    "originalLine": "0fc54ee1     3        TCIL            CÔMODA CHICAGO CINAMOMO - TCIL"
+  },
+  {
+    "sku": "dfd34d29",
+    "qty": 3,
+    "originalLine": "dfd34d29     3      ORTOBOM       COLCHÃO SOLTEIRO ORTOBOM EXCLUSIVE FOAM"
+  },
+  {
+    "sku": "1373b7f7",
+    "qty": 1,
+    "originalLine": "1373b7f7     1      ORTOBOM      COLCHAO LIGHT D45 CASAL ORTOPÉDICO - ORTOBOM"
+  },
+  {
+    "sku": "4fe95fb7",
+    "qty": 2,
+    "originalLine": "4fe95fb7     2        TCIL        COMODA RIPADA GUARANI 4 GAV CINAMOMO - TCIL"
+  },
+  {
+    "sku": "c01bcca3",
+    "qty": 8,
+    "originalLine": "c01bcca3     8        TCIL     ROUPEIRO DACAR 3 PORTAS C/ PORTA ESPELHO CIN/OFF- TCIL"
+  },
+  {
+    "sku": "c666dcc2",
+    "qty": 5,
+    "originalLine": "c666dcc2     5       Benetil        COMODA NEW BARCELONA CIN REF 139 - BENETIL"
+  },
+  {
+    "sku": "9b31da85",
+    "qty": 1,
+    "originalLine": "9b31da85     1       Benetil       ROUPEIRO COPACABANA 6 PORTAS CIN/OFF - BENETIL"
+  },
+  {
+    "sku": "720df1b3",
+    "qty": 4,
+    "originalLine": "720df1b3     4       RUFATO       ROUPEIRO CAPRI 6 PORTAS - NATURE / OFF -RUFATO"
+  },
+  {
+    "sku": "2cd0f141",
+    "qty": 10,
+    "originalLine": "2cd0f141     10                    KIT ROMA 4P 1G OFF WHITE- ARAMOVEIS"
+  },
+  {
+    "sku": "lc202502",
+    "qty": 13,
+    "originalLine": "lc202502     13      EVIDENCIA      COMODA SAPATEIRA 1P.5G. CINNAMOMO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202503",
+    "qty": 13,
+    "originalLine": "lc202503     13      EVIDENCIA    COMODA SAPATEIRA 1P.5G. CINNAMOMO/BRANCO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202505",
+    "qty": 4,
+    "originalLine": "lc202505     4      EVIDENCIA      COMODA LARISSA 2 PORTAS E 4 GAVETAS BRANCO -"
+  },
+  {
+    "sku": "lc202506",
+    "qty": 6,
+    "originalLine": "lc202506     6      EVIDENCIA       MULTIUSO 2 PORTAS 0,50 CINNAMOMO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202507",
+    "qty": 5,
+    "originalLine": "lc202507     5      EVIDENCIA    MULTIUSO 2 PORTAS 0,50 CINNAMOMO/BRANCO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202508",
+    "qty": 4,
+    "originalLine": "lc202508     4      EVIDENCIA       COMODA NEW MONACO CINNAMOMO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202509",
+    "qty": 5,
+    "originalLine": "lc202509     5      EVIDENCIA    COMODA NEW MONACO CINNAMOMO/BRANCO - - EVIDENCIA"
+  },
+  {
+    "sku": "lc202511",
+    "qty": 9,
+    "originalLine": "lc202511     9      EVIDENCIA    ROUPEIRO NEW MARBELA 5 PORTAS E 1 GAVETA CINNAMOMO -"
+  },
+  {
+    "sku": "lc202512",
+    "qty": 13,
+    "originalLine": "lc202512     13      EVIDENCIA        COMODA 10 GAVETAS CINNAMOMO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202513",
+    "qty": 8,
+    "originalLine": "lc202513     8      EVIDENCIA       ROUPEIRO NEW MARBELA 5 PORTAS E 1 GAVETA"
+  },
+  {
+    "sku": "lc202514",
+    "qty": 4,
+    "originalLine": "lc202514     4      EVIDENCIA    ROUPEIRO NEW MARBELA 7 PORTAS 1 GAVETA CINNAMOMO -"
+  },
+  {
+    "sku": "lc202515",
+    "qty": 3,
+    "originalLine": "lc202515     3      EVIDENCIA        ROUPEIRO NEW MARBELA 7 PORTAS 1 GAVETA"
+  },
+  {
+    "sku": "lc202516",
+    "qty": 11,
+    "originalLine": "lc202516     11      EVIDENCIA    ROUPEIRO PARIS 8 PORTAS 6 GAVETAS CINNAMOMO/BRANCO -"
+  },
+  {
+    "sku": "lc202517",
+    "qty": 3,
+    "originalLine": "lc202517     3      EVIDENCIA      ROUPEIRO PARIS 8 PORTAS 6 GAVETAS CINNAMOMO -"
+  },
+  {
+    "sku": "lc202518",
+    "qty": 7,
+    "originalLine": "lc202518     7      EVIDENCIA         236 - ROUPEIRO SEVILHA 6 PORTAS 3 GAV"
+  },
+  {
+    "sku": "lc202519",
+    "qty": 5,
+    "originalLine": "lc202519     5      EVIDENCIA     ROUPEIRO TREVISO 4 PORTAS E 6 GAVETAS CINNAMOMO -"
+  },
+  {
+    "sku": "lc202520",
+    "qty": 6,
+    "originalLine": "lc202520     6      EVIDENCIA         ROUPEIRO TREVISO 4 PORTAS E 6 GAVETAS"
+  },
+  {
+    "sku": "lc202521",
+    "qty": 16,
+    "originalLine": "lc202521     16      EVIDENCIA     COMODA 10 GAVETAS CINNAMOMO/BRANCO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202522",
+    "qty": 6,
+    "originalLine": "lc202522     6      EVIDENCIA         COMODA 5 GAVETAS BRANCO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202523",
+    "qty": 7,
+    "originalLine": "lc202523     7      EVIDENCIA        COMODA 5 GAVETAS CINNAMOMO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202524",
+    "qty": 7,
+    "originalLine": "lc202524     7      EVIDENCIA     COMODA 5 GAVETAS BRANCO/CINNAMOMO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202525",
+    "qty": 9,
+    "originalLine": "lc202525     9      EVIDENCIA       COMODA TV/VIDEO 6G. CINNAMOMO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202526",
+    "qty": 6,
+    "originalLine": "lc202526     6      EVIDENCIA     COMODA TV/VIDEO 6G. CINNAMOMO/BRANCO - EVIDENCIA"
+  },
+  {
+    "sku": "lc202527",
+    "qty": 18,
+    "originalLine": "lc202527     18      EVIDENCIA       COMODA SAPATEIRA 1P.5G. BRANCA - EVIDENCIA"
+  },
+  {
+    "sku": "b6b9f40d",
+    "qty": 10,
+    "originalLine": "b6b9f40d     10    ARCA ESTOFADOS    SOFA CAMA ESDRAS 2,20 SATURNO - ARCA ESTOFADOS"
+  },
+  {
+    "sku": "bc6113a8",
+    "qty": 9,
+    "originalLine": "bc6113a8     9     LSILVA MOVEIS        CABECEIRA BIA QUEEN CORINO MARROM"
+  },
+  {
+    "sku": "798d98a2",
+    "qty": 5,
+    "originalLine": "798d98a2     5     LSILVA MOVEIS      CABECEIRA PRIME CASA (138) CORINO MARROM"
+  },
+  {
+    "sku": "24795122",
+    "qty": 2,
+    "originalLine": "24795122     2       INOVE      SOFA MOD RIO DE JANEIRO MOD 80 -BRAÇO 25 MARROM"
+  },
+  {
+    "sku": "09b93fd6",
+    "qty": 1,
+    "originalLine": "09b93fd6     1       INOVE      SOFA CAMA RETRATIL POSITANO MOD 80 - BRAÇO 10 LINHO"
+  },
+  {
+    "sku": "4531f15a",
+    "qty": 4,
+    "originalLine": "4531f15a     4       INOVE      SOFA CAMA RETRATIL AMARANTO MOD 100 - BRAÇO 15 LIHO"
+  },
+  {
+    "sku": "CRU",
+    "qty": 8,
+    "originalLine": "CRU 08 SEM CORINO - INOVE"
+  },
+  {
+    "sku": "0349c1bd",
+    "qty": 5,
+    "originalLine": "0349c1bd     5     LSILVA MOVEIS        CABECEIRA BIA QUEEN (158) CORINO CINZA"
+  },
+  {
+    "sku": "2abea882",
+    "qty": 3,
+    "originalLine": "2abea882     3     LSILVA MOVEIS       CABECEIRA BIA QUEEN (158) CORINO MARROM"
+  },
+  {
+    "sku": "e6884f4e",
+    "qty": 8,
+    "originalLine": "e6884f4e     8        JCM            ESCRIVANINHA FELICIA - BRANCO - JCM"
+  },
+  {
+    "sku": "b06dd921",
+    "qty": 7,
+    "originalLine": "b06dd921     7        JCM           ESCRIVANINHA FELICIA - CINAMOMO - JCM"
+  },
+  {
+    "sku": "3ee3b2d3",
+    "qty": 14,
+    "originalLine": "3ee3b2d3     14       JCM            CRISTALEIRA GRAÇA - CIN/OFF - JCM"
+  },
+  {
+    "sku": "030222a6",
+    "qty": 3,
+    "originalLine": "030222a6     3        JCM            APARADOR FORMOSO - OFF/CIN - JCM"
+  },
+  {
+    "sku": "22e8b1f4",
+    "qty": 10,
+    "originalLine": "22e8b1f4     10       JCM             APARADOR FORMOSO - CIN - JCM"
+  },
+  {
+    "sku": "2fe7ec3d",
+    "qty": 12,
+    "originalLine": "2fe7ec3d     12       JCM           ESCRIVANINHA MEGA CANDIAN - CIN - JCM"
+  },
+  {
+    "sku": "9da09903",
+    "qty": 3,
+    "originalLine": "9da09903     3        JCM           APARADOR LEAL CANDIAN - CIN-OFF - JCM"
+  },
+  {
+    "sku": "f4a99602",
+    "qty": 11,
+    "originalLine": "f4a99602     11       JCM              HOME APEGO - CIN/OFF - JCM"
+  },
+  {
+    "sku": "d3000262",
+    "qty": 4,
+    "originalLine": "d3000262     4        JCM            ESCRIVANINHA HELO - CIN/OFF - JCM"
+  },
+  {
+    "sku": "c64c2c00",
+    "qty": 5,
+    "originalLine": "c64c2c00     5        JCM           CABECEIRA SONHAR C VOL1 - CIN - JCM"
+  },
+  {
+    "sku": "3a987a68",
+    "qty": 13,
+    "originalLine": "3a987a68     13      PORTOBEL         COLCHAO IPANEMA QUEEN - PORTOBEL"
+  },
+  {
+    "sku": "48ab49fc",
+    "qty": 1,
+    "originalLine": "48ab49fc     1      PORTOBEL        COLCHAO PEROLA NEGRA CASAL - PORTOBEL"
+  },
+  {
+    "sku": "62c069cd",
+    "qty": 2,
+    "originalLine": "62c069cd     2                    MULTI-USO VALDEMOVEIS ASTECA - CACAU"
+  },
+  {
+    "sku": "8da3d92f",
+    "qty": 1,
+    "originalLine": "8da3d92f     1       Benetil      COMODA NEW BARCELONA CIN/ OFF REF 139 - BENETIL"
+  },
+  {
+    "sku": "42bd329b",
+    "qty": 6,
+    "originalLine": "42bd329b     6       GIGA        RACK BURITI RIPADO 1.60 OF/NATURE - GIGA MOVEIS"
+  },
+  {
+    "sku": "05ce831f",
+    "qty": 11,
+    "originalLine": "05ce831f    11       GIGA        HOME THEATER RIPADO HAVANA OF/NATURE - GIGA"
+  },
+  {
+    "sku": "8b292b61",
+    "qty": 1,
+    "originalLine": "8b292b61     1                        Sofá cinza 2.50 mostruário mage"
+  },
+  {
+    "sku": "007f0775",
+    "qty": 92,
+    "originalLine": "007f0775     92      EVIDENCIA          COMODA 4 GAV CINAMOMO - EVIDENCIA"
+  },
+  {
+    "sku": "e10bb579",
+    "qty": 97,
+    "originalLine": "e10bb579     97      EVIDENCIA         AEREO 3 PORTAS 1,20 BRANCO - EVIDENCIA"
+  },
+  {
+    "sku": "b7414ce9",
+    "qty": 1,
+    "originalLine": "b7414ce9     1       Itatiaia            BALCAO NEW PORTO 80 CINA OFF"
+  },
+  {
+    "sku": "18d259ad",
+    "qty": 1,
+    "originalLine": "18d259ad     1       VITRINI            SOFA TORONTO LINHO AZUL 2.10"
+  },
+  {
+    "sku": "2b48b22a",
+    "qty": 1,
+    "originalLine": "2b48b22a     1       VITRINI            SOFA TORONTO LINHO PRATA 2.10"
+  },
+  {
+    "sku": "f9e496a7",
+    "qty": 8,
+    "originalLine": "f9e496a7     8    EXATA COMERCIO         SOFA LONDRES VELUDO 2,00 CINZA"
+  },
+  {
+    "sku": "01a90edb",
+    "qty": 2,
+    "originalLine": "01a90edb     2       COLIBRI         BUFFET COPACABANA FREIJO OFF -COLIBRI"
+  },
+  {
+    "sku": "9955dc6b",
+    "qty": 4,
+    "originalLine": "9955dc6b     4       COLIBRI        BUFFET VITORIA FREIJO OFF WHITE - COLIBRI"
+  },
+  {
+    "sku": "f4ddfc6f",
+    "qty": 6,
+    "originalLine": "f4ddfc6f     6       COLIBRI         CRISTALEIRA JURERE OFF /FREIJO - COLIBRI"
+  },
+  {
+    "sku": "a62ff7f4",
+    "qty": 4,
+    "originalLine": "a62ff7f4     4       COLIBRI             APARADOR RIVIERA FREIJO"
+  },
+  {
+    "sku": "90622a0d",
+    "qty": 4,
+    "originalLine": "90622a0d     4       RUFATO      MESA LONDRINA 120 TP VIDRO CANTO RETO C/ CADEIRA"
+  },
+  {
+    "sku": "96c8cf32",
+    "qty": 1,
+    "originalLine": "96c8cf32     1                 MESA ARTE PREMIUM 4 CADEIRAS - MOSTRUARIO MEGA"
+  },
+  {
+    "sku": "ea20ea90",
+    "qty": 2,
+    "originalLine": "ea20ea90     2                      MESA ARTE PREMIUM 6 CADEIRAS"
+  },
+  {
+    "sku": "0e0c8560",
+    "qty": 4,
+    "originalLine": "0e0c8560     4       SOMA       MESA LAVINIA 4 CADEIRAS PRETA MARTELADA - SOMA"
+  },
+  {
+    "sku": "ec23d87f",
+    "qty": 5,
+    "originalLine": "ec23d87f     5                            Cozinha Aline"
+  },
+  {
+    "sku": "1b7952f1",
+    "qty": 2,
+    "originalLine": "1b7952f1     2       Biostar                 CAMA AIR FLEX"
+  },
+  {
+    "sku": "d2ec3335",
+    "qty": 9,
+    "originalLine": "d2ec3335     9                   BASE BAU CASAL LINHÃO PRETO - AUTO NIVEL"
+  },
+  {
+    "sku": "65f5262f",
+    "qty": 10,
+    "originalLine": "65f5262f     10                      BASE QUEEN BAU LINHAO PRETO"
+  },
+  {
+    "sku": "427343da",
+    "qty": 5,
+    "originalLine": "427343da     5       Nesher            BALCAO 80 MARQUESA NESHER"
+  },
+  {
+    "sku": "22d58d21",
+    "qty": 5,
+    "originalLine": "22d58d21     5                       BALCAO 120 MARQUESA NESHWR"
+  },
+  {
+    "sku": "596604b9",
+    "qty": 4,
+    "originalLine": "596604b9     4                      PANELEIRO 70 MARQUESA NESHER"
+  },
+  {
+    "sku": "0c79db4e",
+    "qty": 5,
+    "originalLine": "0c79db4e     5       Nesher         AEREO 80 MICROONDAS MARQUESA NESHER"
+  },
+  {
+    "sku": "0ffdd524",
+    "qty": 5,
+    "originalLine": "0ffdd524     5                       AEREO 120 MARQUESA NESHER"
+  },
+  {
+    "sku": "e5356c1d",
+    "qty": 4,
+    "originalLine": "e5356c1d     4     RONDOMOVEIS    CAMA BOX SOLTEIRO + CAMA AUXILIAR ORTOPÉDICO D33 -"
+  },
+  {
+    "sku": "bacef4d1",
+    "qty": 1,
+    "originalLine": "bacef4d1     1                        Sofá Creta Linho Cinza 2.000"
+  },
+  {
+    "sku": "38a53775",
+    "qty": 23,
+    "originalLine": "38a53775     23      SALETO     ROUPEIRO DINAMARCA C/ 8 PÉS CIN/ OFF WHITE - SALLÊTO"
+  },
+  {
+    "sku": "5b082a24",
+    "qty": 5,
+    "originalLine": "5b082a24     5                    BASE BAU CASAL LINHÃO PALHA - AUTO NIVE"
+  },
+  {
+    "sku": "436327fa",
+    "qty": 2,
+    "originalLine": "436327fa     2                       CAMA CASAL PROMO ALTO NIVEL"
+  },
+  {
+    "sku": "c97afab8",
+    "qty": 3,
+    "originalLine": "c97afab8     3                         CADEIRA ISABELA- PAR"
+  },
+  {
+    "sku": "b395fb96",
+    "qty": 1,
+    "originalLine": "b395fb96     1                        SOFA MONTREAL MARROM"
+  },
+  {
+    "sku": "3bad8d76",
+    "qty": 1,
+    "originalLine": "3bad8d76     1                     COLCHAO PEDRA DO RELOGIO ORT 138"
+  },
+  {
+    "sku": "3f33c383",
+    "qty": 4,
+    "originalLine": "3f33c383     4                    CAMA CASAL SIENA 1,40 BRANCO - BIANCHI"
+  },
+  {
+    "sku": "8ce6ff0f",
+    "qty": 11,
+    "originalLine": "8ce6ff0f     11                       PANELEIRO CONDESSA NESHER"
+  },
+  {
+    "sku": "0f07fc32",
+    "qty": 8,
+    "originalLine": "0f07fc32     8                     ROUPEIRO SAO CARLOS CIN OFF LEIFER"
+  },
+  {
+    "sku": "cba733cb",
+    "qty": 8,
+    "originalLine": "cba733cb     8                       CAMA SOLTEIRO MILANO - LEIFER"
+  },
+  {
+    "sku": "94f413f3",
+    "qty": 11,
+    "originalLine": "94f413f3     11                       CAMA CASAL MILANO - LEIFER"
+  },
+  {
+    "sku": "a0c604c4",
+    "qty": 13,
+    "originalLine": "a0c604c4     13      RUFATO       ROUPEIRO OSLO 3 PORTAS - NAITURE/OFF - RUFATO"
+  },
+  {
+    "sku": "32fcc1fa",
+    "qty": 3,
+    "originalLine": "32fcc1fa     3                      CABECEIRA IRIS 1.6 CIN/OFF/RIPADO"
+  },
+  {
+    "sku": "3e1a2625",
+    "qty": 12,
+    "originalLine": "3e1a2625     12                       CRIADO DHARA FREIJO/CINZA"
+  },
+  {
+    "sku": "0a7a8c37",
+    "qty": 13,
+    "originalLine": "0a7a8c37     13                     CÔMODA FÊNIX BRANCA - MINASPLAC"
+  },
+  {
+    "sku": "9632b54c",
+    "qty": 7,
+    "originalLine": "9632b54c     7                   CÔMODA FENIX CINA/OFF WHITE - MINASPLAC"
+  },
+  {
+    "sku": "4f3d165f",
+    "qty": 1,
+    "originalLine": "4f3d165f     1                 COLCHÃO CASAL MONTE VERDE D28 - OURO DE MINAS"
+  },
+  {
+    "sku": "72bd50ea",
+    "qty": 4,
+    "originalLine": "72bd50ea     4                      CAMA CASAL SIENA 1,40 CIN - BIANCHI"
+  },
+  {
+    "sku": "d98daf38",
+    "qty": 2,
+    "originalLine": "d98daf38     2                CAMA BOX SOLTEIRO ORTOPÉDICO D33 - RONDOCONFORT"
+  },
+  {
+    "sku": "e997c966",
+    "qty": 19,
+    "originalLine": "e997c966     19                  RACK TURIM RIPADO NATURE/OFF - GIGA MOVEIS"
+  },
+  {
+    "sku": "b595348c",
+    "qty": 2,
+    "originalLine": "b595348c     2                        KIT LIA BRANCO - SALLETO"
+  },
+  {
+    "sku": "36e37e2a",
+    "qty": 1,
+    "originalLine": "36e37e2a     1                           Rack Veneto Cin"
+  },
+  {
+    "sku": "5889b7ad",
+    "qty": 4,
+    "originalLine": "5889b7ad     4                CONJUNTO SOFA 175 3X2L VELUDO GRAFITE (CINZA) PE IMB"
+  },
+  {
+    "sku": "5fe64f01",
+    "qty": 4,
+    "originalLine": "5fe64f01     4               CONJUNTO SOFA 175 3X2L VELUDO JURERE (MARROM) PE IMB"
+  },
+  {
+    "sku": "48fbb5c7",
+    "qty": 10,
+    "originalLine": "48fbb5c7     10                     ROUPEIRO DUBAI 4P CINAMOMO - IMOP"
+  },
+  {
+    "sku": "4ddcf3c6",
+    "qty": 10,
+    "originalLine": "4ddcf3c6     10                    ROUPEIRO DUBAI 4P CIN/ OFF WHITE - IMOP"
+  },
+  {
+    "sku": "594410b4",
+    "qty": 4,
+    "originalLine": "594410b4     4                        MESA DANY TAMPO 100x60"
+  },
+  {
+    "sku": "8f6b87ef",
+    "qty": 26,
+    "originalLine": "8f6b87ef     26                COLCHÃO PREMIUM CASAL D45 C/PILLOW ORTOPÉDICO-"
+  },
+  {
+    "sku": "8d03acad",
+    "qty": 9,
+    "originalLine": "8d03acad     9                  COLCHAO PREMIUM QUEEM D45 C/PILLOW - ECOTEC"
+  },
+  {
+    "sku": "23a55eff",
+    "qty": 15,
+    "originalLine": "23a55eff     15               COLCHAO TORONTO SOLTEIRO MOLAS ENSACADAS - ECOTEC"
+  },
+  {
+    "sku": "a5ea3e43",
+    "qty": 14,
+    "originalLine": "a5ea3e43     14                COLCHAO TORONTO CASAL MOLAS ENSACADAS - ECOTEC"
+  },
+  {
+    "sku": "7f63bd1a",
+    "qty": 16,
+    "originalLine": "7f63bd1a     16                COLCHAO TORONTO QUEEM MOLAS ENSACADAS - ECOTEC"
+  },
+  {
+    "sku": "47557d1f",
+    "qty": 31,
+    "originalLine": "47557d1f    31                COLCHAO LISBOA CASAL - ECOTEC (APENAS UMA UNIDADE)"
+  },
+  {
+    "sku": "4e18ce38",
+    "qty": 8,
+    "originalLine": "4e18ce38     8                CAMA BOX PRESTIGIE CASAL MOLAS ENSACADAS - ECOTEC"
+  },
+  {
+    "sku": "208ed44c",
+    "qty": 13,
+    "originalLine": "208ed44c    13                 CAMA BOX AÇUCENA SOLTEIRO ORTOPEDICO - ECOTEC"
+  },
+  {
+    "sku": "c91d8d07",
+    "qty": 38,
+    "originalLine": "c91d8d07     38                  CAMA BOX AÇUCENA CASAL ORTOPEDICO - ECOTEC"
+  },
+  {
+    "sku": "765aae40",
+    "qty": 6,
+    "originalLine": "765aae40     6               COLCHAO STAR PLUS CASAL MOLAS ENSACADAS - INOVAFLEX"
+  },
+  {
+    "sku": "fbab072c",
+    "qty": 2,
+    "originalLine": "fbab072c     2                 COLCHAO STAR PLUS SOLTEIRO MOLAS ENSACADAS -"
+  },
+  {
+    "sku": "220153c4",
+    "qty": 9,
+    "originalLine": "220153c4     9               COLCHAO SUPREME CASAL MOLAS ENSACADAS - INOVAFLEX"
+  },
+  {
+    "sku": "c018f11b",
+    "qty": 18,
+    "originalLine": "c018f11b     18                  COLCHAO CONFORT PREMIUM CASAL - INOVAFLEX"
+  },
+  {
+    "sku": "6a8c3d2f",
+    "qty": 20,
+    "originalLine": "6a8c3d2f    20                   COLCHAO INOVA FIRME D20 CASAL - INOVAFLEX"
+  },
+  {
+    "sku": "9100792d",
+    "qty": 1,
+    "originalLine": "9100792d     1                    BASE QUEEM BIPARTIDA MARROM - GAZIN"
+  },
+  {
+    "sku": "0b830254",
+    "qty": 20,
+    "originalLine": "0b830254     20                         MESA ANE PRETA 70 x 70"
+  },
+  {
+    "sku": "8546a384",
+    "qty": 7,
+    "originalLine": "8546a384     7                       RACK MALIBU - VALDE MÓVEIS"
+  },
+  {
+    "sku": "385cb727",
+    "qty": 13,
+    "originalLine": "385cb727     13                      BASE CASAL COMUM LINHAO PRETO"
+  },
+  {
+    "sku": "8acf83da",
+    "qty": 8,
+    "originalLine": "8acf83da     8                 CAMA BOX AÇUCENA SOLTEIRO COM AUXILIAR - ECOTEC"
+  },
+  {
+    "sku": "09218c97",
+    "qty": 8,
+    "originalLine": "09218c97     8               CAMA BOX PRESTIGIE SOLTEIRO MOLAS ENSACADAS - ECOTEC"
+  },
+  {
+    "sku": "a8be39fc",
+    "qty": 13,
+    "originalLine": "a8be39fc     13                   CAMA BOX CONFORT PILLOW CASAL - ECOTEC"
+  },
+  {
+    "sku": "18657bd5",
+    "qty": 6,
+    "originalLine": "18657bd5     6                   COLCHÃO BERÇO BABY JUNE - NOSSO SONHO"
+  },
+  {
+    "sku": "53ea1e44",
+    "qty": 3,
+    "originalLine": "53ea1e44     3                    CAMA BOX COM AUXILIAR D33 - ORTOBELO"
+  },
+  {
+    "sku": "37583d27",
+    "qty": 9,
+    "originalLine": "37583d27     9                 ROUPEIRO NINA 06 PTS C/ESPELHO C/KIT PE - NATURE"
+  },
+  {
+    "sku": "067ce589",
+    "qty": 7,
+    "originalLine": "067ce589     7                     BASE QUEEN TECIDO PRETO - PORTOBEL"
+  },
+  {
+    "sku": "e3af8998",
+    "qty": 5,
+    "originalLine": "e3af8998     5                     BASE QUEEN TECIDO BEGE - PORTOBEL"
+  },
+  {
+    "sku": "bf4ec5f2",
+    "qty": 17,
+    "originalLine": "bf4ec5f2     17                    BASE SOLTEIRO TECIDO PRETO - PORTOBEL"
+  },
+  {
+    "sku": "45ce12c7",
+    "qty": 13,
+    "originalLine": "45ce12c7     13                      CAMA BOX CASAL D33 - ORTOBELO"
+  },
+  {
+    "sku": "369b9574",
+    "qty": 5,
+    "originalLine": "369b9574     5                    BASE SOLTEIRO SUEDE PRETO - ORTOBELO"
+  },
+  {
+    "sku": "fa80ac34",
+    "qty": 2,
+    "originalLine": "fa80ac34     2                      CAMA BOX VIENA LUX - ORTOBELO"
+  },
+  {
+    "sku": "270d45e0",
+    "qty": 5,
+    "originalLine": "270d45e0     5                      ROUPEIRO DUBAI 4P BRANCO - IMOP"
+  },
+  {
+    "sku": "a3f326d6",
+    "qty": 3,
+    "originalLine": "a3f326d6     3                      COLCHAO SOLTEIRO BLACK - HERVAL"
+  },
+  {
+    "sku": "01dad132",
+    "qty": 1,
+    "originalLine": "01dad132     1                 MESA MOSTRUARIO 4 CADEIRAS-- SEM TROCA/GARANTIA"
+  },
+  {
+    "sku": "f550bb68",
+    "qty": 7,
+    "originalLine": "f550bb68     7                     BASE CASAL TECIDO BEGE - PORTOBEL"
+  },
+  {
+    "sku": "0337b99c",
+    "qty": 18,
+    "originalLine": "0337b99c    18                    BASE CASAL TECIDO PRETO - PORTOBEL"
+  },
+  {
+    "sku": "5cf3a72f",
+    "qty": 14,
+    "originalLine": "5cf3a72f     14                 COLCHÃO SOLTEIRO MOLAS C/EPS DUETTO PASSIONE -"
+  },
+  {
+    "sku": "52547a60",
+    "qty": 15,
+    "originalLine": "52547a60     15                COLCHÃO CASAL MOLAS C/EPS DUETTO PASSIONE - NOSSO"
+  },
+  {
+    "sku": "e83cc7ab",
+    "qty": 11,
+    "originalLine": "e83cc7ab     11                    COLCHAO IPANEMA SOLTEIRO - PORTOBEL"
+  },
+  {
+    "sku": "0bbc8fcb",
+    "qty": 13,
+    "originalLine": "0bbc8fcb     13                     COLCHAO IPANEMA CASAL - PORTOBEL"
+  },
+  {
+    "sku": "51f084f4",
+    "qty": 25,
+    "originalLine": "51f084f4     25                    COLCHAO INOVA D33 SOLTEIRO - INOVAFLEX"
+  },
+  {
+    "sku": "cc6f359e",
+    "qty": 12,
+    "originalLine": "cc6f359e     12                    COLCHAO INOVA D33 CASAL - INOVAFLEX"
+  },
+  {
+    "sku": "075a65fa",
+    "qty": 3,
+    "originalLine": "075a65fa     3                     CONJ. CAPRI 2L+2LC/CTO SEUDE CINZA"
+  },
+  {
+    "sku": "fdf54129",
+    "qty": 3,
+    "originalLine": "fdf54129     3                    CONJ. CAPRI 2L + 2L C/CTO SUEDE MARROM"
+  },
+  {
+    "sku": "57998161",
+    "qty": 6,
+    "originalLine": "57998161     6                  CÔMODA MADRI PLUS 5G 1P. CINAMOMO ACP MOVEIS"
+  },
+  {
+    "sku": "d91c2424",
+    "qty": 3,
+    "originalLine": "d91c2424     3                      CABECEIRA REF.201 COR 097 CINZA"
+  },
+  {
+    "sku": "efc8bc71",
+    "qty": 3,
+    "originalLine": "efc8bc71     3                     CABECEIRA REF.014 COR 106 MARROM"
+  },
+  {
+    "sku": "1cc347e8",
+    "qty": 3,
+    "originalLine": "1cc347e8     3                      CABECEIRA REF.014 COR 97 CINZA"
+  },
+  {
+    "sku": "a3a3f3d1",
+    "qty": 8,
+    "originalLine": "a3a3f3d1     8                      BASE CASAL COMUM LINHAO PALHA"
+  },
+  {
+    "sku": "0b26f24a",
+    "qty": 11,
+    "originalLine": "0b26f24a     11                    BASE CASAL COURINO PRETO - AUTO NÍVEL"
+  },
+  {
+    "sku": "9dac7824",
+    "qty": 5,
+    "originalLine": "9dac7824     5                  COLCHÃO SOLTEIRO LIGHT ORTOPÉDICO ORTOBOM"
+  },
+  {
+    "sku": "6ad3e762",
+    "qty": 40,
+    "originalLine": "6ad3e762     40                  COLCHAO SOLTEIRO LIGHT D20 ECOTEC 12X188X88"
+  },
+  {
+    "sku": "a26a8bd1",
+    "qty": 4,
+    "originalLine": "a26a8bd1     4                  EST. SOBERANO RT 2.30 (02 PC) BOUCLE MARROM"
+  }
+]
