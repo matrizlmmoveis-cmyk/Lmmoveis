@@ -28,7 +28,18 @@ export const supabaseService = {
             if (error) throw error;
 
             if (data && data.length > 0) {
-                allItems = allItems.concat(data as Product[]);
+                const mapped = data.map((p: any) => ({
+                    id: p.id,
+                    name: p.name,
+                    category: p.category,
+                    price: p.price,
+                    costPrice: p.cost_price,
+                    assemblyPrice: p.assembly_price,
+                    sku: p.sku,
+                    imageUrl: p.image_url,
+                    supplierId: p.supplier_id
+                }));
+                allItems = allItems.concat(mapped as Product[]);
                 page++;
                 if (data.length < limit) hasMore = false;
             } else {
@@ -329,6 +340,27 @@ export const supabaseService = {
         return true;
     },
 
+    async getCustomers() {
+        const { data, error } = await supabase.from('customers').select('*').order('name', { ascending: true });
+        if (error) throw error;
+        return (data || []).map((c: any) => ({
+            id: c.id,
+            type: c.type,
+            name: c.name,
+            document: c.document,
+            email: c.email,
+            phone: c.phone,
+            zipCode: c.zip_code,
+            address: c.address,
+            number: c.number,
+            complement: c.complement,
+            neighborhood: c.neighborhood,
+            city: c.city,
+            state: c.state,
+            reference: c.reference
+        })) as Customer[];
+    },
+
     async getEmployeeByEmail(email: string) {
         const { data, error } = await supabase.from('employees').select('*').eq('username', email).single();
         if (error) return null;
@@ -336,13 +368,34 @@ export const supabaseService = {
     },
 
     async createCustomer(customer: Customer) {
-        const { error } = await supabase.from('customers').insert(customer);
+        const payload: any = {
+            id: customer.id,
+            type: customer.type,
+            name: customer.name,
+            document: customer.document,
+            email: customer.email,
+            phone: customer.phone,
+            zip_code: customer.zipCode,
+            address: customer.address,
+            number: customer.number,
+            complement: customer.complement,
+            neighborhood: customer.neighborhood,
+            city: customer.city,
+            state: customer.state,
+            reference: customer.reference
+        };
+        const { error } = await supabase.from('customers').insert(payload);
         if (error) throw error;
         return true;
     },
 
     async updateCustomer(id: string, updates: Partial<Customer>) {
-        const { error } = await supabase.from('customers').update(updates).eq('id', id);
+        const payload: any = { ...updates };
+        if (updates.zipCode !== undefined) {
+            payload.zip_code = updates.zipCode;
+            delete payload.zipCode;
+        }
+        const { error } = await supabase.from('customers').update(payload).eq('id', id);
         if (error) throw error;
         return true;
     }

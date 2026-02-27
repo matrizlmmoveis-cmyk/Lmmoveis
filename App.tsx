@@ -67,19 +67,20 @@ const App: React.FC = () => {
   useEffect(() => {
     const initData = async () => {
       try {
-        const [sItems, iItems, stItems, eItems, pItems] = await Promise.all([
+        const [sItems, iItems, stItems, eItems, pItems, cItems] = await Promise.all([
           supabaseService.getSales(),
           supabaseService.getInventory(),
           supabaseService.getStores(),
           supabaseService.getEmployees(),
-          supabaseService.getProducts()
+          supabaseService.getProducts(),
+          supabaseService.getCustomers()
         ]);
         setSales(sItems);
         setInventory(iItems);
         setStores(stItems);
         setEmployees(eItems);
         setProducts(pItems);
-        // Customers will be handled or fetched separately if many, or here if few
+        setCustomers(cItems);
       } catch (err) {
         console.error("Erro ao carregar dados do Supabase:", err);
       } finally {
