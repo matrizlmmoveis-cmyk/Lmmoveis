@@ -1,7 +1,6 @@
-
-import React, { useState } from 'react';
-import { Truck, Wrench, Plus, Trash2, Printer, Search, User, ClipboardList, CheckCircle2, AlertCircle } from 'lucide-react';
-import { OrderStatus, Sale, Employee } from '../types.ts';
+import React, { useState, useEffect } from 'react';
+import { Truck, Wrench, Plus, Trash2, Printer, Search, User, ClipboardList, CheckCircle2, AlertCircle, History, ArrowLeft, Calendar } from 'lucide-react';
+import { OrderStatus, Sale, Employee, Romaneio } from '../types.ts';
 import { supabaseService } from '../services/supabaseService.ts';
 
 interface RomaneiosProps {
@@ -11,13 +10,27 @@ interface RomaneiosProps {
 }
 
 const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEmployees }) => {
-  // ... existing states ...
+  const [view, setView] = useState<'create' | 'history'>('create');
+  const [romaneios, setRomaneios] = useState<Romaneio[]>([]);
   const [type, setType] = useState<'entrega' | 'montagem'>('entrega');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [saleInput, setSaleInput] = useState('');
   const [batchSales, setBatchSales] = useState<Sale[]>([]);
   const [error, setError] = useState('');
   const [showPrint, setShowPrint] = useState(false);
+
+  useEffect(() => {
+    loadRomaneios();
+  }, []);
+
+  const loadRomaneios = async () => {
+    try {
+      const data = await supabaseService.getRomaneios();
+      setRomaneios(data);
+    } catch (err) {
+      console.error("Erro ao carregar romaneios:", err);
+    }
+  };
 
   const employees = allEmployees.filter(e => type === 'entrega' ? e.role === 'MOTORISTA' : e.role === 'MONTADOR');
 
@@ -33,6 +46,8 @@ const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEm
       if (sale) {
         if (batchSales.find(bs => bs.id === id)) {
           // Skip
+        } else if (type === 'montagem' && !sale.assemblyRequired) {
+          notFound.push(`${id} (Não exige montagem)`);
         } else {
           foundSales.push(sale);
         }
@@ -42,7 +57,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEm
     });
 
     if (notFound.length > 0) {
-      setError(`Código(s) de venda não encontrado(s): ${notFound.join(', ')}`);
+      setError(`Código(s) inválido(s) ou não encontrado(s): ${notFound.join(', ')}`);
     }
 
     setBatchSales([...batchSales, ...foundSales]);
@@ -77,6 +92,14 @@ const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEm
 
       await Promise.all(promises);
 
+      // Salvar histórico de Romaneio
+      await supabaseService.createRomaneio({
+        type,
+        employeeId: selectedEmployeeId,
+        saleIds: batchIds,
+        status: 'ATIVO'
+      });
+
       // Atualizar estado local
       setSales(prevSales => prevSales.map(s => {
         if (batchIds.includes(s.id)) {
@@ -89,6 +112,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEm
         return s;
       }));
 
+      loadRomaneios();
       setShowPrint(true);
     } catch (err) {
       console.error("Erro ao salvar romaneio:", err);
@@ -163,127 +187,228 @@ const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEm
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">Painel de Romaneios</h1>
-        <p className="text-slate-500 font-medium">Criação de carga em lote por código de venda</p>
+      <header className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">Painel de Romaneios</h1>
+          <p className="text-slate-500 font-medium">Criação de carga em lote por código de venda</p>
+        </div>
+        <button
+          onClick={() => setView(view === 'create' ? 'history' : 'create')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all font-bold text-xs uppercase ${view === 'create' ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-blue-600 text-white shadow-lg'
+            }`}
+        >
+          {view === 'create' ? (
+            <><History className="w-4 h-4" /> Histórico</>
+          ) : (
+            <><Plus className="w-4 h-4" /> Novo Romaneio</>
+          )}
+        </button>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-5">
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">1. Selecionar Operação</label>
-              <div className="flex bg-slate-100 p-1 rounded-2xl">
-                <button
-                  onClick={() => { setType('entrega'); setBatchSales([]); setSelectedEmployeeId(''); }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${type === 'entrega' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-50'}`}
-                >
-                  <Truck className="w-4 h-4" /> ENTREGAS
-                </button>
-                <button
-                  onClick={() => { setType('montagem'); setBatchSales([]); setSelectedEmployeeId(''); }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${type === 'montagem' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
-                >
-                  <Wrench className="w-4 h-4" /> MONTAGENS
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">2. Escolher Responsável</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <select
-                  className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:border-blue-500 transition-all uppercase"
-                  value={selectedEmployeeId}
-                  onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                >
-                  <option value="">Selecione o {type === 'entrega' ? 'Motorista' : 'Montador'}</option>
-                  {employees.map(emp => (
-                    <option key={emp.id} value={emp.id}>{emp.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <form onSubmit={handleAddSale}>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">3. Digitar Código(s) da Venda</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Ex: 101, 102"
-                  className="flex-1 px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-black text-blue-600 outline-none focus:border-blue-500 transition-all"
-                  value={saleInput}
-                  onChange={(e) => setSaleInput(e.target.value)}
-                />
-                <button
-                  type="submit"
-                  className="bg-slate-900 text-white px-6 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95"
-                >
-                  <Plus className="w-6 h-6" />
-                </button>
-              </div>
-              <p className="text-[9px] text-slate-400 mt-2 italic font-bold uppercase tracking-tighter">Separe múltiplos códigos por vírgula ou espaço.</p>
-            </form>
-
-            {error && (
-              <div className="bg-red-50 text-red-600 p-4 rounded-2xl flex items-center gap-3 text-xs font-bold border border-red-100 animate-in shake duration-300">
-                <AlertCircle className="w-5 h-5 shrink-0" />
-                {error}
-              </div>
-            )}
+      {view === 'history' ? (
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden animate-in slide-in-from-right-4 duration-500">
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-blue-500" />
+              Histórico de Cargas Lançadas
+            </h3>
           </div>
-
-          <button
-            onClick={handleFinalize}
-            className={`w-full py-5 rounded-[2.5rem] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${type === 'entrega' ? 'bg-blue-600 text-white shadow-blue-200' : 'bg-emerald-600 text-white shadow-emerald-200'}`}
-          >
-            <ClipboardList className="w-5 h-5" />
-            Lançar Romaneio em Lote
-          </button>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] uppercase font-black text-slate-400">
+                  <th className="px-6 py-4">Data / Hora</th>
+                  <th className="px-6 py-4">Tipo</th>
+                  <th className="px-6 py-4">Responsável</th>
+                  <th className="px-6 py-4">Volumes</th>
+                  <th className="px-6 py-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {romaneios.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-20 text-center">
+                      <p className="text-slate-400 font-bold uppercase text-xs">Nenhum romaneio encontrado no histórico.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  romaneios.map(r => {
+                    const emp = allEmployees.find(e => e.id === r.employeeId);
+                    return (
+                      <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-bold text-slate-700">
+                            {new Date(r.createdAt!).toLocaleDateString('pt-BR')}
+                          </p>
+                          <p className="text-[10px] text-slate-400 font-bold">
+                            {new Date(r.createdAt!).toLocaleTimeString('pt-BR')}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${r.type === 'entrega' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'
+                            }`}>
+                            {r.type}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-bold text-slate-700 uppercase">{emp?.name || 'Não identificado'}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">{emp?.role}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex -space-x-2">
+                            {r.saleIds.slice(0, 5).map((id, i) => (
+                              <div key={i} className="w-7 h-7 bg-slate-100 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-black text-slate-600 shadow-sm">
+                                #{id}
+                              </div>
+                            ))}
+                            {r.saleIds.length > 5 && (
+                              <div className="w-7 h-7 bg-blue-600 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-black text-white shadow-sm">
+                                +{r.saleIds.length - 5}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => {
+                              // Re-habilitar impressão para um item do histórico
+                              const romaneioSales = sales.filter(s => r.saleIds.includes(s.id));
+                              setType(r.type);
+                              setSelectedEmployeeId(r.employeeId);
+                              setBatchSales(romaneioSales);
+                              setShowPrint(true);
+                            }}
+                            className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-800 transition-all flex items-center gap-2"
+                          >
+                            <Printer className="w-3 h-3" /> Re-imprimir
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-5">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">1. Selecionar Operação</label>
+                <div className="flex bg-slate-100 p-1 rounded-2xl">
+                  <button
+                    onClick={() => { setType('entrega'); setBatchSales([]); setSelectedEmployeeId(''); }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${type === 'entrega' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    <Truck className="w-4 h-4" /> ENTREGAS
+                  </button>
+                  <button
+                    onClick={() => { setType('montagem'); setBatchSales([]); setSelectedEmployeeId(''); }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${type === 'montagem' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
+                  >
+                    <Wrench className="w-4 h-4" /> MONTAGENS
+                  </button>
+                </div>
+              </div>
 
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm min-h-[500px] flex flex-col">
-            <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50 rounded-t-[2rem]">
-              <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                Pedidos no Lote ({batchSales.length})
-              </h3>
-              {batchSales.length > 0 && (
-                <button onClick={() => setBatchSales([])} className="text-red-500 font-bold text-[10px] uppercase hover:underline">Limpar Lote</button>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">2. Escolher Responsável</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <select
+                    className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:border-blue-500 transition-all uppercase"
+                    value={selectedEmployeeId}
+                    onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                  >
+                    <option value="">Selecione o {type === 'entrega' ? 'Motorista' : 'Montador'}</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <form onSubmit={handleAddSale}>
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">3. Digitar Código(s) da Venda</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Ex: 101, 102"
+                    className="flex-1 px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-black text-blue-600 outline-none focus:border-blue-500 transition-all"
+                    value={saleInput}
+                    onChange={(e) => setSaleInput(e.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    className="bg-slate-900 text-white px-6 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                  >
+                    <Plus className="w-6 h-6" />
+                  </button>
+                </div>
+                <p className="text-[9px] text-slate-400 mt-2 italic font-bold uppercase tracking-tighter">Separe múltiplos códigos por vírgula ou espaço.</p>
+              </form>
+
+              {error && (
+                <div className="bg-red-50 text-red-600 p-4 rounded-2xl flex items-center gap-3 text-xs font-bold border border-red-100 animate-in shake duration-300">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  {error}
+                </div>
               )}
             </div>
 
-            <div className="flex-1 p-6">
-              {batchSales.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-300 space-y-4 opacity-50 py-20">
-                  <ClipboardList className="w-20 h-20 stroke-[1px]" />
-                  <p className="font-black uppercase text-xs">Aguardando inclusão de códigos de venda...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {batchSales.map(sale => (
-                    <div key={sale.id} className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-200 relative group animate-in slide-in-from-right-2 duration-300">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-black">#{sale.id}</span>
-                        <span className="text-[10px] font-black text-slate-500 uppercase truncate flex-1">{sale.customerName}</span>
+            <button
+              onClick={handleFinalize}
+              className={`w-full py-5 rounded-[2.5rem] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${type === 'entrega' ? 'bg-blue-600 text-white shadow-blue-200' : 'bg-emerald-600 text-white shadow-emerald-200'}`}
+            >
+              <ClipboardList className="w-5 h-5" />
+              Lançar Romaneio em Lote
+            </button>
+          </div>
+
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm min-h-[500px] flex flex-col">
+              <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50 rounded-t-[2rem]">
+                <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  Pedidos no Lote ({batchSales.length})
+                </h3>
+                {batchSales.length > 0 && (
+                  <button onClick={() => setBatchSales([])} className="text-red-500 font-bold text-[10px] uppercase hover:underline">Limpar Lote</button>
+                )}
+              </div>
+
+              <div className="flex-1 p-6">
+                {batchSales.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-300 space-y-4 opacity-50 py-20">
+                    <ClipboardList className="w-20 h-20 stroke-[1px]" />
+                    <p className="font-black uppercase text-xs">Aguardando inclusão de códigos de venda...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {batchSales.map(sale => (
+                      <div key={sale.id} className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-200 relative group animate-in slide-in-from-right-2 duration-300">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-black">#{sale.id}</span>
+                          <span className="text-[10px] font-black text-slate-500 uppercase truncate flex-1">{sale.customerName}</span>
+                        </div>
+                        <p className="text-[10px] text-slate-600 font-bold uppercase line-clamp-2 leading-relaxed">{sale.deliveryAddress}</p>
+                        <button
+                          onClick={() => removeSale(sale.id)}
+                          className="absolute -top-2 -right-2 bg-white text-red-500 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all border border-slate-100"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <p className="text-[10px] text-slate-600 font-bold uppercase line-clamp-2 leading-relaxed">{sale.deliveryAddress}</p>
-                      <button
-                        onClick={() => removeSale(sale.id)}
-                        className="absolute -top-2 -right-2 bg-white text-red-500 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all border border-slate-100"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

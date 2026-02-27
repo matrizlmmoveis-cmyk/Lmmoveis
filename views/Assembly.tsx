@@ -1,20 +1,19 @@
 import React from 'react';
-import { OrderStatus, Sale, Product } from '../types.ts';
+import { OrderStatus, Sale, Product, Employee } from '../types.ts';
 import { supabaseService } from '../services/supabaseService';
 import { Wrench, MapPin, CheckCircle, Clock } from 'lucide-react';
 
 interface AssemblyProps {
-  userId?: string;
-  userRole?: string;
+  user: Employee | { id: string, name: string, role: string, storeId?: string } | null;
   sales: Sale[];
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   products: Product[];
 }
 
-const Assembly: React.FC<AssemblyProps> = ({ userId, userRole, sales, setSales, products }) => {
+const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products }) => {
   // Auto-refresh inteligente (apenas para MONTADOR e em primeiro plano)
   React.useEffect(() => {
-    if (userRole !== 'MONTADOR') return;
+    if (user?.role !== 'MONTADOR') return;
 
     let intervalId: NodeJS.Timeout;
 
@@ -49,12 +48,12 @@ const Assembly: React.FC<AssemblyProps> = ({ userId, userRole, sales, setSales, 
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [userRole, setSales]);
-  // Filtrar ordens de montagem designadas em tempo real (liberadas apenas PÓS-ENTREGA)
+  }, [user?.role, setSales]);
+  // Filtrar ordens de montagem designadas (aparecem se estiverem em rota ou entregues)
   const myTasks = sales.filter(s =>
     s.assemblyRequired &&
-    s.status === OrderStatus.DELIVERED &&
-    (userId === 'admin' || s.assignedAssemblerId === userId)
+    (s.status === OrderStatus.DELIVERED || s.status === OrderStatus.SHIPPED || s.status === OrderStatus.PENDING) &&
+    (user?.id === 'admin' || s.assignedAssemblerId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
   );
 
   const calculateTotalAssembly = (sale: Sale) => {
@@ -101,9 +100,15 @@ const Assembly: React.FC<AssemblyProps> = ({ userId, userRole, sales, setSales, 
             return (
               <div key={task.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
                 <div className="flex justify-between items-start">
-                  <div className="bg-amber-50 px-3 py-1 rounded-lg text-amber-600 font-black text-[10px] uppercase flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Liberado p/ Montagem
-                  </div>
+                  {task.status === OrderStatus.DELIVERED ? (
+                    <div className="bg-amber-50 px-3 py-1 rounded-lg text-amber-600 font-black text-[10px] uppercase flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Liberado p/ Montagem
+                    </div>
+                  ) : (
+                    <div className="bg-slate-100 px-3 py-1 rounded-lg text-slate-500 font-black text-[10px] uppercase flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Aguardando Entrega
+                    </div>
+                  )}
                   <div className="text-right">
                     <p className="text-[10px] font-black text-slate-400">COMISSÃO</p>
                     <p className="text-sm font-black text-emerald-600">R$ {val.toFixed(2)}</p>
@@ -130,14 +135,22 @@ const Assembly: React.FC<AssemblyProps> = ({ userId, userRole, sales, setSales, 
                     return (
                       <div key={i} className="flex justify-between items-center text-xs font-bold text-slate-700 uppercase mb-1">
                         <span>• {item.quantity}x {p?.name || item.productId}</span>
-                        <span className="text-slate-400">R$ {p?.assemblyPrice.toFixed(2)} un</span>
+                        <span className="text-slate-400">R$ {(p?.assemblyPrice || 0).toFixed(2)} un</span>
                       </div>
                     );
                   })}
                 </div>
 
-                <button onClick={() => handleComplete(task.id)} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-blue-100 active:scale-95 transition-all">
-                  <CheckCircle className="w-4 h-4" /> Concluir Montagem
+                <button
+                  onClick={() => handleComplete(task.id)}
+                  disabled={task.status !== OrderStatus.DELIVERED}
+                  className={`w-full py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 ${task.status === OrderStatus.DELIVERED
+                    ? 'bg-blue-600 text-white shadow-blue-100'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                    }`}
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  {task.status === OrderStatus.DELIVERED ? 'Concluir Montagem' : 'Aguardando Entrega'}
                 </button>
               </div>
             );

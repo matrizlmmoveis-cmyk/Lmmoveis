@@ -12,6 +12,7 @@ import Stores from './views/Stores.tsx';
 import Customers from './views/Customers.tsx';
 import EmployeesView from './views/Employees.tsx';
 import Romaneios from './views/Romaneios.tsx';
+import Products from './views/Products.tsx';
 import Expedicao from './views/Expedicao.tsx';
 import Tarefas from './views/Tarefas.tsx';
 import ReceiptSettlement from './views/ReceiptSettlement.tsx';
@@ -91,11 +92,6 @@ const App: React.FC = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        // Buscar o funcionário pelo email (ou username mapeado)
-        // Neste exemplo, vamos assumir que o email do Auth é o username do Employee
-        // Obtenção dos dados via serviço já carregou employees no estado, então podemos buscar lá
-        // Mas como employees pode demorar para carregar, melhor fazer uma query direta se necessário
-        // Por agora, vamos tentar o find no estado se disponível, ou via serviço
         const email = session.user.email;
         if (email) {
           const emp = await supabaseService.getEmployeeByEmail(email);
@@ -105,17 +101,30 @@ const App: React.FC = () => {
           }
         }
       } else {
-        // Apenas limpa se NÃO for o usuário Master (que não tem sessão no Supabase Auth)
+        // Sessão expirou ou usuário deslogou do Supabase Auth
         const savedUser = localStorage.getItem('lm_user');
-        const isMaster = savedUser && JSON.parse(savedUser).username === 'Master';
-        if (!isMaster) {
-          setUser(null);
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          // Só limpamos o estado se o usuário que estava logado era o Admin (que usa Auth)
+          // Usuários Master ou Funcionários (login local) não devem ser deslogados aqui
+          if (parsed.username === 'lucas@moveislm.com') {
+            setUser(null);
+            localStorage.removeItem('lm_user');
+          }
         }
       }
     });
 
     return () => subscription.unsubscribe();
   }, [employees]); // Re-run if employees state changes to ensure we can find the profile
+
+  const redirectByRole = (employee: Employee) => {
+    if (employee.role === 'MOTORISTA') setActiveView('delivery');
+    else if (employee.role === 'MONTADOR') setActiveView('assembly');
+    else if (employee.role === 'CONFERENTE') setActiveView('expedicao');
+    else if (employee.role === 'SUPERVISOR') setActiveView('tarefas');
+    else setActiveView('dashboard');
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,23 +144,22 @@ const App: React.FC = () => {
       }
 
       // 1. Tentar login via Supabase Auth
-      const authUser = await supabaseService.signIn(loginForm.user, loginForm.pass);
+      let authUser = null;
+      try {
+        authUser = await supabaseService.signIn(loginForm.user, loginForm.pass);
+      } catch (e) {
+        console.warn("Auth falhou, tentando login local...");
+      }
 
       if (authUser) {
-        // 2. Buscar perfil completo na tabela employees
-        // Se for admin (Lucas), podemos tratar de forma especial ou ter um registro na tabela
+        // 2. Buscar perfil completo na tabela employees (Login via Auth)
         const employee = employees.find(emp => emp.username === loginForm.user);
 
         if (employee) {
           setUser(employee);
           localStorage.setItem('lm_user', JSON.stringify(employee));
           setShowLogin(false);
-
-          if (employee.role === 'MOTORISTA') setActiveView('delivery');
-          else if (employee.role === 'MONTADOR') setActiveView('assembly');
-          else if (employee.role === 'CONFERENTE') setActiveView('expedicao');
-          else if (employee.role === 'SUPERVISOR') setActiveView('tarefas');
-          else setActiveView('dashboard');
+          redirectByRole(employee);
         } else {
           // Caso seja o admin principal e não esteja na tabela (fallback)
           if (loginForm.user === 'lucas@moveislm.com') {
@@ -164,6 +172,22 @@ const App: React.FC = () => {
             setError('Perfil não encontrado para este usuário.');
             await supabaseService.signOut();
           }
+        }
+      } else {
+        // 3. Fallback: Tentar login direto pela tabela de funcionários (para usuários sem Auth cadastrado)
+        const employee = employees.find(emp =>
+          emp.username === loginForm.user &&
+          emp.password === loginForm.pass &&
+          emp.active
+        );
+
+        if (employee) {
+          setUser(employee);
+          localStorage.setItem('lm_user', JSON.stringify(employee));
+          setShowLogin(false);
+          redirectByRole(employee);
+        } else {
+          setError('Usuário ou senha incorretos.');
         }
       }
     } catch (err: any) {
@@ -190,18 +214,19 @@ const App: React.FC = () => {
       case 'dashboard': return <Dashboard user={user!} sales={sales} stores={stores} />;
       case 'catalog': return <ProductCatalog user={user} inventory={inventory} stores={stores} products={products} setProducts={setProducts} />;
       case 'customers': return <Customers customers={customers} setCustomers={setCustomers} />;
+      case 'products': return <Products user={user} products={products} inventory={inventory} stores={stores} employees={employees} />;
       case 'sales': return <Sales user={user} sales={sales} setSales={setSales} inventory={inventory} setInventory={setInventory} stores={stores} products={products} customers={customers} employees={employees} />;
       case 'inventory': return <Inventory inventory={inventory} setInventory={setInventory} products={products} stores={stores} />;
       case 'stores': return <Stores stores={stores} setStores={setStores} employees={employees} />;
-      case 'employees': return <EmployeesView employees={employees} setEmployees={setEmployees} stores={stores} />;
+      case 'employees': return <EmployeesView user={user} employees={employees} setEmployees={setEmployees} stores={stores} />;
       case 'romaneios': return <Romaneios sales={sales} setSales={setSales} employees={employees} />;
       case 'expedicao': return <Expedicao user={user} stores={stores} />;
       case 'tarefas': return <Tarefas user={user} stores={stores} />;
       case 'delivery':
-      case 'logistics': return <Logistics userId={user!.id} userRole={user!.role} sales={sales} setSales={setSales} />;
-      case 'assembly': return <Assembly userId={user!.id} userRole={user!.role} sales={sales} setSales={setSales} products={products} />;
+      case 'logistics': return <Logistics user={user} sales={sales} setSales={setSales} />;
+      case 'assembly': return <Assembly user={user} sales={sales} setSales={setSales} products={products} />;
       case 'settlement': return <ReceiptSettlement sales={sales} setSales={setSales} employees={employees} stores={stores} />;
-      case 'reports': return <Reports sales={sales} stores={stores} products={products} employees={employees} />;
+      case 'reports': return <Reports user={user} sales={sales} stores={stores} products={products} employees={employees} />;
       default: return <ProductCatalog user={user} inventory={inventory} stores={stores} products={products} setProducts={setProducts} />;
     }
   };

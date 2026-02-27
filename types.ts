@@ -1,14 +1,23 @@
 
 export enum OrderStatus {
-  PENDING = 'Pendente',
-  SHIPPED = 'Enviado',
-  DELIVERED = 'Entregue',
+  PENDING = 'Aguardando Entrega',
+  SHIPPED = 'Em Rota',
+  DELIVERED = 'Entregue - Aguardando Montagem',
   ASSEMBLY_PENDING = 'Montagem Pendente',
-  COMPLETED = 'Concluído',
-  CANCELED = 'Cancelado'
+  COMPLETED = 'Entregue',
+  CANCELED = 'Cancelada'
 }
 
-export type UserRole = 'ADMIN' | 'MOTORISTA' | 'MONTADOR' | 'CONFERENTE' | 'VENDEDOR' | 'GERENTE';
+export interface Romaneio {
+  id: string;
+  type: 'entrega' | 'montagem';
+  employeeId: string;
+  saleIds: string[];
+  createdAt?: string;
+  status: 'ATIVO' | 'CONCLUIDO';
+}
+
+export type UserRole = 'ADMIN' | 'MOTORISTA' | 'MONTADOR' | 'CONFERENTE' | 'VENDEDOR' | 'GERENTE' | 'SUPERVISOR';
 
 export interface Employee {
   id: string;

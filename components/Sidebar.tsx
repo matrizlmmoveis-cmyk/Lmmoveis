@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   ShoppingCart,
   Package,
+  Box,
   Truck,
   Wrench,
   BarChart3,
@@ -29,20 +30,21 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, role, onLogout }) => {
   const allItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'VENDEDOR'] },
-    { id: 'catalog', label: 'Catálogo', icon: Grid, roles: ['ADMIN', 'VENDEDOR', 'CONFERENTE'] },
-    { id: 'customers', label: 'Clientes', icon: Users, roles: ['ADMIN', 'VENDEDOR'] },
-    { id: 'sales', label: 'Vendas', icon: ShoppingCart, roles: ['ADMIN', 'VENDEDOR'] },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'SUPERVISOR', 'MASTER', 'GERENTE'] },
+    { id: 'catalog', label: 'Catálogo', icon: Grid, roles: ['ADMIN', 'VENDEDOR', 'CONFERENTE', 'SUPERVISOR', 'MASTER', 'GERENTE'] },
+    { id: 'customers', label: 'Clientes', icon: Users, roles: ['ADMIN', 'VENDEDOR', 'GERENTE', 'SUPERVISOR', 'MASTER'] },
+    { id: 'products', label: 'Produtos', icon: Box, roles: ['ADMIN', 'VENDEDOR', 'GERENTE', 'SUPERVISOR', 'MASTER'] },
+    { id: 'sales', label: 'Vendas', icon: ShoppingCart, roles: ['ADMIN', 'VENDEDOR', 'GERENTE', 'SUPERVISOR', 'MASTER'] },
     { id: 'inventory', label: 'Estoque', icon: Package, roles: ['ADMIN', 'CONFERENTE'] },
     { id: 'expedicao', label: 'Expedição', icon: PackageCheck, roles: ['ADMIN', 'CONFERENTE'] },
     { id: 'tarefas', label: 'Tarefas', icon: ClipboardCheck, roles: ['ADMIN', 'SUPERVISOR', 'MASTER'] },
-    { id: 'settlement', label: 'Acerto Entregas', icon: DollarSign, roles: ['ADMIN', 'SUPERVISOR', 'GERENTE', 'MASTER'] },
+    { id: 'settlement', label: 'Acerto Entregas', icon: DollarSign, roles: ['ADMIN', 'SUPERVISOR', 'MASTER'] },
     { id: 'stores', label: 'Unidades', icon: StoreIcon, roles: ['ADMIN'] },
-    { id: 'employees', label: 'Equipe', icon: ShieldAlert, roles: ['ADMIN'] },
+    { id: 'employees', label: 'Equipe', icon: ShieldAlert, roles: ['ADMIN', 'GERENTE'] },
     { id: 'romaneios', label: 'Gestão Romaneios', icon: ClipboardList, roles: ['ADMIN'] },
     { id: 'delivery', label: 'Minha Rota', icon: Truck, roles: ['ADMIN', 'MOTORISTA'] },
     { id: 'assembly', label: 'Minhas Montagens', icon: Wrench, roles: ['ADMIN', 'MONTADOR'] },
-    { id: 'reports', label: 'Relatórios', icon: BarChart3, roles: ['ADMIN', 'SUPERVISOR', 'MASTER'] },
+    { id: 'reports', label: 'Relatórios', icon: BarChart3, roles: ['ADMIN', 'SUPERVISOR', 'MASTER', 'GERENTE'] },
   ];
 
   const menuItems = allItems.filter(item => item.roles.includes(role));

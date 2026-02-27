@@ -191,17 +191,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
           {user && (
             <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-lg shadow-blue-100"><Plus className="w-5 h-5" /> Novo</button>
           )}
-          {!user && (
-            <button onClick={() => setIsCartOpen(true)} className="relative bg-slate-900 border border-slate-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 font-bold hover:bg-slate-800 transition-all">
-              <ShoppingCart className="w-5 h-5" />
-              <span className="hidden sm:inline">Carrinho</span>
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-900 animate-in zoom-in-50 duration-200">
-                  {totalItems}
-                </span>
-              )}
-            </button>
-          )}
+
         </div>
       </header>
 
@@ -272,15 +262,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                   </div>
                 )}
 
-                {!user && (
-                  <button
-                    onClick={() => addToCart(product)}
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 mt-2"
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    ADICIONAR AO CARRINHO
-                  </button>
-                )}
+
               </div>
             </div>
           );

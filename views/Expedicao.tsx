@@ -8,14 +8,13 @@ interface SaleItem {
     product_id: string;
     product_name?: string;
     quantity: number;
-    unit_price: number;
+    price: number;
     dispatch_status: string;
     sales?: {
         id: string;
         customer_name: string;
         store_id: string;
         created_at: string;
-        quote_number?: string;
     };
     products?: {
         name: string;
@@ -59,8 +58,8 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores }) => {
             const { data, error } = await supabase
                 .from('sale_items')
                 .select(`
-          id, sale_id, product_id, quantity, unit_price, dispatch_status,
-          sales!inner(id, customer_name, store_id, created_at, quote_number),
+          id, sale_id, product_id, quantity, price, dispatch_status,
+          sales!inner(id, customer_name, store_id, created_at),
           products(name, sku, image_url)
         `)
                 .eq('dispatch_status', 'PENDENTE')
@@ -174,7 +173,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores }) => {
                 .from('tasks')
                 .insert({
                     title: `Item Indisponível: ${item.products?.name || 'Produto'}`,
-                    description: `Item não encontrado no estoque durante expedição.\n\nVenda: ${item.sales?.quote_number || item.sale_id}\nCliente: ${item.sales?.customer_name || 'N/D'}\nProduto: ${item.products?.name || item.product_id}\nSKU: ${item.products?.sku || ''}\nQuantidade: ${item.quantity}`,
+                    description: `Item não encontrado no estoque durante expedição.\n\nVenda: ${item.sale_id}\nCliente: ${item.sales?.customer_name || 'N/D'}\nProduto: ${item.products?.name || item.product_id}\nSKU: ${item.products?.sku || ''}\nQuantidade: ${item.quantity}`,
                     type: 'ESTOQUE',
                     status: 'ABERTA',
                     priority: 'ALTA',
@@ -214,8 +213,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores }) => {
         return (
             sale?.customer_name?.toLowerCase().includes(s) ||
             saleId.toLowerCase().includes(s) ||
-            saleItems.some(i => i.products?.name?.toLowerCase().includes(s)) ||
-            sale?.quote_number?.toLowerCase().includes(s)
+            saleItems.some(i => i.products?.name?.toLowerCase().includes(s))
         );
     });
 
@@ -288,7 +286,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores }) => {
                     {filteredSales.map(([saleId, saleItems]) => {
                         const sale = saleItems[0].sales;
                         const isExpanded = expandedSale === saleId;
-                        const quoteNum = sale?.quote_number || saleId.substring(0, 8);
+                        const quoteNum = saleId;
                         const totalItems = saleItems.reduce((a, b) => a + b.quantity, 0);
 
                         return (

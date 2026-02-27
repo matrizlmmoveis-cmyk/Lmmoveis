@@ -5,12 +5,13 @@ import { Plus, X, Shield, User, Key, Save, CheckCircle, Trash2, Store as StoreIc
 import { supabaseService } from '../services/supabaseService.ts';
 
 interface EmployeesProps {
+  user: Employee | { id: 'admin', name: 'Lucas', role: 'ADMIN', storeId?: string } | null;
   employees: Employee[];
   setEmployees: React.Dispatch<React.SetStateAction<Employee[]>>;
   stores: Store[];
 }
 
-const EmployeesView: React.FC<EmployeesProps> = ({ employees, setEmployees, stores }) => {
+const EmployeesView: React.FC<EmployeesProps> = ({ user, employees, setEmployees, stores }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
@@ -20,7 +21,7 @@ const EmployeesView: React.FC<EmployeesProps> = ({ employees, setEmployees, stor
     username: '',
     password: '',
     active: true,
-    storeId: ''
+    storeId: user?.role === 'GERENTE' ? user.storeId : ''
   });
 
   const handleOpenModal = (emp?: Employee) => {
@@ -29,7 +30,14 @@ const EmployeesView: React.FC<EmployeesProps> = ({ employees, setEmployees, stor
       setFormData(emp);
     } else {
       setEditingEmployee(null);
-      setFormData({ name: '', role: 'VENDEDOR', username: '', password: '', active: true, storeId: '' });
+      setFormData({
+        name: '',
+        role: 'VENDEDOR',
+        username: '',
+        password: '',
+        active: true,
+        storeId: user?.role === 'GERENTE' ? user.storeId : ''
+      });
     }
     setIsModalOpen(true);
   };
@@ -61,7 +69,16 @@ const EmployeesView: React.FC<EmployeesProps> = ({ employees, setEmployees, stor
     }
   };
 
-  const roles: UserRole[] = ['ADMIN', 'MOTORISTA', 'MONTADOR', 'CONFERENTE', 'VENDEDOR', 'GERENTE'];
+  const roles: UserRole[] = user?.role === 'GERENTE'
+    ? ['VENDEDOR']
+    : ['ADMIN', 'MOTORISTA', 'MONTADOR', 'CONFERENTE', 'VENDEDOR', 'GERENTE', 'SUPERVISOR'];
+
+  const filteredEmployees = employees.filter(emp => {
+    if (user?.role === 'GERENTE') {
+      return emp.storeId === user.storeId;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -91,7 +108,7 @@ const EmployeesView: React.FC<EmployeesProps> = ({ employees, setEmployees, stor
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {employees.map(emp => (
+            {filteredEmployees.map(emp => (
               <tr key={emp.id} className="hover:bg-slate-50/50 group">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
@@ -113,9 +130,10 @@ const EmployeesView: React.FC<EmployeesProps> = ({ employees, setEmployees, stor
                 <td className="px-6 py-4 text-sm font-medium text-slate-500">{emp.username}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-lg text-[10px] font-black border ${emp.role === 'ADMIN' ? 'bg-red-50 text-red-600 border-red-100' :
-                      emp.role === 'MOTORISTA' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                        emp.role === 'MONTADOR' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          emp.role === 'GERENTE' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                    emp.role === 'MOTORISTA' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                      emp.role === 'MONTADOR' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        emp.role === 'GERENTE' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                          emp.role === 'SUPERVISOR' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                             'bg-slate-50 text-slate-600 border-slate-200'
                     }`}>
                     {emp.role}
@@ -163,7 +181,8 @@ const EmployeesView: React.FC<EmployeesProps> = ({ employees, setEmployees, stor
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase mb-1">Unidade Designada</label>
                   <select
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm"
+                    disabled={user?.role === 'GERENTE'}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm disabled:opacity-50"
                     value={formData.storeId || ''}
                     onChange={e => setFormData({ ...formData, storeId: e.target.value })}
                   >

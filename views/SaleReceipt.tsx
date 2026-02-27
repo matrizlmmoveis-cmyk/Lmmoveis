@@ -1,6 +1,5 @@
-
-import { Sale, Customer } from '../types.ts';
-import { STORES as STORES_DATA, SELLERS as SELLERS_DATA, PRODUCTS as PRODUCTS_DATA, INITIAL_CUSTOMERS } from '../constants.tsx';
+import React from 'react';
+import { Sale, Customer, Store, Product, Employee } from '../types.ts';
 import { Printer, ArrowLeft, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { nfEmailService } from '../services/nfe/nfeService';
 import { SEFAZTxtGenerator } from '../services/nfe/sefazGenerator';
@@ -9,15 +8,19 @@ import { NFeIssuer, NFeDest, NFeItem } from '../services/nfe/types';
 interface SaleReceiptProps {
   sale: Sale;
   onBack: () => void;
+  stores: Store[];
+  products: Product[];
+  employees: Employee[];
+  customers: Customer[];
 }
 
-const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack }) => {
+const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, products, employees, customers }) => {
   const [isEmitting, setIsEmitting] = React.useState(false);
   const [nfeStatus, setNfeStatus] = React.useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = React.useState('');
 
-  const store = STORES_DATA.find(s => s.id === sale.storeId);
-  const seller = SELLERS_DATA.find(s => s.id === sale.sellerId);
+  const store = stores.find(s => s.id === sale.storeId);
+  const seller = employees.find(s => s.id === sale.sellerId);
 
   const handlePrint = () => {
     window.print();
@@ -30,7 +33,7 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack }) => {
 
     try {
       // 1. Validar / Buscar dados completos do cliente
-      const customer = INITIAL_CUSTOMERS.find(c => c.document === sale.customerCpf);
+      const customer = customers.find(c => c.document === sale.customerCpf);
       if (!customer) throw new Error("Dados detalhados do cliente não encontrados no cadastro.");
 
       // 2. Preparar Emitente (Mock da Loja Selecionada)
@@ -63,7 +66,7 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack }) => {
 
       // 4. Preparar Itens
       const items: NFeItem[] = sale.items.map(item => {
-        const prod = PRODUCTS_DATA.find(p => p.id === item.productId);
+        const prod = products.find(p => p.id === item.productId);
         return {
           description: prod?.name || 'Produto',
           ncm: '94036000', // Mock NCM para móveis de madeira
@@ -129,8 +132,8 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack }) => {
             onClick={handleEmitNFe}
             disabled={isEmitting || nfeStatus === 'success'}
             className={`flex items-center gap-2 px-6 py-2 rounded-lg font-bold shadow-lg transition-all ${nfeStatus === 'success'
-                ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
-                : 'bg-emerald-600 text-white shadow-emerald-100 hover:bg-emerald-700 disabled:opacity-70'
+              ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
+              : 'bg-emerald-600 text-white shadow-emerald-100 hover:bg-emerald-700 disabled:opacity-70'
               }`}
           >
             {isEmitting ? (
@@ -166,7 +169,7 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack }) => {
           <div className="flex-1 px-4 py-2 flex flex-col justify-center">
             <h1 className="text-center font-black text-xl mb-0.5 uppercase tracking-tighter">Móveis LM - Gestão Pro</h1>
             <div className="text-[9px] font-bold text-center space-y-0 opacity-80">
-              {STORES_DATA.map(s => (
+              {stores.map(s => (
                 <p key={s.id} className="leading-tight uppercase">{s.name} - {s.phones?.[0]}</p>
               ))}
             </div>
@@ -174,7 +177,7 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack }) => {
           <div className="px-6 py-2 text-center border-l border-black flex flex-col justify-center bg-white shrink-0">
             <p className="text-[10px] font-black uppercase text-slate-400 mb-0">Código Venda</p>
             <p className="font-black text-[32px] text-blue-700 leading-none">#{sale.id}</p>
-            <p className="text-[10px] font-bold mt-1 uppercase opacity-60">Data: {sale.date}</p>
+            <p className="text-[10px] font-bold mt-1 uppercase opacity-60">Data: {new Date(sale.date).toLocaleDateString('pt-BR')}</p>
           </div>
         </div>
 
@@ -198,7 +201,7 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack }) => {
           </thead>
           <tbody className="text-[12px]">
             {sale.items.map((item, i) => {
-              const prod = PRODUCTS_DATA.find(p => p.id === item.productId);
+              const prod = products.find(p => p.id === item.productId);
               return (
                 <tr key={i} className="border-b border-black h-10">
                   <td className="border-r border-black px-3 uppercase font-black text-[11px]">{prod?.name}</td>

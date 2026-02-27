@@ -20,7 +20,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, sales, stores }) => {
 
   // Calculate dynamic data based on filteredSales (simplified for now)
   const totalSalesToday = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
-  const totalDeliveriesToday = filteredSales.filter(sale => sale.status === 'Enviado' || sale.status === 'Entregue').length;
+  const totalDeliveriesToday = filteredSales.filter(sale => sale.status === 'Em Rota' || sale.status === 'Entregue').length;
 
   const data = [
     { name: 'Seg', vendas: totalSalesToday * 0.8, entregas: totalDeliveriesToday * 0.7 },

@@ -1,22 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Truck, MapPin, CheckCircle2, Navigation, Package, Camera, X, Check, Eraser } from 'lucide-react';
-import { OrderStatus, Sale } from '../types.ts';
+import { OrderStatus, Sale, Employee } from '../types.ts';
 import { supabaseService } from '../services/supabaseService';
 
 interface LogisticsProps {
-  userId?: string;
-  userRole?: string;
+  user: Employee | { id: string, name: string, role: string, storeId?: string } | null;
   sales: Sale[];
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
 }
 
-const Logistics: React.FC<LogisticsProps> = ({ userId, userRole, sales, setSales }) => {
+const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales }) => {
   const [activeDeliveryId, setActiveDeliveryId] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
   // Auto-refresh inteligente (apenas para MOTORISTA e em primeiro plano)
   useEffect(() => {
-    if (userRole !== 'MOTORISTA') return;
+    if (user?.role !== 'MOTORISTA') return;
 
     let intervalId: NodeJS.Timeout;
 
@@ -51,7 +50,7 @@ const Logistics: React.FC<LogisticsProps> = ({ userId, userRole, sales, setSales
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [userRole, setSales]);
+  }, [user?.role, setSales]);
   const [photo, setPhoto] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null); // Para assinatura
@@ -60,7 +59,7 @@ const Logistics: React.FC<LogisticsProps> = ({ userId, userRole, sales, setSales
 
   const myDeliveries = sales.filter(s =>
     (s.status === OrderStatus.PENDING || s.status === OrderStatus.SHIPPED) &&
-    (userId === 'admin' || s.assignedDriverId === userId)
+    (user?.id === 'admin' || s.assignedDriverId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
   );
 
   // Lógica da Câmera
@@ -182,7 +181,7 @@ const Logistics: React.FC<LogisticsProps> = ({ userId, userRole, sales, setSales
           </div>
           <div className="bg-white/10 p-4 rounded-2xl">
             <p className="text-[10px] font-black text-white/40 uppercase">Concluídas</p>
-            <p className="text-2xl font-black">{sales.filter(s => s.status === OrderStatus.DELIVERED && s.assignedDriverId === userId).length}</p>
+            <p className="text-2xl font-black">{sales.filter(s => s.status === OrderStatus.DELIVERED && (s.assignedDriverId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))).length}</p>
           </div>
         </div>
       </header>

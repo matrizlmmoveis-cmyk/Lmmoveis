@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer } from '../types';
+import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer, Romaneio } from '../types';
 
 export const supabaseService = {
     // STORES
@@ -13,7 +13,15 @@ export const supabaseService = {
     async getEmployees() {
         const { data, error } = await supabase.from('employees').select('*');
         if (error) throw error;
-        return data as Employee[];
+        return (data || []).map((e: any) => ({
+            id: e.id,
+            name: e.name,
+            role: e.role,
+            username: e.username,
+            password: e.password,
+            active: e.active,
+            storeId: e.store_id
+        })) as Employee[];
     },
 
     // PRODUCTS
@@ -156,27 +164,59 @@ export const supabaseService = {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return data as Sale[];
+        return (data || []).map((s: any) => ({
+            id: s.id,
+            date: s.date,
+            customerName: s.customer_name,
+            customerCpf: s.customer_cpf,
+            customerPhone: s.customer_phone,
+            customerEmail: s.customer_email,
+            customerReference: s.customer_reference,
+            storeId: s.store_id,
+            sellerId: s.seller_id,
+            total: s.total,
+            status: s.status,
+            deliveryAddress: s.delivery_address,
+            deliveryObs: s.delivery_obs,
+            assemblyRequired: s.assembly_required,
+            assignedDriverId: s.assigned_driver_id,
+            assignedAssemblerId: s.assigned_assembler_id,
+            items: (s.items || []).map((i: any) => ({
+                productId: i.product_id,
+                quantity: i.quantity,
+                price: i.price,
+                discount: i.discount,
+                originalPrice: i.original_price,
+                locationId: i.location_id,
+                assemblyRequired: i.assembly_required
+            })),
+            payments: (s.payments || []).map((p: any) => ({
+                method: p.method,
+                amount: p.amount,
+                status: p.status
+            }))
+        })) as Sale[];
     },
 
     async createSale(sale: Sale) {
         // 1. Inserir cabeçalho da venda
         const { error: saleError } = await supabase.from('sales').insert({
             id: sale.id,
+            date: sale.date,
             customer_name: sale.customerName,
             customer_cpf: sale.customerCpf,
             customer_phone: sale.customerPhone,
             customer_email: sale.customerEmail,
             customer_reference: sale.customerReference,
-            store_id: sale.storeId,
-            seller_id: sale.sellerId,
+            store_id: sale.storeId || null,
+            seller_id: sale.sellerId || null, // send null not '' to avoid FK violation
             total: sale.total,
             status: sale.status,
             delivery_address: sale.deliveryAddress,
             delivery_obs: sale.deliveryObs,
             assembly_required: sale.assemblyRequired,
-            assigned_driver_id: sale.assignedDriverId,
-            assigned_assembler_id: sale.assignedAssemblerId
+            assigned_driver_id: sale.assignedDriverId || null,
+            assigned_assembler_id: sale.assignedAssemblerId || null
         });
 
         if (saleError) throw saleError;
@@ -189,7 +229,7 @@ export const supabaseService = {
             price: item.price,
             discount: item.discount,
             original_price: item.originalPrice,
-            location_id: item.locationId,
+            location_id: item.locationId || null,
             assembly_required: item.assemblyRequired
         }));
 
@@ -226,7 +266,7 @@ export const supabaseService = {
         if (extra?.assemblySignature) payload.assembly_signature = extra.assemblySignature;
         if (extra?.assemblyPhoto) payload.assembly_photo = extra.assemblyPhoto;
 
-        if (status === 'Entregue') {
+        if (status === 'Entregue' || status === 'Entregue - Aguardando Montagem') {
             payload.delivery_date = new Date().toISOString().split('T')[0];
         }
 
@@ -238,7 +278,7 @@ export const supabaseService = {
         if (error) throw error;
 
         // Liberar pagamentos pendentes de entrega para o Acerto Caixa
-        if (status === 'Entregue') {
+        if (status === 'Entregue' || status === 'Entregue - Aguardando Montagem') {
             await supabase
                 .from('sale_payments')
                 .update({ status: 'AGUARDANDO_ACERTO' })
@@ -272,7 +312,7 @@ export const supabaseService = {
             password: employee.password,
             role: employee.role,
             active: employee.active,
-            store_id: employee.storeId
+            store_id: employee.storeId || null
         };
         const { error } = await supabase.from('employees').insert(payload);
         if (error) throw error;
@@ -286,7 +326,7 @@ export const supabaseService = {
         if (updates.password !== undefined) payload.password = updates.password;
         if (updates.role !== undefined) payload.role = updates.role;
         if (updates.active !== undefined) payload.active = updates.active;
-        if (updates.storeId !== undefined) payload.store_id = updates.storeId;
+        if (updates.storeId !== undefined) payload.store_id = updates.storeId || null;
 
         const { error } = await supabase.from('employees').update(payload).eq('id', id);
         if (error) throw error;
@@ -326,12 +366,17 @@ export const supabaseService = {
 
     // AUTH
     async signIn(email: string, pass: string) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password: pass
-        });
-        if (error) throw error;
-        return data.user;
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password: pass
+            });
+            if (error) return null;
+            return data.user;
+        } catch (err) {
+            console.error("Auth signin error:", err);
+            return null;
+        }
     },
 
     async signOut() {
@@ -397,6 +442,72 @@ export const supabaseService = {
         }
         const { error } = await supabase.from('customers').update(payload).eq('id', id);
         if (error) throw error;
+        return true;
+    },
+
+    // ROMANEIOS
+    async getRomaneios() {
+        const { data, error } = await supabase.from('romaneios').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        return (data || []).map((r: any) => ({
+            id: r.id.toString(),
+            type: r.type,
+            employeeId: r.employee_id,
+            saleIds: r.sale_ids,
+            createdAt: r.created_at,
+            status: r.status
+        })) as Romaneio[];
+    },
+
+    async createRomaneio(romaneio: Omit<Romaneio, 'id'>) {
+        const { data, error } = await supabase.from('romaneios').insert({
+            type: romaneio.type,
+            employee_id: romaneio.employeeId,
+            sale_ids: romaneio.saleIds,
+            status: romaneio.status || 'ATIVO'
+        }).select().single();
+        if (error) throw error;
+        return data.id.toString();
+    },
+
+    async cancelSale(saleId: string) {
+        // 1. Buscar itens da venda para estornar estoque
+        const { data: items, error: FetchError } = await supabase
+            .from('sale_items')
+            .select('product_id, quantity, location_id')
+            .eq('sale_id', saleId);
+
+        if (FetchError) throw FetchError;
+
+        // 2. Estornar cada item no estoque
+        for (const item of (items || [])) {
+            // Obter quantidade atual
+            const { data: invData } = await supabase
+                .from('inventory')
+                .select('quantity')
+                .eq('product_id', item.product_id)
+                .eq('location_id', item.location_id)
+                .single();
+
+            const currentQty = invData?.quantity || 0;
+            const newQty = currentQty + item.quantity;
+
+            await supabase
+                .from('inventory')
+                .upsert({
+                    product_id: item.product_id,
+                    location_id: item.location_id,
+                    quantity: newQty
+                }, { onConflict: 'product_id,location_id' });
+        }
+
+        // 3. Atualizar status da venda para Cancelada
+        const { error: saleError } = await supabase
+            .from('sales')
+            .update({ status: 'Cancelada' }) // Usando o rótulo do enum atualizado
+            .eq('id', saleId);
+
+        if (saleError) throw saleError;
         return true;
     }
 };

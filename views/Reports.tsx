@@ -4,6 +4,7 @@ import { Download, FileText, Calendar } from 'lucide-react';
 import { Sale, Store, Product, Employee } from '../types.ts';
 
 interface ReportsProps {
+  user: Employee | { id: 'admin', name: 'Lucas', role: 'ADMIN', storeId?: string } | null;
   sales: Sale[];
   stores: Store[];
   products: Product[];
@@ -12,9 +13,9 @@ interface ReportsProps {
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#f59e0b', '#6366f1'];
 
-const Reports: React.FC<ReportsProps> = ({ sales, stores, products, employees }) => {
+const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employees }) => {
   const [dateFilter, setDateFilter] = React.useState('this_month');
-  const [storeFilter, setStoreFilter] = React.useState('all');
+  const [storeFilter, setStoreFilter] = React.useState(user?.role === 'GERENTE' ? (user.storeId || 'all') : 'all');
   const [sellerFilter, setSellerFilter] = React.useState('all');
 
   const filteredSales = useMemo(() => {
@@ -92,9 +93,10 @@ const Reports: React.FC<ReportsProps> = ({ sales, stores, products, employees })
           </select>
 
           <select
+            disabled={user?.role === 'GERENTE'}
             value={storeFilter}
             onChange={(e) => setStoreFilter(e.target.value)}
-            className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all outline-none"
+            className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all outline-none disabled:opacity-50"
           >
             <option value="all">Todas as Lojas</option>
             {stores.map(s => (
