@@ -26,6 +26,8 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
     reason: ''
   });
   const [isAdjusting, setIsAdjusting] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
 
   const handleAdjustmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,19 +253,65 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
               </div>
 
               <div className="space-y-4">
-                <div>
+                <div className="relative">
                   <label className="block text-xs font-black text-slate-400 uppercase mb-1">Produto</label>
-                  <select
-                    required
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm text-slate-700"
-                    value={adjustForm.productId}
-                    onChange={e => setAdjustForm({ ...adjustForm, productId: e.target.value })}
-                  >
-                    <option value="">Selecione o produto</option>
-                    {products.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} - {p.sku}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm text-slate-700 focus:border-blue-500 transition-all"
+                      placeholder="Pesquisar por nome ou SKU..."
+                      value={productSearch || (adjustForm.productId ? products.find(p => p.id === adjustForm.productId)?.name : '')}
+                      onFocus={() => { setProductSearch(''); setIsProductDropdownOpen(true); }}
+                      onChange={e => { setProductSearch(e.target.value); setAdjustForm({ ...adjustForm, productId: '' }); setIsProductDropdownOpen(true); }}
+                      onBlur={() => setTimeout(() => setIsProductDropdownOpen(false), 200)}
+                    />
+                    {isProductDropdownOpen && (
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto">
+                        {products
+                          .filter(p => {
+                            const q = productSearch.toLowerCase();
+                            return !q || p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q);
+                          })
+                          .slice(0, 50)
+                          .map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onMouseDown={() => {
+                                setAdjustForm({ ...adjustForm, productId: p.id });
+                                setProductSearch('');
+                                setIsProductDropdownOpen(false);
+                              }}
+                              className="w-full px-4 py-2.5 text-left hover:bg-blue-50 transition-colors border-b border-slate-50 last:border-0"
+                            >
+                              <p className="font-bold text-xs text-slate-900 uppercase">{p.name}</p>
+                              <p className="text-[10px] text-slate-400 font-medium">SKU: {p.sku || 'N/A'}</p>
+                            </button>
+                          ))
+                        }
+                        {products.filter(p => {
+                          const q = productSearch.toLowerCase();
+                          return !q || p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q);
+                        }).length === 0 && (
+                            <p className="px-4 py-3 text-xs text-slate-400 font-medium text-center">Nenhum produto encontrado</p>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                  {adjustForm.productId && !productSearch && (
+                    <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-[10px] font-black text-blue-700 uppercase">
+                          {products.find(p => p.id === adjustForm.productId)?.name}
+                        </p>
+                        <p className="text-[9px] text-blue-500 font-medium">
+                          SKU: {products.find(p => p.id === adjustForm.productId)?.sku || 'N/A'}
+                        </p>
+                      </div>
+                      <button type="button" onClick={() => setAdjustForm({ ...adjustForm, productId: '' })} className="text-blue-400 hover:text-blue-600 text-xs font-bold px-1">✕</button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase mb-1">Local (CD ou Loja)</label>
