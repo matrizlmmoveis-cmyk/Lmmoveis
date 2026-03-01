@@ -159,88 +159,162 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, product
         </div>
       </div>
 
-      <div className="border-2 border-black p-4 text-[12px] text-black leading-snug font-sans bg-white">
-        <div className="bg-[#f8fafc] flex items-stretch mb-4 border border-black overflow-hidden">
-          <div className="bg-[#1e293b] p-4 flex items-center justify-center w-28 border-r border-black shrink-0">
-            <div className="border-2 border-white p-1 rounded-sm text-white font-black text-center">
-              LM
-            </div>
+      {/* PRINTABLE RECEIPT */}
+      <div className="border-2 border-black text-[11.5px] text-black font-sans bg-white max-w-[780px] mx-auto" style={{ minHeight: '1050px', display: 'flex', flexDirection: 'column' }}>
+
+        {/* ── HEADER ─────────────────────────────────── */}
+        <div className="flex border-b-2 border-black">
+          {/* Logo — inline SVG, always renders in print */}
+          <div className="flex items-center justify-center shrink-0 border-r border-black" style={{ width: '100px', minHeight: '90px', backgroundColor: '#2d2d2d' }}>
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* House outline */}
+              <polygon points="30,6 56,28 52,28 52,54 8,54 8,28 4,28" fill="none" stroke="white" strokeWidth="3" strokeLinejoin="round" />
+              {/* Door */}
+              <rect x="24" y="38" width="12" height="16" fill="white" />
+              {/* Sofa body */}
+              <rect x="14" y="32" width="32" height="10" rx="3" fill="white" />
+              {/* Sofa arms */}
+              <rect x="11" y="30" width="7" height="12" rx="2" fill="white" />
+              <rect x="42" y="30" width="7" height="12" rx="2" fill="white" />
+              {/* Sofa back */}
+              <rect x="14" y="26" width="32" height="8" rx="2" fill="white" />
+            </svg>
           </div>
-          <div className="flex-1 px-4 py-2 flex flex-col justify-center">
-            <h1 className="text-center font-black text-xl mb-0.5 uppercase tracking-tighter">Móveis LM - Gestão Pro</h1>
-            <div className="text-[9px] font-bold text-center space-y-0 opacity-80">
+
+          {/* Company name + stores */}
+          <div className="flex-1 px-6 py-3 flex flex-col justify-center" style={{ backgroundColor: '#e8f5e9' }}>
+            <h1 className="text-center font-black uppercase leading-tight tracking-tight" style={{ fontSize: '17px' }}>
+              GRUPO FERNANDES MÓVEIS
+            </h1>
+            <div className="text-center mt-2 space-y-0.5" style={{ fontSize: '9px', fontWeight: 600 }}>
               {stores.map(s => (
-                <p key={s.id} className="leading-tight uppercase">{s.name} - {s.phones?.[0]}</p>
+                <p key={s.id} className="leading-snug uppercase">
+                  {s.name.toUpperCase()}
+                  {s.location ? ` - ${s.location.toUpperCase()}` : ''}
+                  {s.phones?.[0] ? ` - ${s.phones[0]}` : ''}
+                </p>
               ))}
             </div>
           </div>
-          <div className="px-6 py-2 text-center border-l border-black flex flex-col justify-center bg-white shrink-0">
-            <p className="text-[10px] font-black uppercase text-slate-400 mb-0">Código Venda</p>
-            <p className="font-black text-[32px] text-blue-700 leading-none">#{sale.id}</p>
-            <p className="text-[10px] font-bold mt-1 uppercase opacity-60">Data: {new Date(sale.date).toLocaleDateString('pt-BR')}</p>
+
+          {/* Pedido + date */}
+          <div className="shrink-0 border-l border-black px-5 py-3 flex flex-col justify-center text-right bg-white" style={{ minWidth: '140px' }}>
+            <p className="font-black uppercase" style={{ fontSize: '11px' }}>PEDIDO {sale.id}</p>
+            <p className="font-bold mt-1" style={{ fontSize: '10px' }}>
+              Data: {new Date(sale.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-x-4 gap-y-1 mb-4 border border-black p-3 bg-slate-50/50">
-          <div className="col-span-8"><span className="font-black uppercase text-[9px] text-slate-400">Comprador:</span> <p className="font-black uppercase text-[14px]">{sale.customerName}</p></div>
-          <div className="col-span-4"><span className="font-black uppercase text-[9px] text-slate-400">CPF/CNPJ:</span> <p className="font-bold">{sale.customerCpf}</p></div>
-          <div className="col-span-12 mt-1"><span className="font-black uppercase text-[9px] text-slate-400">Local de Entrega:</span> <p className="font-bold uppercase text-[12px]">{sale.deliveryAddress}</p></div>
-          <div className="col-span-12"><span className="font-black uppercase text-[9px] text-slate-400">Referência:</span> <p className="italic uppercase text-[10px] font-medium">{sale.customerReference}</p></div>
-          <div className="col-span-6 mt-1"><span className="font-black uppercase text-[9px] text-slate-400">Contato:</span> <p className="font-bold">{sale.customerPhone}</p></div>
-          <div className="col-span-6 mt-1"><span className="font-black uppercase text-[9px] text-slate-400">Vendedor(a):</span> <p className="font-bold uppercase">{seller?.name}</p></div>
+
+        {/* ── CLIENTE ──────────────────────────────────── */}
+        <div className="px-4 py-3 border-b border-black space-y-1.5">
+          <div className="flex gap-8 flex-wrap">
+            <p><strong>Cliente:</strong> {sale.customerName}</p>
+            <p><strong>CPF:</strong> {sale.customerCpf}</p>
+          </div>
+          <p><strong>Telefone:</strong> {sale.customerPhone}</p>
+          <p><strong>Endereço:</strong> {sale.deliveryAddress}</p>
+          {sale.customerReference && <p><strong>Referencia:</strong> {sale.customerReference}</p>}
+          <div className="flex gap-8 flex-wrap">
+            {sale.customerEmail && <p><strong>Email:</strong> {sale.customerEmail}</p>}
+            <p><strong>Vendedor:</strong> {seller?.name || '—'}</p>
+          </div>
+          {sale.deliveryObs && (
+            <p className="pt-1"><strong>OBS:</strong> {sale.deliveryObs}</p>
+          )}
         </div>
 
-        <table className="w-full border-collapse border border-black mb-4">
-          <thead className="bg-slate-100">
-            <tr className="border-b border-black text-[10px] font-black uppercase">
-              <th className="border-r border-black p-2 text-left">Itens do Pedido</th>
-              <th className="border-r border-black p-2 text-center w-14">QTD</th>
-              <th className="border-r border-black p-2 text-right w-24">Unit.</th>
-              <th className="p-2 text-right w-28">Total Item</th>
+        {/* ── TABELA DE ITENS ───────────────────────────── */}
+        <table className="w-full border-collapse border-b border-black" style={{ flex: 1 }}>
+          <thead className="bg-gray-100">
+            <tr className="text-[10px] font-black uppercase border-b border-black">
+              <th className="border-r border-black px-3 py-2 text-left">Produto</th>
+              <th className="border-r border-black px-3 py-2 text-center w-12">QTD</th>
+              <th className="border-r border-black px-3 py-2 text-center w-24">CD</th>
+              <th className="border-r border-black px-3 py-2 text-right w-28">V. Unit</th>
+              <th className="border-r border-black px-3 py-2 text-right w-28">Total</th>
+              <th className="px-3 py-2 text-center w-16">% Desc</th>
             </tr>
           </thead>
-          <tbody className="text-[12px]">
+          <tbody>
             {sale.items.map((item, i) => {
               const prod = products.find(p => p.id === item.productId);
+              const sourceStore = stores.find(s => s.id === item.locationId);
+              const total = item.price * item.quantity;
               return (
-                <tr key={i} className="border-b border-black h-10">
-                  <td className="border-r border-black px-3 uppercase font-black text-[11px]">{prod?.name}</td>
-                  <td className="border-r border-black px-2 text-center font-black">{item.quantity}</td>
-                  <td className="border-r border-black px-3 text-right">R$ {item.price.toFixed(2)}</td>
-                  <td className="px-3 text-right font-black text-blue-800">R$ {(item.price * item.quantity * (1 - item.discount / 100)).toFixed(2)}</td>
+                <tr key={i} className="border-b border-black" style={{ height: '36px' }}>
+                  <td className="border-r border-black px-3 py-2 font-medium uppercase text-[10.5px]">{prod?.name}</td>
+                  <td className="border-r border-black px-3 py-2 text-center">{item.quantity}</td>
+                  <td className="border-r border-black px-3 py-2 text-center text-[10px]">{sourceStore?.name || '—'}</td>
+                  <td className="border-r border-black px-3 py-2 text-right">R$ {item.price.toFixed(2)}</td>
+                  <td className="border-r border-black px-3 py-2 text-right font-bold">R$ {total.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-center">{item.discount > 0 ? `${item.discount.toFixed(0)}%` : '0'}</td>
                 </tr>
-              )
+              );
             })}
-            {[...Array(4)].map((_, i) => (
-              <tr key={`empty-${i}`} className="border-b border-black h-8 opacity-20">
-                <td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td></td>
+            {/* Linhas vazias — altura maior para preencher A4 */}
+            {[...Array(Math.max(0, 8 - sale.items.length))].map((_, i) => (
+              <tr key={`empty-${i}`} className="border-b border-black" style={{ height: '36px' }}>
+                <td className="border-r border-black" />
+                <td className="border-r border-black" />
+                <td className="border-r border-black" />
+                <td className="border-r border-black" />
+                <td className="border-r border-black" />
+                <td />
               </tr>
             ))}
-          </tbody>
-          <tfoot>
-            <tr className="font-black text-[18px] bg-slate-50">
-              <td colSpan={3} className="text-right p-3 border-r border-black uppercase tracking-widest text-slate-400">Valor Total do Pedido:</td>
-              <td className="p-3 text-right text-blue-700">R$ {sale.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+            {/* Total row */}
+            <tr>
+              <td colSpan={4} className="border-r border-black px-3 py-2 text-right font-black text-[12px] uppercase">
+                Total:
+              </td>
+              <td colSpan={2} className="px-3 py-2 text-right font-black text-[12px]">
+                R$ {sale.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </td>
             </tr>
-          </tfoot>
+          </tbody>
         </table>
 
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="border border-black p-3 h-28 bg-amber-50/30">
-            <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Informações Adicionais / Entrega:</p>
-            <p className="font-bold uppercase text-[11px] leading-relaxed">{sale.deliveryObs || 'Sem observações adicionais.'}</p>
-            {sale.assemblyRequired && (
-              <p className="mt-2 text-emerald-700 font-black text-[10px] border border-emerald-200 bg-emerald-50 px-2 py-1 rounded inline-block">SOLICITADO MONTAGEM</p>
-            )}
+        {/* ── PAGAMENTOS ────────────────────────────────── */}
+        <div className="px-4 py-3 border-b border-black">
+          <p className="text-[11.5px] font-medium">
+            {(sale.payments || []).map(p => `${p.method}: $ ${p.amount.toFixed(2)}`).join(' / ')}
+            {' /'}
+          </p>
+        </div>
+
+        {/* ── RETIRA / MOSTRUÁRIO + DATA ─────────────────── */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-black">
+          <div className="flex gap-10">
+            <span className="text-[11.5px]"><strong>Retira:</strong>&nbsp;Sim&nbsp;(&nbsp;&nbsp;&nbsp;)&nbsp;&nbsp;&nbsp;Não&nbsp;(&nbsp;&nbsp;&nbsp;)</span>
+            <span className="text-[11.5px]"><strong>Mostruário:</strong>&nbsp;Sim&nbsp;(&nbsp;&nbsp;&nbsp;)&nbsp;&nbsp;&nbsp;Não&nbsp;(&nbsp;&nbsp;&nbsp;)</span>
           </div>
-          <div className="border border-black p-3 flex flex-col justify-end items-center">
-            <div className="w-full border-t border-black mb-1"></div>
-            <p className="text-[9px] font-black uppercase text-slate-400">Assinatura de Recebimento</p>
+          <span className="text-[10.5px] font-bold">
+            Rio de Janeiro, {new Date(sale.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </span>
+        </div>
+
+        {/* ── AVISOS ────────────────────────────────────── */}
+        <div className="grid grid-cols-2 border-b border-black text-[9.5px]">
+          <div className="border-r border-black px-3 py-3 leading-relaxed">
+            <strong>OBS:</strong> O Atacadão dos Móveis não possui carro de entregas! Frete por conta do cliente.
+            Conferir no ato do recebimento, sendo identificado alguma avaria ou falta de volumes entrar em
+            contato com a loja antes do recebimento.
+          </div>
+          <div className="px-3 py-3 leading-relaxed">
+            <strong>Atenção:</strong> Em caso de necessidade de Assistência Técnica o prazo para envio da(s) peça(s) faltante
+            ou danificada são de 30 dias úteis.<br />
+            Não trocamos peças de mostruário.
           </div>
         </div>
 
-        <div className="text-[8px] text-center font-bold text-slate-400 uppercase tracking-[0.2em] border-t border-slate-100 pt-2">
-          Este documento é para controle interno e romaneio - Verifique seus produtos no ato da entrega - ID {sale.id}
+        {/* ── ASSINATURA ────────────────────────────────── */}
+        <div className="flex justify-center" style={{ paddingTop: '60px', paddingBottom: '24px' }}>
+          <div className="text-center">
+            <div className="border-t border-black mb-1" style={{ width: '280px' }} />
+            <p className="text-[10.5px] font-bold uppercase">Assinatura do Cliente</p>
+          </div>
         </div>
       </div>
     </div>
@@ -248,3 +322,6 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, product
 };
 
 export default SaleReceipt;
+
+
+

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Store, Employee } from '../types.ts';
-import { Building2, Users, MapPin, Plus, UserPlus, Mail, Phone, X, Save, Settings } from 'lucide-react';
+import { Building2, Users, MapPin, Plus, UserPlus, Mail, Phone, X, Save, Settings, Warehouse, Store as StoreIcon2 } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService.ts';
 
 interface StoresProps {
@@ -9,6 +9,12 @@ interface StoresProps {
   setStores: React.Dispatch<React.SetStateAction<Store[]>>;
   employees: Employee[];
 }
+
+const storeTypeLabels: Record<string, { label: string; badge: string; color: string; icon: React.ReactNode }> = {
+  STORE_STOCK: { label: 'Loja / Ponto de Venda', badge: 'LOJA', color: 'bg-blue-100 text-blue-700', icon: <StoreIcon2 className="w-5 h-5" /> },
+  CD: { label: 'CD Principal', badge: 'CD PRINCIPAL', color: 'bg-purple-100 text-purple-700', icon: <Warehouse className="w-5 h-5" /> },
+  CD_LOJA: { label: 'CD da Loja', badge: 'CD LOJA', color: 'bg-amber-100 text-amber-700', icon: <Warehouse className="w-5 h-5" /> },
+};
 
 const Stores: React.FC<StoresProps> = ({ stores, setStores, employees }) => {
   const [tab, setTab] = useState<'stores' | 'sellers'>('stores');
@@ -46,7 +52,7 @@ const Stores: React.FC<StoresProps> = ({ stores, setStores, employees }) => {
           name: formData.name || '',
           location: formData.location || '',
           phones: formData.phones || [],
-          type: 'STORE_STOCK' // Default
+          type: formData.type as Store['type'] || 'STORE_STOCK'
         };
         await supabaseService.createStore(newStore);
         setStores([...stores, newStore]);
@@ -57,6 +63,13 @@ const Stores: React.FC<StoresProps> = ({ stores, setStores, employees }) => {
       alert("Erro ao salvar no banco de dados.");
     }
   };
+
+  // Agrupar lojas por tipo para exibição organizada
+  const storeGroups: { label: string; types: Store['type'][]; items: Store[] }[] = [
+    { label: 'Lojas / Pontos de Venda', types: ['STORE_STOCK'], items: stores.filter(s => s.type === 'STORE_STOCK') },
+    { label: 'CDs Principais', types: ['CD'], items: stores.filter(s => s.type === 'CD') },
+    { label: 'CDs das Lojas', types: ['CD_LOJA'], items: stores.filter(s => s.type === 'CD_LOJA') },
+  ];
 
   return (
     <div className="space-y-6">
@@ -82,50 +95,66 @@ const Stores: React.FC<StoresProps> = ({ stores, setStores, employees }) => {
       </header>
 
       {tab === 'stores' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {stores.map((store) => (
-            <div key={store.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                  <Building2 className="w-6 h-6" />
-                </div>
-                <button
-                  onClick={() => handleOpenModal(store)}
-                  className="p-2 opacity-0 group-hover:opacity-100 hover:bg-slate-100 rounded-lg transition-all text-slate-400 hover:text-blue-600"
-                >
-                  <Settings className="w-5 h-5" />
-                </button>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 uppercase">{store.name}</h3>
-              <div className="flex items-start gap-2 text-slate-400 mt-2 mb-6 min-h-[40px]">
-                <MapPin className="w-4 h-4 shrink-0 mt-1" />
-                <span className="text-xs">{store.location}</span>
-              </div>
+        <div className="space-y-8">
+          {storeGroups.map(group => group.items.length > 0 && (
+            <div key={group.label}>
+              <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">{group.label}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {group.items.map((store) => {
+                  const typeInfo = storeTypeLabels[store.type] || storeTypeLabels['STORE_STOCK'];
+                  return (
+                    <div key={store.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className={`p-3 rounded-xl ${store.type === 'CD' || store.type === 'CD_LOJA' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
+                          {typeInfo.icon}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${typeInfo.color}`}>{typeInfo.badge}</span>
+                          <button
+                            onClick={() => handleOpenModal(store)}
+                            className="p-2 opacity-0 group-hover:opacity-100 hover:bg-slate-100 rounded-lg transition-all text-slate-400 hover:text-blue-600"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 uppercase">{store.name}</h3>
+                      <div className="flex items-start gap-2 text-slate-400 mt-2 mb-6 min-h-[40px]">
+                        <MapPin className="w-4 h-4 shrink-0 mt-1" />
+                        <span className="text-xs">{store.location || '—'}</span>
+                      </div>
 
-              <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm font-semibold text-slate-600">
-                    {employees.filter(s => s.storeId === store.id && s.role === 'VENDEDOR').length} Vendedores
-                  </span>
-                </div>
-                <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-1 rounded-lg">ATIVO</span>
+                      <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-slate-400" />
+                          <span className="text-sm font-semibold text-slate-600">
+                            {employees.filter(s => s.storeId === store.id && s.role === 'VENDEDOR').length} Vendedores
+                          </span>
+                        </div>
+                        <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-1 rounded-lg">ATIVO</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
-          <button
-            onClick={() => handleOpenModal()}
-            className="border-2 border-dashed border-slate-200 p-6 rounded-2xl flex flex-col items-center justify-center gap-3 text-slate-400 hover:text-blue-500 hover:border-blue-200 transition-all hover:bg-blue-50/30"
-          >
-            <Plus className="w-10 h-10" />
-            <span className="font-bold">Adicionar Unidade</span>
-          </button>
+
+          {/* Botão para adicionar */}
+          <div>
+            <button
+              onClick={() => handleOpenModal()}
+              className="border-2 border-dashed border-slate-200 p-6 rounded-2xl flex items-center justify-center gap-3 text-slate-400 hover:text-blue-500 hover:border-blue-200 transition-all hover:bg-blue-50/30 w-full"
+            >
+              <Plus className="w-8 h-8" />
+              <span className="font-bold">Adicionar Unidade / CD</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
             <h2 className="font-bold text-slate-900 uppercase">Equipe de Vendas</h2>
-            {/* O modal de Criação fica em "Equipe" (Employees.tsx). O botão aqui serve de atalho prático. */}
             <button
               onClick={() => alert("Para adicionar vendedores, acesse o menu 'Equipe' na barra lateral.")}
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-100"
@@ -182,7 +211,27 @@ const Stores: React.FC<StoresProps> = ({ stores, setStores, employees }) => {
             <form onSubmit={handleSaveStore} className="p-6 space-y-4">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-black text-slate-400 uppercase mb-1">Nome da Loja</label>
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-1">Tipo de Unidade</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['STORE_STOCK', 'CD', 'CD_LOJA'] as const).map(type => {
+                      const info = storeTypeLabels[type];
+                      const isSelected = formData.type === type;
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, type })}
+                          className={`p-3 rounded-xl border-2 text-center transition-all ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}
+                        >
+                          <span className={`text-xs font-black block ${isSelected ? 'text-blue-700' : 'text-slate-500'}`}>{info.badge}</span>
+                          <span className={`text-[10px] block mt-0.5 ${isSelected ? 'text-blue-500' : 'text-slate-400'}`}>{info.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-1">Nome da Unidade</label>
                   <input
                     required
                     type="text"
@@ -195,7 +244,6 @@ const Stores: React.FC<StoresProps> = ({ stores, setStores, employees }) => {
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase mb-1">Endereço Completo</label>
                   <input
-                    required
                     type="text"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 transition-all outline-none"
                     placeholder="Av. Exemplo, 123 - Centro"
@@ -206,7 +254,6 @@ const Stores: React.FC<StoresProps> = ({ stores, setStores, employees }) => {
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase mb-1">Telefone de Contato</label>
                   <input
-                    required
                     type="text"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 transition-all outline-none"
                     placeholder="(00) 00000-0000"

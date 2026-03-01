@@ -250,10 +250,12 @@ export const supabaseService = {
         return true;
     },
 
-    async updateInventory(productId: string, locationId: string, quantity: number) {
+    async updateInventory(productId: string, locationId: string, quantity: number, type?: string) {
+        const payload: any = { product_id: productId, location_id: locationId, quantity };
+        if (type) payload.type = type;
         const { error } = await supabase
             .from('inventory')
-            .upsert({ product_id: productId, location_id: locationId, quantity }, { onConflict: 'product_id,location_id' });
+            .upsert(payload, { onConflict: 'product_id,location_id' });
 
         if (error) throw error;
         return true;
@@ -334,7 +336,13 @@ export const supabaseService = {
     },
 
     async createStore(store: Store) {
-        const payload: Record<string, any> = { id: store.id, name: store.name, type: store.type };
+        const payload: Record<string, any> = {
+            id: store.id,
+            name: store.name,
+            type: store.type,
+            location: store.location || null,
+            phones: store.phones || []
+        };
         const { error } = await supabase.from('stores').insert(payload);
         if (error) throw error;
         return true;
@@ -344,8 +352,52 @@ export const supabaseService = {
         const payload: Record<string, any> = {};
         if (updates.name !== undefined) payload.name = updates.name;
         if (updates.type !== undefined) payload.type = updates.type;
+        if (updates.location !== undefined) payload.location = updates.location;
+        if (updates.phones !== undefined) payload.phones = updates.phones;
 
         const { error } = await supabase.from('stores').update(payload).eq('id', id);
+        if (error) throw error;
+        return true;
+    },
+
+    async createTask(task: {
+        title: string;
+        description?: string;
+        type: string;
+        status?: string;
+        priority: string;
+        created_by?: string;
+        assigned_to?: string;
+        assigned_to_user_id?: string;
+        store_id?: string;
+        source_store_id?: string;
+        sale_id?: string;
+        product_name?: string;
+    }) {
+        const { error } = await supabase.from('tasks').insert({
+            title: task.title,
+            description: task.description || null,
+            type: task.type,
+            status: task.status || 'ABERTA',
+            priority: task.priority,
+            created_by: task.created_by || null,
+            assigned_to: task.assigned_to || null,
+            assigned_to_user_id: task.assigned_to_user_id || null,
+            store_id: task.store_id || null,
+            source_store_id: task.source_store_id || null,
+            sale_id: task.sale_id || null,
+            product_name: task.product_name || null,
+        });
+        if (error) throw error;
+        return true;
+    },
+
+    async respondTask(taskId: string, response: string, respondedBy: string) {
+        const { error } = await supabase.from('tasks').update({
+            response,
+            responded_by: respondedBy,
+            responded_at: new Date().toISOString(),
+        }).eq('id', taskId);
         if (error) throw error;
         return true;
     },
@@ -509,5 +561,56 @@ export const supabaseService = {
 
         if (saleError) throw saleError;
         return true;
-    }
+    },
+
+    // Marca a venda como "Cancelamento Pendente" SEM mexer no estoque
+    async markSaleCancelPending(saleId: string) {
+        const { error } = await supabase
+            .from('sales')
+            .update({ status: 'Cancelamento Pendente' })
+            .eq('id', saleId);
+        if (error) throw error;
+        return true;
+    },
+
+    // Devolve o estoque dos itens da venda para um CD/loja escolhido e cancela a venda
+    async restoreInventoryToLocation(saleId: string, targetLocationId: string) {
+        // 1. Buscar itens da venda
+        const { data: items, error: fetchErr } = await supabase
+            .from('sale_items')
+            .select('product_id, quantity, location_id')
+            .eq('sale_id', saleId);
+        if (fetchErr) throw fetchErr;
+
+        // 2. Devolver cada item ao CD escolhido
+        for (const item of (items || [])) {
+            const { data: invData } = await supabase
+                .from('inventory')
+                .select('quantity, type')
+                .eq('product_id', item.product_id)
+                .eq('location_id', targetLocationId)
+                .single();
+
+            const currentQty = invData?.quantity || 0;
+            const newQty = currentQty + item.quantity;
+
+            await supabase
+                .from('inventory')
+                .upsert({
+                    product_id: item.product_id,
+                    location_id: targetLocationId,
+                    quantity: newQty,
+                    ...(invData?.type ? { type: invData.type } : {})
+                }, { onConflict: 'product_id,location_id' });
+        }
+
+        // 3. Marcar venda como Cancelada
+        const { error: saleErr } = await supabase
+            .from('sales')
+            .update({ status: 'Cancelada' })
+            .eq('id', saleId);
+        if (saleErr) throw saleErr;
+        return true;
+    },
 };
+

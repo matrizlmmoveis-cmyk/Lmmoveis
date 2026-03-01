@@ -37,11 +37,13 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   });
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [isManagerOverrideNeeded, setIsManagerOverrideNeeded] = useState(false);
   const [managerLogin, setManagerLogin] = useState({ username: '', password: '' });
   const [managerError, setManagerError] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [cancelRequest, setCancelRequest] = useState<{ saleId: string; justification: string } | null>(null);
 
   const handleCustomerCreated = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -98,23 +100,37 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const handleAddItem = (product: Product) => {
     const existing = newSale.items?.find(i => i.productId === product.id);
     if (existing) {
+      // Só valida ao AUMENTAR a qtd além do saldo do CD já selecionado no item
+      const availableQty = inventory.find(i => i.productId === product.id && i.locationId === existing.locationId)?.quantity || 0;
+      if (existing.quantity + 1 > availableQty) {
+        const locationName = stores.find(s => s.id === existing.locationId)?.name || existing.locationId;
+        alert(`Saldo insuficiente em "${locationName}"! Disponível: ${availableQty} un.`);
+        return;
+      }
       setNewSale({
         ...newSale,
         items: newSale.items?.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i)
       });
     } else {
+      // Ao adicionar pela 1ª vez: seleciona automaticamente o CD com saldo
+      // Prefere o CD da loja atual se tiver saldo, senão usa o primeiro com saldo
+      const stockLocations = inventory.filter(i => i.productId === product.id && i.quantity > 0);
+      const preferred = stockLocations.find(i => i.locationId === newSale.storeId) || stockLocations[0];
+      const defaultLocationId = preferred?.locationId || newSale.storeId || (stores[0]?.id || '');
+
       const newItem: SaleItem = {
         productId: product.id,
         quantity: 1,
         price: product.price,
         discount: 0,
         originalPrice: product.price,
-        locationId: newSale.storeId || (stores[0]?.id || ''),
+        locationId: defaultLocationId,
         assemblyRequired: false
       };
       setNewSale({ ...newSale, items: [...(newSale.items || []), newItem] });
     }
   };
+
 
   const handleRemoveItem = (productId: string) => {
     setNewSale({
@@ -171,19 +187,33 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     }
   };
 
-  const handleCancelSale = async (saleId: string) => {
-    if (!window.confirm('Tem certeza que deseja cancelar esta venda? O estoque será estornado e o status será alterado para Cancelada.')) return;
+  const handleCancelSale = async (saleId: string, justification: string) => {
     try {
-      await supabaseService.cancelSale(saleId);
-      setSales(prev => prev.map(s => s.id === saleId ? { ...s, status: OrderStatus.CANCELED } : s));
-      const updatedInventory = await supabaseService.getInventory();
-      setInventory(updatedInventory);
-      alert('Venda cancelada com sucesso e estoque estornado!');
+      const sale = sales.find(s => s.id === saleId);
+      await supabaseService.markSaleCancelPending(saleId);
+      setSales(prev => prev.map(s => s.id === saleId ? { ...s, status: OrderStatus.CANCEL_PENDING } : s));
+
+      await supabaseService.createTask({
+        title: `Autorização de Cancelamento — Venda Nº ${saleId}`,
+        description: `A venda Nº ${saleId} (Cliente: ${sale?.customerName || '?'}, Total: R$ ${sale?.total?.toFixed(2) || '0,00'}) solicitada para cancelamento por ${user?.name || 'operador'} (${user?.role}).\n\nJustificativa: ${justification}\n\nProdutos: ${sale?.items?.map(i => products.find(p => p.id === i.productId)?.name).filter(Boolean).join(', ')}\n\nApós autorizar, escolha o CD para devolução do saldo.`,
+        type: 'CANCELAMENTO_PENDENTE',
+        priority: 'ALTA',
+        status: 'ABERTA',
+        created_by: user?.name || 'Sistema',
+        assigned_to: 'MASTER',
+        store_id: sale?.storeId || user?.storeId || '',
+        sale_id: saleId,
+        product_name: sale?.items?.map(i => products.find(p => p.id === i.productId)?.name).filter(Boolean).join(', ') || '',
+      });
+
+      setCancelRequest(null);
+      alert('Solicitação de cancelamento enviada! Aguarde autorização do MASTER/SUPERVISOR na tela de Tarefas/Avisos.');
     } catch (err) {
-      console.error('Erro ao cancelar venda:', err);
-      alert('Erro ao cancelar venda.');
+      console.error('Erro ao solicitar cancelamento:', err);
+      alert('Erro ao solicitar cancelamento.');
     }
   };
+
 
   const handleConfirmPayment = async (saleId: string, amount: number) => {
     try {
@@ -237,9 +267,37 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       await supabaseService.createSale(sale);
       const inventoryUpdates = sale.items.map(item => {
         const currentQty = inventory.find(i => i.productId === item.productId && i.locationId === item.locationId)?.quantity || 0;
-        return supabaseService.updateInventory(item.productId, item.locationId, Math.max(0, currentQty - item.quantity));
+        const locationStore = stores.find(s => s.id === item.locationId);
+        const storeType = locationStore?.type || 'STORE_STOCK';
+        return supabaseService.updateInventory(item.productId, item.locationId, Math.max(0, currentQty - item.quantity), storeType);
       });
       await Promise.all(inventoryUpdates);
+
+
+      // Criar avisos automáticos para itens vendidos de outra loja
+      const crossStoreItems = sale.items.filter(item => item.locationId && item.locationId !== sale.storeId);
+      const saleStoreName = stores.find(s => s.id === sale.storeId)?.name || sale.storeId;
+      if (crossStoreItems.length > 0) {
+        const notificationPromises = crossStoreItems.map(item => {
+          const productName = products.find(p => p.id === item.productId)?.name || item.productId;
+          const sourceStoreName = stores.find(s => s.id === item.locationId)?.name || item.locationId;
+          return supabaseService.createTask({
+            title: `Produto vendido de ${sourceStoreName}`,
+            description: `A loja "${saleStoreName}" vendeu ${item.quantity}x "${productName}" do estoque de "${sourceStoreName}".\nCliente: ${sale.customerName}\nVenda Nº ${sale.id}`,
+            type: 'AVISO_SAIDA_ESTOQUE',
+            priority: 'ALTA',
+            status: 'ABERTA',
+            created_by: user?.name || 'Sistema',
+            assigned_to: 'GERENTE',
+            store_id: item.locationId, // Loja que é dona do estoque (exibição no gerente dessa loja)
+            source_store_id: item.locationId,
+            sale_id: sale.id,
+            product_name: productName,
+          });
+        });
+        await Promise.all(notificationPromises);
+      }
+
       setSales([sale, ...sales]);
       setInventory(prev => {
         const updated = [...prev];
@@ -306,10 +364,55 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 <button onClick={() => setIsCustomerModalOpen(true)} className="text-blue-600 font-bold text-xs uppercase">+ Novo Cliente</button>
               </div>
               <div className="relative">
-                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm" value={selectedCustomer?.id || ''} onChange={(e) => setSelectedCustomer(customers.find(c => c.id === e.target.value) || null)}>
-                  <option value="">Selecione um cliente...</option>
-                  {(customers || []).map(c => <option key={c.id} value={c.id}>{c.name} ({c.document})</option>)}
-                </select>
+                <input
+                  type="text"
+                  placeholder="Buscar por nome, CPF ou telefone..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm"
+                  value={customerSearch || (selectedCustomer ? selectedCustomer.name : '')}
+                  onFocus={() => { setCustomerSearch(''); setCustomerDropdownOpen(true); }}
+                  onChange={e => { setCustomerSearch(e.target.value); setSelectedCustomer(null); setCustomerDropdownOpen(true); }}
+                  onBlur={() => setTimeout(() => setCustomerDropdownOpen(false), 200)}
+                />
+                {customerDropdownOpen && (
+                  <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto">
+                    {(customers || [])
+                      .filter(c => {
+                        const q = customerSearch.toLowerCase();
+                        return !q ||
+                          c.name.toLowerCase().includes(q) ||
+                          (c.document || '').toLowerCase().includes(q) ||
+                          (c.phone || '').toLowerCase().includes(q);
+                      })
+                      .slice(0, 30)
+                      .map(c => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onMouseDown={() => { setSelectedCustomer(c); setCustomerSearch(''); setCustomerDropdownOpen(false); }}
+                          className="w-full px-4 py-2.5 text-left hover:bg-blue-50 transition-colors"
+                        >
+                          <p className="font-bold text-xs text-slate-900 uppercase">{c.name}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">{c.document} {c.phone ? `· ${c.phone}` : ''}</p>
+                        </button>
+                      ))
+                    }
+                    {(customers || []).filter(c => {
+                      const q = customerSearch.toLowerCase();
+                      return !q || c.name.toLowerCase().includes(q) || (c.document || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q);
+                    }).length === 0 && (
+                        <p className="px-4 py-3 text-xs text-slate-400 font-medium">Nenhum cliente encontrado</p>
+                      )}
+                  </div>
+                )}
+                {selectedCustomer && (
+                  <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-black text-blue-700 uppercase">{selectedCustomer.name}</p>
+                      <p className="text-[10px] text-blue-500 font-medium">{selectedCustomer.document} {selectedCustomer.phone ? `· ${selectedCustomer.phone}` : ''}</p>
+                    </div>
+                    <button type="button" onClick={() => { setSelectedCustomer(null); setCustomerSearch(''); }} className="text-blue-400 hover:text-blue-600 text-xs font-bold">✕</button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
@@ -352,7 +455,16 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                       <div key={item.productId} className="bg-white border border-slate-100 rounded-2xl p-3 space-y-2">
                         <p className="text-[10px] font-black uppercase text-blue-700 truncate">{p?.name}</p>
                         <div className="flex flex-wrap items-center gap-2">
-                          <input type="number" min="1" className="w-14 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" value={item.quantity} onChange={e => setNewSale({ ...newSale, items: newSale.items?.map(i => i.productId === item.productId ? { ...i, quantity: parseInt(e.target.value) || 1 } : i) })} />
+                          <input type="number" min="1" className="w-14 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" value={item.quantity} onChange={e => {
+                            const newQty = parseInt(e.target.value) || 1;
+                            const availableQty = inventory.find(inv => inv.productId === item.productId && inv.locationId === item.locationId)?.quantity || 0;
+                            if (newQty > availableQty) {
+                              const locationName = stores.find(s => s.id === item.locationId)?.name || item.locationId;
+                              alert(`Saldo insuficiente em "${locationName}"! Disponível: ${availableQty} un.`);
+                              return;
+                            }
+                            setNewSale({ ...newSale, items: newSale.items?.map(i => i.productId === item.productId ? { ...i, quantity: newQty } : i) });
+                          }} />
                           <span className="text-[10px] text-slate-400 font-bold">x</span>
                           <input type="number" className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" value={item.price} onChange={e => handlePriceChange(item.productId, parseFloat(e.target.value) || 0)} />
                           <span className="text-[9px] text-slate-400 font-bold">Desc.</span>
@@ -529,8 +641,12 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                       {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (
                         <button onClick={() => { const p = sale.payments.find(p => p.status === 'AGUARDANDO_ACERTO'); if (p) handleConfirmPayment(sale.id, p.amount); }} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black uppercase shadow-sm"><DollarSign className="w-4 h-4" /> Receber</button>
                       )}
-                      {(user?.username === 'Master' || user?.role === 'SUPERVISOR') && sale.status !== OrderStatus.CANCELED && (
-                        <button onClick={() => handleCancelSale(sale.id)} className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-black uppercase"><Trash2 className="w-4 h-4" /> Cancelar</button>
+                      {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || (user?.role === 'GERENTE' && sale.storeId === user?.storeId)) &&
+                        sale.status !== OrderStatus.CANCELED && sale.status !== OrderStatus.CANCEL_PENDING && (
+                          <button onClick={() => setCancelRequest({ saleId: sale.id, justification: '' })} className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-black uppercase"><Trash2 className="w-4 h-4" /> Cancelar</button>
+                        )}
+                      {sale.status === OrderStatus.CANCEL_PENDING && (
+                        <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-100 uppercase">Aguard. Autorização</span>
                       )}
                     </div>
                   </td>
@@ -540,8 +656,55 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
           </table>
         </div>
       </div>
+
+      {/* Modal de Justificativa de Cancelamento */}
+      {cancelRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 bg-red-50 border-b border-red-100 flex justify-between items-center">
+              <div>
+                <h2 className="text-base font-black text-red-800 uppercase">Solicitar Cancelamento</h2>
+                <p className="text-[10px] text-red-500 font-medium">Venda Nº {cancelRequest.saleId} · Será enviada para autorização do MASTER/SUPERVISOR</p>
+              </div>
+              <button onClick={() => setCancelRequest(null)} className="p-2 hover:bg-red-100 rounded-full transition-colors">
+                <span className="text-red-400 font-black text-lg leading-none">✕</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase mb-2">Justificativa obrigatória</label>
+                <textarea
+                  rows={4}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-700 resize-none outline-none focus:border-red-300"
+                  placeholder="Descreva o motivo do cancelamento..."
+                  value={cancelRequest.justification}
+                  onChange={e => setCancelRequest({ ...cancelRequest, justification: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setCancelRequest(null)}
+                  className="flex-1 py-3 text-slate-500 font-bold uppercase text-xs border border-slate-200 rounded-2xl hover:bg-slate-50"
+                >
+                  Voltar
+                </button>
+                <button
+                  onClick={() => {
+                    if (!cancelRequest.justification.trim()) { alert('Informe a justificativa do cancelamento.'); return; }
+                    handleCancelSale(cancelRequest.saleId, cancelRequest.justification);
+                  }}
+                  className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-red-100 hover:bg-red-700"
+                >
+                  Enviar Solicitação
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Sales;
+

@@ -5,8 +5,10 @@ export enum OrderStatus {
   DELIVERED = 'Entregue - Aguardando Montagem',
   ASSEMBLY_PENDING = 'Montagem Pendente',
   COMPLETED = 'Entregue',
+  CANCEL_PENDING = 'Cancelamento Pendente',
   CANCELED = 'Cancelada'
 }
+
 
 export interface Romaneio {
   id: string;
@@ -34,7 +36,7 @@ export interface Store {
   name: string;
   location: string;
   phones?: string[];
-  type: 'CD' | 'STORE_STOCK';
+  type: 'CD' | 'STORE_STOCK' | 'CD_LOJA';
 }
 
 export interface Seller {

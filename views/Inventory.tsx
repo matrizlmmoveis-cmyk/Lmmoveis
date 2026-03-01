@@ -36,15 +36,17 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
       const currentItem = inventory.find(i => i.productId === adjustForm.productId && i.locationId === adjustForm.locationId);
       const currentQty = currentItem?.quantity || 0;
       const newQty = adjustForm.type === 'IN' ? currentQty + adjustForm.quantity : Math.max(0, currentQty - adjustForm.quantity);
+      const selectedStore = stores.find(s => s.id === adjustForm.locationId);
+      const storeType = selectedStore?.type || 'STORE_STOCK';
 
-      await supabaseService.updateInventory(adjustForm.productId, adjustForm.locationId, newQty);
+      await supabaseService.updateInventory(adjustForm.productId, adjustForm.locationId, newQty, storeType);
 
       // Update local state
       let newInventory = [...inventory];
       if (currentItem) {
         newInventory = newInventory.map(i => i.productId === adjustForm.productId && i.locationId === adjustForm.locationId ? { ...i, quantity: newQty } : i);
       } else {
-        newInventory.push({ productId: adjustForm.productId, locationId: adjustForm.locationId, quantity: newQty, type: stores.find(s => s.id === adjustForm.locationId)?.type || 'STORE_STOCK', lastUpdated: new Date().toISOString() } as InventoryItem);
+        newInventory.push({ productId: adjustForm.productId, locationId: adjustForm.locationId, quantity: newQty, type: storeType, lastUpdated: new Date().toISOString() } as InventoryItem);
       }
       setInventory(newInventory);
       setIsAdjustModalOpen(false);
@@ -308,8 +310,8 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
                   type="submit"
                   disabled={isAdjusting}
                   className={`w-full py-4 rounded-2xl font-black shadow-xl transition-all flex items-center justify-center gap-2 ${isAdjusting ? 'bg-slate-400 cursor-not-allowed' :
-                      adjustForm.type === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100' :
-                        'bg-red-600 hover:bg-red-700 text-white shadow-red-100'
+                    adjustForm.type === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100' :
+                      'bg-red-600 hover:bg-red-700 text-white shadow-red-100'
                     }`}
                 >
                   <FileText className="w-5 h-5" />

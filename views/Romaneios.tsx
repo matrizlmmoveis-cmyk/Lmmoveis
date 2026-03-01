@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, Wrench, Plus, Trash2, Printer, Search, User, ClipboardList, CheckCircle2, AlertCircle, History, ArrowLeft, Calendar } from 'lucide-react';
-import { OrderStatus, Sale, Employee, Romaneio } from '../types.ts';
+import { Truck, Wrench, Plus, Trash2, Printer, Search, User, ClipboardList, CheckCircle2, AlertCircle, History, ArrowLeft, Calendar, Package, Phone, MapPin, MessageSquare } from 'lucide-react';
+import { OrderStatus, Sale, Employee, Romaneio, Product } from '../types.ts';
 import { supabaseService } from '../services/supabaseService.ts';
 
 interface RomaneiosProps {
   sales: Sale[];
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   employees: Employee[];
+  products: Product[];
 }
 
-const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEmployees }) => {
+const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEmployees, products }) => {
   const [view, setView] = useState<'create' | 'history'>('create');
   const [romaneios, setRomaneios] = useState<Romaneio[]>([]);
   const [type, setType] = useState<'entrega' | 'montagem'>('entrega');
@@ -122,6 +123,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEm
 
   if (showPrint) {
     const emp = allEmployees.find(e => e.id === selectedEmployeeId);
+    const isEntrega = type === 'entrega';
     return (
       <div className="max-w-4xl mx-auto p-8 bg-white shadow-xl min-h-screen animate-in zoom-in-95 duration-300">
         <div className="no-print flex justify-between items-center mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-200">
@@ -131,47 +133,106 @@ const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEm
           </button>
         </div>
 
-        <div className="border-4 border-black p-6 font-mono-receipt text-black">
+        <div className="border-4 border-black p-6 font-mono text-black print:border-2">
+          {/* Cabeçalho */}
           <div className="text-center border-b-2 border-black pb-4 mb-4">
-            <h1 className="text-2xl font-black uppercase">Móveis LM - Romaneio de {type === 'entrega' ? 'Entrega' : 'Montagem'}</h1>
+            <h1 className="text-2xl font-black uppercase">Móveis LM — Romaneio de {isEntrega ? 'Entrega' : 'Montagem'}</h1>
             <p className="text-sm font-bold mt-1">Gerado em: {new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR')}</p>
           </div>
 
+          {/* Responsável */}
           <div className="grid grid-cols-2 gap-4 mb-6 border-b-2 border-black pb-4">
             <div>
-              <p className="text-[10px] font-black uppercase">Responsável Designado:</p>
+              <p className="text-[10px] font-black uppercase">{isEntrega ? 'Motorista' : 'Montador'} Responsável:</p>
               <p className="text-lg font-black uppercase">{emp?.name}</p>
               <p className="text-xs font-bold uppercase">{emp?.role}</p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-black uppercase">Volume de Pedidos:</p>
-              <p className="text-lg font-black">{batchSales.length} ITENS</p>
+              <p className="text-[10px] font-black uppercase">Total de Pedidos:</p>
+              <p className="text-lg font-black">{batchSales.length} PEDIDO{batchSales.length !== 1 ? 'S' : ''}</p>
+              <p className="text-[10px] font-black uppercase mt-1">Itens Totais:</p>
+              <p className="text-base font-black">{batchSales.reduce((acc, s) => acc + s.items.reduce((a, i) => a + i.quantity, 0), 0)} UN</p>
             </div>
           </div>
 
-          <table className="w-full text-left border-collapse mb-8">
-            <thead>
-              <tr className="border-b-2 border-black text-xs font-black uppercase">
-                <th className="py-2 w-16">Cod.</th>
-                <th className="py-2">Cliente / Destino</th>
-                <th className="py-2 w-24 text-right">Assinatura</th>
-              </tr>
-            </thead>
-            <tbody>
-              {batchSales.map(sale => (
-                <tr key={sale.id} className="border-b border-black text-[11px] h-20">
-                  <td className="py-2 font-black text-lg align-top">{sale.id}</td>
-                  <td className="py-2 pr-4 align-top">
-                    <p className="font-black uppercase text-sm">{sale.customerName}</p>
-                    <p className="uppercase font-bold">{sale.deliveryAddress}</p>
-                    <p className="italic text-[9px] mt-1">Obs: {sale.deliveryObs}</p>
-                  </td>
-                  <td className="py-2 border-l border-black align-bottom text-[8px] text-center">CLIENTE</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* Lista de Pedidos */}
+          <div className="space-y-6">
+            {batchSales.map((sale, idx) => (
+              <div key={sale.id} className="border-2 border-black">
+                {/* Header do pedido */}
+                <div className={`px-4 py-2 flex items-center justify-between ${isEntrega ? 'bg-gray-100' : 'bg-gray-50'}`}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl font-black">#{sale.id}</span>
+                    <span className="text-sm font-black uppercase">{idx + 1}º PEDIDO</span>
+                  </div>
+                  {sale.assemblyRequired && <span className="text-[9px] font-black border border-black px-2 py-0.5 uppercase">Exige Montagem</span>}
+                </div>
 
+                <div className="p-4 grid grid-cols-1 gap-3">
+                  {/* Dados do Cliente (entrega: completo, montagem: básico) */}
+                  <div className="border-b border-dashed border-gray-400 pb-3">
+                    <p className="text-[9px] font-black uppercase mb-1">Cliente / {isEntrega ? 'Destino' : 'Local'}</p>
+                    <p className="text-base font-black uppercase">{sale.customerName}</p>
+                    {isEntrega && (
+                      <>
+                        <p className="text-xs font-bold uppercase mt-0.5">{sale.deliveryAddress}</p>
+                        {sale.customerPhone && (
+                          <p className="text-xs font-bold mt-0.5">📞 {sale.customerPhone}</p>
+                        )}
+                        {sale.customerCpf && (
+                          <p className="text-[10px] text-gray-600 font-bold mt-0.5">CPF: {sale.customerCpf}</p>
+                        )}
+                        {sale.deliveryObs && (
+                          <div className="mt-1 bg-gray-100 border border-gray-300 rounded px-2 py-1">
+                            <p className="text-[9px] font-black uppercase">Obs da Venda:</p>
+                            <p className="text-[10px] font-bold italic">{sale.deliveryObs}</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Itens do Pedido */}
+                  <div>
+                    <p className="text-[9px] font-black uppercase mb-1">Itens do Pedido</p>
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-400">
+                          <th className="text-left text-[9px] font-black uppercase py-1 pr-2">Qtd</th>
+                          <th className="text-left text-[9px] font-black uppercase py-1">Produto</th>
+                          {isEntrega && <th className="text-right text-[9px] font-black uppercase py-1">Local Orig.</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sale.items.map((item, iIdx) => {
+                          const prod = products.find(p => p.id === item.productId);
+                          return (
+                            <tr key={iIdx} className="border-b border-dashed border-gray-200">
+                              <td className="py-1 pr-2 font-black text-sm align-top">{item.quantity}x</td>
+                              <td className="py-1 font-bold text-[11px] uppercase align-top">{prod?.name || item.productId}</td>
+                              {isEntrega && (
+                                <td className="py-1 pl-2 text-[9px] font-bold text-gray-500 text-right align-top">{item.locationId || '—'}</td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Assinatura */}
+                  {isEntrega && (
+                    <div className="mt-2 pt-2 border-t border-dashed border-gray-400">
+                      <div className="h-10 border-b border-black mt-4"></div>
+                      <p className="text-[8px] font-black uppercase text-center mt-1">Assinatura do Cliente</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Assinaturas finais */}
           <div className="grid grid-cols-2 gap-8 mt-12">
             <div className="text-center">
               <div className="border-t border-black pt-2 text-[10px] font-bold uppercase">Assinatura: {emp?.name}</div>

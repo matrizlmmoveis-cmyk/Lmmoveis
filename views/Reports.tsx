@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Download, FileText, Calendar } from 'lucide-react';
+import { Download, FileText, Printer, X } from 'lucide-react';
 import { Sale, Store, Product, Employee } from '../types.ts';
 
 interface ReportsProps {
@@ -14,47 +14,50 @@ interface ReportsProps {
 const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#f59e0b', '#6366f1'];
 
 const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employees }) => {
-  const [dateFilter, setDateFilter] = React.useState('this_month');
-  const [storeFilter, setStoreFilter] = React.useState(user?.role === 'GERENTE' ? (user.storeId || 'all') : 'all');
-  const [sellerFilter, setSellerFilter] = React.useState('all');
+  const [dateFilter, setDateFilter] = useState('this_month');
+  const [storeFilter, setStoreFilter] = useState(user?.role === 'GERENTE' ? (user.storeId || 'all') : 'all');
+  const [sellerFilter, setSellerFilter] = useState('all');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [showPdf, setShowPdf] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
   const filteredSales = useMemo(() => {
-    let filtered = sales;
+    let filtered = sales.filter(s => s.status !== 'Cancelada');
 
-    // Filter by Store
-    if (storeFilter !== 'all') {
-      filtered = filtered.filter(s => s.storeId === storeFilter);
-    }
+    if (storeFilter !== 'all') filtered = filtered.filter(s => s.storeId === storeFilter);
+    if (sellerFilter !== 'all') filtered = filtered.filter(s => s.sellerId === sellerFilter);
 
-    // Filter by Seller
-    if (sellerFilter !== 'all') {
-      filtered = filtered.filter(s => s.sellerId === sellerFilter);
-    }
-
-    // Filter by Date
     const now = new Date();
     if (dateFilter === 'today') {
-      filtered = filtered.filter(s => new Date(s.createdAt).toDateString() === now.toDateString());
+      filtered = filtered.filter(s => new Date(s.date).toDateString() === now.toDateString());
     } else if (dateFilter === 'this_week') {
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay());
-      filtered = filtered.filter(s => new Date(s.createdAt) >= startOfWeek);
+      const start = new Date(now); start.setDate(now.getDate() - now.getDay());
+      filtered = filtered.filter(s => new Date(s.date) >= start);
     } else if (dateFilter === 'this_month') {
       filtered = filtered.filter(s => {
-        const d = new Date(s.createdAt);
+        const d = new Date(s.date);
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+    } else if (dateFilter === 'custom' && customStart && customEnd) {
+      const start = new Date(customStart + 'T00:00:00');
+      const end = new Date(customEnd + 'T23:59:59');
+      filtered = filtered.filter(s => {
+        const d = new Date(s.date);
+        return d >= start && d <= end;
       });
     }
 
-    return filtered;
-  }, [sales, storeFilter, sellerFilter, dateFilter]);
+    return filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [sales, storeFilter, sellerFilter, dateFilter, customStart, customEnd]);
+
   const categoryData = useMemo(() => {
     const categories: Record<string, number> = {};
     filteredSales.forEach(sale => {
       sale.items.forEach(item => {
         const product = products.find(p => p.id === item.productId);
         const category = product?.category || 'Outros';
-        const itemTotal = (item.price - (item.discount || 0)) * item.quantity;
+        const itemTotal = item.price * item.quantity;
         categories[category] = (categories[category] || 0) + itemTotal;
       });
     });
@@ -62,17 +65,164 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
   }, [filteredSales, products]);
 
   const storeData = useMemo(() => {
-    return stores.map(store => {
-      const storeSales = filteredSales.filter(s => s.storeId === store.id);
-      const totalVendas = storeSales.reduce((acc, curr) => acc + curr.total, 0);
-      return {
-        name: store.name,
-        vendas: totalVendas,
-        meta: 100000 // Meta fictícia para visualização
-      };
-    });
+    return stores.map(store => ({
+      name: store.name,
+      vendas: filteredSales.filter(s => s.storeId === store.id).reduce((acc, curr) => acc + curr.total, 0),
+      meta: 100000
+    }));
   }, [filteredSales, stores]);
 
+  const totalGeral = filteredSales.reduce((acc, s) => acc + s.total, 0);
+
+  // Totais por forma de pagamento
+  const paymentTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    filteredSales.forEach(sale => {
+      (sale.payments || []).forEach(p => {
+        const method = p.method || 'Outros';
+        totals[method] = (totals[method] || 0) + (p.amount || 0);
+      });
+    });
+    return totals;
+  }, [filteredSales]);
+
+  const getPaymentLabel = (method: string) => {
+    const map: Record<string, string> = {
+      'Dinheiro': 'Dinheiro',
+      'PIX': 'Pix',
+      'Cartão de Crédito': 'Cartão de Crédito',
+      'Cartão Crédito': 'Cartão de Crédito',
+      'Cartão de Débito': 'Cartão de Débito',
+      'Cartão Débito': 'Cartão de Débito',
+      'Entrega': 'Pagar na Entrega',
+      'Boleto': 'Boleto',
+      'Crediário': 'Crediário',
+    };
+    return map[method] || method;
+  };
+
+  const getDateLabel = () => {
+    if (dateFilter === 'today') return `Hoje (${new Date().toLocaleDateString('pt-BR')})`;
+    if (dateFilter === 'this_week') return 'Esta Semana';
+    if (dateFilter === 'this_month') return `Mês ${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
+    if (dateFilter === 'custom' && customStart && customEnd)
+      return `De: ${new Date(customStart + 'T12:00').toLocaleDateString('pt-BR')} até: ${new Date(customEnd + 'T12:00').toLocaleDateString('pt-BR')}`;
+    return 'Todo o Período';
+  };
+
+  const getSellerName = (sellerId: string) => employees.find(e => e.id === sellerId)?.name || '—';
+  const getStoreName = (storeId: string) => stores.find(s => s.id === storeId)?.name || '—';
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  // Print PDF view
+  if (showPdf) {
+    return (
+      <div className="space-y-0">
+        {/* Toolbar - no-print */}
+        <div className="no-print flex items-center justify-between gap-4 mb-6 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
+          <button
+            onClick={() => setShowPdf(false)}
+            className="flex items-center gap-2 text-slate-600 font-bold text-sm hover:text-slate-900 transition-all"
+          >
+            <X className="w-4 h-4" /> Fechar PDF
+          </button>
+          <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
+            {filteredSales.length} pedidos · {totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          </div>
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+          >
+            <Printer className="w-4 h-4" /> Imprimir / Salvar PDF
+          </button>
+        </div>
+
+        {/* PDF Content */}
+        <div ref={printRef} className="bg-white p-8 print:p-6 max-w-[1100px] mx-auto shadow-xl rounded-2xl print:shadow-none print:rounded-none">
+          {/* Header */}
+          <div className="text-center mb-6 border-b-2 border-black pb-4">
+            <h1 className="text-3xl font-black text-black">Relatório de Vendas</h1>
+            <p className="text-sm text-gray-600 mt-1 font-medium">
+              {storeFilter !== 'all' ? getStoreName(storeFilter) : 'Todas as Lojas'} &nbsp;·&nbsp; {getDateLabel()}
+            </p>
+            {sellerFilter !== 'all' && (
+              <p className="text-xs text-gray-500 mt-0.5">Vendedor: {getSellerName(sellerFilter)}</p>
+            )}
+          </div>
+
+          {/* Tabela principal */}
+          <table className="w-full border-collapse text-sm mb-6" style={{ borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#e8eaf6' }}>
+                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Pedido</th>
+                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Data</th>
+                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Cliente</th>
+                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Vendedor</th>
+                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Produtos</th>
+                <th className="border border-gray-400 px-3 py-2 text-right font-black text-black text-xs uppercase">Total</th>
+                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Pagamento</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSales.map((sale, idx) => {
+                const rowBg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+                const itemsList = sale.items.map(item => {
+                  const prod = products.find(p => p.id === item.productId);
+                  return `QTD${item.quantity}: ${prod?.name || item.productId} - R$ ${(item.price * item.quantity).toFixed(2)} /`;
+                }).join(' ');
+
+                const paymentsStr = (sale.payments || []).map(p => {
+                  const label = getPaymentLabel(p.method);
+                  return `${label}: $ ${p.amount.toFixed(2)}`;
+                }).join(' / ');
+
+                return (
+                  <tr key={sale.id} style={{ backgroundColor: rowBg }}>
+                    <td className="border border-gray-300 px-3 py-2 font-bold text-xs text-gray-800 align-top">{sale.id}</td>
+                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top whitespace-nowrap">
+                      {new Date(sale.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-800 font-medium align-top">{sale.customerName}</td>
+                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top">{getSellerName(sale.sellerId)}</td>
+                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top">{itemsList}</td>
+                    <td className="border border-gray-300 px-3 py-2 text-xs font-bold text-gray-900 text-right align-top whitespace-nowrap">
+                      R$ {sale.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top">{paymentsStr}</td>
+                  </tr>
+                );
+              })}
+
+              {/* Linha de TOTAL */}
+              <tr style={{ backgroundColor: '#c5cae9' }}>
+                <td colSpan={5} className="border border-gray-400 px-3 py-2 text-right font-black text-sm text-black uppercase" style={{ textAlign: 'right' }}>
+                  TOTAL
+                </td>
+                <td className="border border-gray-400 px-3 py-2 text-right font-black text-sm text-black whitespace-nowrap">
+                  R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </td>
+                <td className="border border-gray-400 px-3 py-2"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Totais por forma de pagamento */}
+          <div className="text-right text-sm space-y-0.5">
+            {Object.entries(paymentTotals).map(([method, amount]) => (
+              <p key={method} className="text-gray-700 font-medium">
+                {getPaymentLabel(method)}: <span className="font-bold">R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </p>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal view
   return (
     <div className="space-y-6">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -80,7 +230,7 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
           <h1 className="text-2xl font-bold text-slate-900">Relatórios</h1>
           <p className="text-slate-500">Indicadores de performance e vendas</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
@@ -90,7 +240,18 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
             <option value="today">Hoje</option>
             <option value="this_week">Esta Semana</option>
             <option value="this_month">Este Mês</option>
+            <option value="custom">Período Personalizado</option>
           </select>
+
+          {dateFilter === 'custom' && (
+            <>
+              <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+                className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm outline-none" />
+              <span className="flex items-center text-slate-400 text-sm font-bold">até</span>
+              <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+                className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm outline-none" />
+            </>
+          )}
 
           <select
             disabled={user?.role === 'GERENTE'}
@@ -99,9 +260,7 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
             className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all outline-none disabled:opacity-50"
           >
             <option value="all">Todas as Lojas</option>
-            {stores.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
+            {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
 
           <select
@@ -115,18 +274,22 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
             ))}
           </select>
 
-          <button className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
+          <button
+            onClick={() => setShowPdf(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+          >
             <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Exportar PDF</span>
+            <span>Gerar PDF</span>
           </button>
         </div>
       </header>
 
+      {/* KPI Cards */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Total de Vendas Filtradas</p>
           <h2 className="text-3xl font-black text-slate-900 mt-1">
-            {(filteredSales.reduce((acc, curr) => acc + curr.total, 0) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            {totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </h2>
         </div>
         <div className="text-right">
@@ -135,29 +298,19 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
         </div>
       </div>
 
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <h3 className="text-lg font-bold mb-6">Vendas por Categoria</h3>
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={120}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
+                <Pie data={categoryData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={5} dataKey="value">
                   {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip
-                  formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR')}`}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
+                <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR')}`} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                 <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
@@ -165,37 +318,34 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-bold mb-6">Performance por Loja (Vendas vs Meta)</h3>
+          <h3 className="text-lg font-bold mb-6">Performance por Loja</h3>
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={storeData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontWeight: 600 }} />
-                <Tooltip
-                  cursor={{ fill: '#f8fafc' }}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
+                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                 <Bar dataKey="vendas" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
-                <Bar dataKey="meta" fill="#e2e8f0" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
+      {/* Quick actions */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100">
           <h3 className="text-lg font-bold">Relatórios Rápidos</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-          <button className="p-6 text-left hover:bg-slate-50 transition-all flex items-center gap-4 group">
+          <button onClick={() => setShowPdf(true)} className="p-6 text-left hover:bg-slate-50 transition-all flex items-center gap-4 group">
             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all">
               <FileText className="w-6 h-6" />
             </div>
             <div>
-              <p className="font-bold text-slate-900">Relatório de Comissão</p>
-              <p className="text-sm text-slate-500">Vendedores e metas individuais</p>
+              <p className="font-bold text-slate-900">Relatório de Vendas (PDF)</p>
+              <p className="text-sm text-slate-500">Com itens, pagamentos e totais</p>
             </div>
           </button>
           <button className="p-6 text-left hover:bg-slate-50 transition-all flex items-center gap-4 group">
