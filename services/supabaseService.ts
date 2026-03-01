@@ -410,11 +410,25 @@ export const supabaseService = {
             .eq('sale_id', saleId)
             .eq('method', 'Entrega')
             .eq('amount', amount)
+            .in('status', ['PENDENTE_ENTREGA', 'AGUARDANDO_ACERTO', 'PAGO_EM_LOJA']);
+
+        if (error) throw error;
+        return true;
+    },
+
+    async markPaymentPaidAtStore(saleId: string, amount: number) {
+        const { error } = await supabase
+            .from('sale_payments')
+            .update({ status: 'PAGO_EM_LOJA' })
+            .eq('sale_id', saleId)
+            .eq('method', 'Entrega')
+            .eq('amount', amount)
             .in('status', ['PENDENTE_ENTREGA', 'AGUARDANDO_ACERTO']);
 
         if (error) throw error;
         return true;
     },
+
 
     // AUTH
     async signIn(email: string, pass: string) {

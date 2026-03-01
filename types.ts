@@ -98,7 +98,8 @@ export interface InventoryItem {
   type: 'CD' | 'STORE_STOCK' | 'SHOWROOM';
 }
 
-export type PaymentStatus = 'CONFERIDO' | 'PENDENTE_ENTREGA' | 'AGUARDANDO_ACERTO';
+export type PaymentStatus = 'CONFERIDO' | 'PENDENTE_ENTREGA' | 'AGUARDANDO_ACERTO' | 'PAGO_EM_LOJA';
+
 
 export interface Payment {
   method: 'Dinheiro' | 'PIX' | 'Cartão de Crédito' | 'Cartão de Débito' | 'Boleto' | 'Crediário' | 'Entrega';

@@ -641,6 +641,27 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                       {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (
                         <button onClick={() => { const p = sale.payments.find(p => p.status === 'AGUARDANDO_ACERTO'); if (p) handleConfirmPayment(sale.id, p.amount); }} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black uppercase shadow-sm"><DollarSign className="w-4 h-4" /> Receber</button>
                       )}
+                      {/* Botão Pago na Loja para gerentes — pagamento de entrega recebido no balcão */}
+                      {sale.payments?.some(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO')) &&
+                        (user?.role === 'GERENTE' || user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && (
+                          <button
+                            onClick={async () => {
+                              const p = sale.payments.find(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));
+                              if (!p) return;
+                              if (!window.confirm(`Confirmar que o cliente pagou R$ ${p.amount.toFixed(2)} na loja? O motorista NÃO deve cobrar na entrega.`)) return;
+                              try {
+                                await supabaseService.markPaymentPaidAtStore(sale.id, p.amount);
+                                setSales(prev => prev.map(s => s.id === sale.id ? { ...s, payments: s.payments.map(pay => pay.method === 'Entrega' && pay.amount === p.amount ? { ...pay, status: 'PAGO_EM_LOJA' as any } : pay) } : s));
+                              } catch { alert('Erro ao registrar pagamento na loja.'); }
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-xs font-black uppercase border border-violet-200"
+                          >
+                            <DollarSign className="w-4 h-4" /> Pago na Loja
+                          </button>
+                        )}
+                      {sale.payments?.some(p => p.method === 'Entrega' && p.status === 'PAGO_EM_LOJA') && (
+                        <span className="text-[9px] font-black text-violet-700 bg-violet-50 px-2 py-1 rounded border border-violet-200 uppercase">Pago na Loja</span>
+                      )}
                       {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || (user?.role === 'GERENTE' && sale.storeId === user?.storeId)) &&
                         sale.status !== OrderStatus.CANCELED && sale.status !== OrderStatus.CANCEL_PENDING && (
                           <button onClick={() => setCancelRequest({ saleId: sale.id, justification: '' })} className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-black uppercase"><Trash2 className="w-4 h-4" /> Cancelar</button>
