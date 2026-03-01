@@ -16,10 +16,11 @@ interface SalesProps {
   stores: Store[];
   products: Product[];
   customers: Customer[];
+  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
   employees: Employee[];
 }
 
-const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInventory, stores, products, customers, employees }) => {
+const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInventory, stores, products, customers, setCustomers, employees }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -54,6 +55,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   } | null>(null);
 
   const handleCustomerCreated = (customer: Customer) => {
+    setCustomers(prev => [...prev, customer]); // Atualiza lista global para dropdowns
     setSelectedCustomer(customer);
     setIsCustomerModalOpen(false);
   };
@@ -101,6 +103,9 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
     if (user?.role === 'GERENTE') {
       return matchesSearch && matchesStatus && s.storeId === user.storeId;
+    }
+    if (user?.role === 'VENDEDOR') {
+      return matchesSearch && matchesStatus && s.sellerId === user.id;
     }
     return matchesSearch && matchesStatus;
   });
@@ -569,7 +574,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
             </div>
           </div>
         </div>
-        {isCustomerModalOpen && <CustomerModal isOpen={isCustomerModalOpen} onClose={() => setIsCustomerModalOpen(false)} onCustomerCreated={handleCustomerCreated} />}
+        {isCustomerModalOpen && <CustomerModal onClose={() => setIsCustomerModalOpen(false)} onSuccess={handleCustomerCreated} />}
         {isManagerOverrideNeeded && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
             <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">

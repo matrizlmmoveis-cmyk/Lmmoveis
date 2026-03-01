@@ -160,13 +160,64 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, product
       </div>
 
       {/* PRINTABLE RECEIPT */}
-      <div className="border-2 border-black text-[11.5px] text-black font-sans bg-white max-w-[780px] mx-auto" style={{ minHeight: '1050px', display: 'flex', flexDirection: 'column' }}>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @media print {
+            /* Hide only the UI shell components */
+            .no-print, nav, aside, button, .Sidebar, [role="navigation"], header.no-print {
+              display: none !important;
+            }
+
+            /* Ensure the page-level containers don't restrict the print */
+            html, body, #root, main, section {
+              height: auto !important;
+              min-height: 0 !important;
+              overflow: visible !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background-color: white !important;
+              position: static !important;
+              width: 100% !important;
+            }
+
+            @page {
+              margin: 5mm;
+              size: auto;
+            }
+
+            /* Receipt Content Styling */
+            .print-container { 
+              display: flex !important;
+              flex-direction: column !important;
+              box-shadow: none !important; 
+              margin: 0 auto !important; 
+              padding: 0 !important;
+              width: 100% !important;
+              max-width: 19cm !important; /* Fits safely on A4 with 5mm margins */
+              border: 2px solid black !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+
+            /* Aggressive color and layout preservation */
+            .print-container * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+
+            /* Hide scrollbars (universal) */
+            ::-webkit-scrollbar { display: none !important; }
+            * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+          }
+        `
+      }} />
+      <div className="border-2 border-black text-[11.5px] text-black font-sans bg-white max-w-[780px] mx-auto print-container" style={{ minHeight: '1050px', display: 'flex', flexDirection: 'column' }}>
 
         {/* ── HEADER ─────────────────────────────────── */}
         <div className="flex border-b-2 border-black">
           {/* Logo — inline SVG, always renders in print */}
-          <div className="flex items-center justify-center shrink-0 border-r border-black" style={{ width: '100px', minHeight: '90px', backgroundColor: '#2d2d2d' }}>
-            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <div className="flex items-center justify-center shrink-0 border-r border-black" style={{ width: '150px', minHeight: '100px', backgroundColor: '#2d2d2d' }}>
+            <svg width="100" height="100" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
               {/* House outline */}
               <polygon points="30,6 56,28 52,28 52,54 8,54 8,28 4,28" fill="none" stroke="white" strokeWidth="3" strokeLinejoin="round" />
               {/* Door */}
@@ -183,17 +234,17 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, product
 
           {/* Company name + stores */}
           <div className="flex-1 px-6 py-3 flex flex-col justify-center" style={{ backgroundColor: '#e8f5e9' }}>
-            <h1 className="text-center font-black uppercase leading-tight tracking-tight" style={{ fontSize: '17px' }}>
+            <h1 className="text-center font-black uppercase leading-tight tracking-tight" style={{ fontSize: '24px' }}>
               GRUPO FERNANDES MÓVEIS
             </h1>
-            <div className="text-center mt-2 space-y-0.5" style={{ fontSize: '9px', fontWeight: 600 }}>
-              {stores.map(s => (
-                <p key={s.id} className="leading-snug uppercase">
-                  {s.name.toUpperCase()}
-                  {s.location ? ` - ${s.location.toUpperCase()}` : ''}
-                  {s.phones?.[0] ? ` - ${s.phones[0]}` : ''}
+            <div className="text-center mt-2 space-y-0.5" style={{ fontSize: '11px', fontWeight: 700 }}>
+              {store && (
+                <p className="leading-snug uppercase">
+                  {store.name.toUpperCase()}
+                  {store.location ? ` - ${store.location.toUpperCase()}` : ''}
+                  {store.phones?.[0] ? ` - ${store.phones[0]}` : ''}
                 </p>
-              ))}
+              )}
             </div>
           </div>
 

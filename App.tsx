@@ -123,6 +123,7 @@ const App: React.FC = () => {
     else if (employee.role === 'MONTADOR') setActiveView('assembly');
     else if (employee.role === 'CONFERENTE') setActiveView('expedicao');
     else if (employee.role === 'SUPERVISOR') setActiveView('tarefas');
+    else if (employee.role === 'VENDEDOR') setActiveView('sales');
     else setActiveView('dashboard');
   };
 
@@ -215,7 +216,7 @@ const App: React.FC = () => {
       case 'catalog': return <ProductCatalog user={user} inventory={inventory} stores={stores} products={products} setProducts={setProducts} />;
       case 'customers': return <Customers customers={customers} setCustomers={setCustomers} />;
       case 'products': return <Products user={user} products={products} inventory={inventory} stores={stores} employees={employees} />;
-      case 'sales': return <Sales user={user} sales={sales} setSales={setSales} inventory={inventory} setInventory={setInventory} stores={stores} products={products} customers={customers} employees={employees} />;
+      case 'sales': return <Sales user={user} sales={sales} setSales={setSales} inventory={inventory} setInventory={setInventory} stores={stores} products={products} customers={customers} setCustomers={setCustomers} employees={employees} />;
       case 'inventory': return <Inventory inventory={inventory} setInventory={setInventory} products={products} stores={stores} />;
       case 'stores': return <Stores stores={stores} setStores={setStores} employees={employees} />;
       case 'employees': return <EmployeesView user={user} employees={employees} setEmployees={setEmployees} stores={stores} />;

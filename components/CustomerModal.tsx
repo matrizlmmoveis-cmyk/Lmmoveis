@@ -170,7 +170,6 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onSuccess }) => 
                         <div>
                             <label className="block text-xs font-black text-slate-400 uppercase mb-1">E-mail</label>
                             <input
-                                required
                                 type="email"
                                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 transition-all outline-none"
                                 value={formData.email}
