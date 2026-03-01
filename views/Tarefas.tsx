@@ -27,6 +27,7 @@ interface Task {
     response?: string;
     responded_by?: string;
     responded_at?: string;
+    proposal_snapshot?: any;
 }
 
 interface TarefasProps {
@@ -70,6 +71,7 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores }) => {
     const [savingTask, setSavingTask] = useState(false);
     const [stockReturnModal, setStockReturnModal] = useState<{ task: Task; selectedLocationId: string } | null>(null);
     const [returningStock, setReturningStock] = useState(false);
+    const [editApprovalModal, setEditApprovalModal] = useState<{ task: Task; processing: boolean } | null>(null);
 
     const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
         setToast({ msg, type });
@@ -472,7 +474,16 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores }) => {
                                                     <RefreshCw className="w-3.5 h-3.5" /> Em Andamento
                                                 </button>
                                             )}
-                                            {/* Ação especial para CANCELAMENTO_PENDENTE: devolve saldo ao CD */}
+                                            {/* Botão especial para EDICAO_PENDENTE */}
+                                            {canManageTask(task) && !isConcluida && task.type === 'EDICAO_PENDENTE' && (
+                                                <button
+                                                    onClick={() => setEditApprovalModal({ task, processing: false })}
+                                                    disabled={isProcessing}
+                                                    className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-black transition-all disabled:opacity-50 shadow-md shadow-amber-500/20"
+                                                >
+                                                    ✏️ Ver Proposta de Edição
+                                                </button>
+                                            )}
                                             {canManageTask(task) && !isConcluida && task.type === 'CANCELAMENTO_PENDENTE' && task.sale_id && (
                                                 <button
                                                     onClick={() => setStockReturnModal({ task, selectedLocationId: stores[0]?.id || '' })}
@@ -501,6 +512,131 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores }) => {
                     })}
                 </div>
             )}
+
+            {/* Modal de Aprovação de Edição de Venda (EDICAO_PENDENTE) */}
+            {editApprovalModal && (() => {
+                const { task, processing } = editApprovalModal;
+                const snap = task.proposal_snapshot as any;
+                const orig = snap?.original || {};
+                const prop = snap?.proposed || {};
+                const origItems: any[] = orig.items || [];
+                const propItems: any[] = prop.items || [];
+
+                const renderItems = (items: any[], highlight?: 'add' | 'remove') => items.map((item: any, idx: number) => (
+                    <div key={idx} className={`flex justify-between items-center py-1.5 px-2 rounded-lg text-xs ${highlight === 'add' ? 'bg-emerald-50' : highlight === 'remove' ? 'bg-red-50' : 'bg-slate-50'}`}>
+                        <span className="font-bold text-slate-700 truncate flex-1">{item.productId}</span>
+                        <span className="text-slate-500 ml-2">Qtd: {item.quantity}</span>
+                        <span className="text-slate-500 ml-2">R$ {(item.price || 0).toFixed(2)}</span>
+                    </div>
+                ));
+
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4 bg-slate-900/80 backdrop-blur-sm">
+                        <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+                            <div className="px-6 py-4 bg-amber-50 border-b border-amber-100 flex justify-between items-center shrink-0">
+                                <div>
+                                    <h2 className="text-base font-black text-amber-800 uppercase">✏️ Aprovação de Edição — Venda Nº {task.sale_id}</h2>
+                                    <p className="text-[10px] text-amber-600">{task.description}</p>
+                                </div>
+                                <button onClick={() => setEditApprovalModal(null)} className="p-2 hover:bg-amber-100 rounded-full"><X className="w-4 h-4 text-amber-500" /></button>
+                            </div>
+
+                            <div className="overflow-y-auto flex-1 p-5">
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Original */}
+                                    <div>
+                                        <p className="text-xs font-black text-slate-500 uppercase mb-2">Venda Original</p>
+                                        <div className="space-y-1">{renderItems(origItems)}</div>
+                                        <div className="mt-3 pt-3 border-t border-slate-100">
+                                            <p className="text-xs text-slate-500">Total: <span className="font-black text-slate-800">R$ {(orig.total || 0).toFixed(2)}</span></p>
+                                            <div className="space-y-1 mt-1">
+                                                {(orig.payments || []).map((p: any, i: number) => (
+                                                    <p key={i} className="text-xs text-slate-500">{p.method}: R$ {(p.amount || 0).toFixed(2)}</p>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {/* Proposto */}
+                                    <div>
+                                        <p className="text-xs font-black text-amber-600 uppercase mb-2">Proposta do Gerente</p>
+                                        <div className="space-y-1">
+                                            {propItems.map((item: any, idx: number) => {
+                                                const isNew = !origItems.some((o: any) => o.productId === item.productId);
+                                                const origItem = origItems.find((o: any) => o.productId === item.productId);
+                                                const changed = origItem && (origItem.quantity !== item.quantity || origItem.price !== item.price);
+                                                return <div key={idx} className={`flex justify-between items-center py-1.5 px-2 rounded-lg text-xs ${isNew ? 'bg-emerald-50 border border-emerald-200' : changed ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50'}`}>
+                                                    <span className="font-bold text-slate-700 truncate flex-1">{item.productId}</span>
+                                                    {isNew && <span className="text-[9px] text-emerald-700 font-black mr-1">NOVO</span>}
+                                                    {changed && !isNew && <span className="text-[9px] text-amber-700 font-black mr-1">ALTERADO</span>}
+                                                    <span className="text-slate-500">Qtd: {item.quantity}</span>
+                                                    <span className="text-slate-500 ml-2">R$ {(item.price || 0).toFixed(2)}</span>
+                                                </div>;
+                                            })}
+                                            {origItems.filter((o: any) => !propItems.some((p: any) => p.productId === o.productId)).map((item: any, idx: number) => (
+                                                <div key={`removed-${idx}`} className="flex justify-between items-center py-1.5 px-2 rounded-lg text-xs bg-red-50 border border-red-200">
+                                                    <span className="font-bold text-red-500 line-through truncate flex-1">{item.productId}</span>
+                                                    <span className="text-[9px] text-red-600 font-black">REMOVIDO</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="mt-3 pt-3 border-t border-slate-100">
+                                            <p className="text-xs text-slate-500">Total: <span className="font-black text-amber-700">R$ {(prop.total || 0).toFixed(2)}</span></p>
+                                            <div className="space-y-1 mt-1">
+                                                {(prop.payments || []).map((p: any, i: number) => (
+                                                    <p key={i} className="text-xs text-slate-500">{p.method}: R$ {(p.amount || 0).toFixed(2)}</p>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="px-5 py-4 border-t border-slate-100 flex gap-3 shrink-0">
+                                <button onClick={() => setEditApprovalModal(null)} className="flex-1 py-3 text-slate-500 font-bold uppercase text-xs border border-slate-200 rounded-2xl hover:bg-slate-50">Fechar</button>
+                                <button
+                                    disabled={processing}
+                                    onClick={async () => {
+                                        if (!window.confirm('Rejeitar esta proposta de edição? A venda volta ao estado original.')) return;
+                                        setEditApprovalModal(m => m ? { ...m, processing: true } : null);
+                                        try {
+                                            await supabaseService.rejectSaleEdit({ saleId: task.sale_id!, taskId: task.id, rejectedBy: user?.name || user?.username });
+                                            setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'CONCLUIDA' } : t));
+                                            setEditApprovalModal(null);
+                                            showToast('❌ Edição rejeitada.');
+                                        } catch { showToast('Erro ao rejeitar.', 'error'); setEditApprovalModal(m => m ? { ...m, processing: false } : null); }
+                                    }}
+                                    className="flex-1 py-3 bg-slate-700 text-white rounded-2xl font-black uppercase text-xs hover:bg-slate-800 disabled:opacity-50"
+                                >
+                                    {processing ? 'Processando...' : '❌ Rejeitar'}
+                                </button>
+                                <button
+                                    disabled={processing}
+                                    onClick={async () => {
+                                        if (!window.confirm('Autorizar esta edição? As alterações serão aplicadas na venda imediatamente.')) return;
+                                        setEditApprovalModal(m => m ? { ...m, processing: true } : null);
+                                        try {
+                                            await supabaseService.applySaleEdit({
+                                                saleId: task.sale_id!,
+                                                taskId: task.id,
+                                                authorizedBy: user?.name || user?.username,
+                                                originalSnapshot: snap?.original,
+                                                proposedSnapshot: snap?.proposed,
+                                                stores,
+                                            });
+                                            setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'CONCLUIDA' } : t));
+                                            setEditApprovalModal(null);
+                                            showToast('✅ Edição autorizada e aplicada!');
+                                        } catch { showToast('Erro ao autorizar.', 'error'); setEditApprovalModal(m => m ? { ...m, processing: false } : null); }
+                                    }}
+                                    className="flex-1 py-3 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 disabled:opacity-50"
+                                >
+                                    {processing ? 'Aplicando...' : '✅ Autorizar Edição'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Modal de Devolução de Saldo (CANCELAMENTO_PENDENTE) */}
             {stockReturnModal && (

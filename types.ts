@@ -6,8 +6,10 @@ export enum OrderStatus {
   ASSEMBLY_PENDING = 'Montagem Pendente',
   COMPLETED = 'Entregue',
   CANCEL_PENDING = 'Cancelamento Pendente',
+  EDIT_PENDING = 'Edição Pendente',
   CANCELED = 'Cancelada'
 }
+
 
 
 export interface Romaneio {

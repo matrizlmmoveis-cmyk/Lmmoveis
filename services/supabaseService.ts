@@ -626,5 +626,195 @@ export const supabaseService = {
         if (saleErr) throw saleErr;
         return true;
     },
+
+    // SALE EDIT AUTHORIZATION FLOW
+    async requestSaleEdit(params: {
+        saleId: string;
+        requestedBy: string;
+        storeId: string;
+        justification: string;
+        originalSnapshot: any;   // venda atual
+        proposedSnapshot: any;   // venda com as mudanças
+        productNames?: string;
+    }) {
+        // 1. Criar task com os snapshots
+        const { data, error } = await supabase.from('tasks').insert({
+            title: `Edição de Venda — Nº ${params.saleId}`,
+            description: `Solicitado por: ${params.requestedBy}\n\nJustificativa: ${params.justification}`,
+            type: 'EDICAO_PENDENTE',
+            status: 'ABERTA',
+            priority: 'ALTA',
+            created_by: params.requestedBy,
+            assigned_to: 'MASTER',
+            store_id: params.storeId,
+            sale_id: params.saleId,
+            product_name: params.productNames || '',
+            proposal_snapshot: { original: params.originalSnapshot, proposed: params.proposedSnapshot }
+        }).select('id').single();
+        if (error) throw error;
+
+        // 2. Marcar venda como "Edição Pendente" para bloquear novas edições
+        await supabase.from('sales').update({ status: 'Edição Pendente' }).eq('id', params.saleId);
+
+        return data?.id as string;
+    },
+
+    async applySaleEdit(params: {
+        saleId: string;
+        taskId: string;
+        authorizedBy: string;
+        originalSnapshot: any;
+        proposedSnapshot: any;
+        stores: any[];
+    }) {
+        const { originalSnapshot: orig, proposedSnapshot: proposed } = params;
+        const changes: any[] = [];
+
+        // --- Apply item changes ---
+        const origItems: any[] = orig.items || [];
+        const propItems: any[] = proposed.items || [];
+
+        // Find removed / reduced items → mark as DEVOLVER in expedition
+        for (const origItem of origItems) {
+            const propItem = propItems.find((i: any) => i.productId === origItem.productId && i.locationId === origItem.locationId);
+            if (!propItem) {
+                // Item completely removed → find sale_item id and mark DEVOLVER
+                const { data: siData } = await supabase.from('sale_items')
+                    .select('id').eq('sale_id', params.saleId).eq('product_id', origItem.productId).single();
+                if (siData?.id) {
+                    await supabase.from('sale_items').update({ dispatch_status: 'DEVOLVER', quantity: origItem.quantity }).eq('id', siData.id);
+                }
+                changes.push({ field: 'item_removed', product_id: origItem.productId, old_value: origItem.quantity, new_value: 0 });
+            } else if (propItem.quantity < origItem.quantity) {
+                // Quantity reduced → update and mark DEVOLVER the difference via a separate approach
+                const { data: siData } = await supabase.from('sale_items')
+                    .select('id').eq('sale_id', params.saleId).eq('product_id', origItem.productId).single();
+                if (siData?.id) {
+                    // Insert a DEVOLVER entry for the difference
+                    await supabase.from('sale_items').insert({
+                        sale_id: params.saleId,
+                        product_id: origItem.productId,
+                        quantity: origItem.quantity - propItem.quantity,
+                        price: origItem.price,
+                        discount: origItem.discount || 0,
+                        location_id: origItem.locationId,
+                        assembly_required: origItem.assemblyRequired || false,
+                        dispatch_status: 'DEVOLVER',
+                    });
+                    // Update original item quantity
+                    await supabase.from('sale_items').update({ quantity: propItem.quantity, price: propItem.price, discount: propItem.discount || 0 }).eq('id', siData.id);
+                }
+                changes.push({ field: 'item_qty_reduced', product_id: origItem.productId, old_value: origItem.quantity, new_value: propItem.quantity });
+            } else if (propItem.price !== origItem.price || propItem.discount !== origItem.discount) {
+                // Only price/discount changed
+                const { data: siData } = await supabase.from('sale_items')
+                    .select('id').eq('sale_id', params.saleId).eq('product_id', origItem.productId).single();
+                if (siData?.id) {
+                    await supabase.from('sale_items').update({ price: propItem.price, discount: propItem.discount || 0 }).eq('id', siData.id);
+                }
+                changes.push({ field: 'item_value', product_id: origItem.productId, old_value: { price: origItem.price, discount: origItem.discount }, new_value: { price: propItem.price, discount: propItem.discount } });
+            }
+        }
+
+        // Find added items → insert as PENDENTE in expedition
+        for (const propItem of propItems) {
+            const origItem = origItems.find((i: any) => i.productId === propItem.productId && i.locationId === propItem.locationId);
+            if (!origItem) {
+                await supabase.from('sale_items').insert({
+                    sale_id: params.saleId,
+                    product_id: propItem.productId,
+                    quantity: propItem.quantity,
+                    price: propItem.price,
+                    discount: propItem.discount || 0,
+                    location_id: propItem.locationId,
+                    assembly_required: propItem.assemblyRequired || false,
+                    dispatch_status: 'PENDENTE',
+                });
+                // Deduct inventory for new item
+                const { data: invData } = await supabase.from('inventory').select('quantity').eq('product_id', propItem.productId).eq('location_id', propItem.locationId).single();
+                const newQty = Math.max(0, (invData?.quantity || 0) - propItem.quantity);
+                await supabase.from('inventory').upsert({ product_id: propItem.productId, location_id: propItem.locationId, quantity: newQty }, { onConflict: 'product_id,location_id' });
+                changes.push({ field: 'item_added', product_id: propItem.productId, new_value: propItem.quantity });
+            }
+        }
+
+        // --- Update payments ---
+        const origPayments: any[] = orig.payments || [];
+        const propPayments: any[] = proposed.payments || [];
+        if (JSON.stringify(origPayments) !== JSON.stringify(propPayments)) {
+            await supabase.from('sale_payments').delete().eq('sale_id', params.saleId);
+            for (const p of propPayments) {
+                await supabase.from('sale_payments').insert({
+                    sale_id: params.saleId,
+                    method: p.method,
+                    amount: p.amount,
+                    details: p.details || null,
+                    status: p.status || null,
+                });
+            }
+            changes.push({ field: 'payments', old_value: origPayments, new_value: propPayments });
+        }
+
+        // Update sale total
+        const newTotal = propItems.reduce((acc: number, i: any) => acc + (i.price * i.quantity), 0);
+        const prevStatus = orig.status === 'Edição Pendente' ? (orig.prevStatus || 'Aguardando Entrega') : orig.status;
+        await supabase.from('sales').update({ total: newTotal, status: prevStatus }).eq('id', params.saleId);
+
+        // Close the task
+        await supabase.from('tasks').update({ status: 'CONCLUIDA', resolved_at: new Date().toISOString(), notes: `Autorizado por ${params.authorizedBy}` }).eq('id', params.taskId);
+
+        // Save audit log
+        await supabase.from('sale_edit_logs').insert({
+            sale_id: params.saleId,
+            task_id: params.taskId,
+            requested_by: orig.requestedBy || 'N/D',
+            authorized_by: params.authorizedBy,
+            authorized_at: new Date().toISOString(),
+            justification: orig.justification || '',
+            original_snapshot: params.originalSnapshot,
+            proposed_snapshot: params.proposedSnapshot,
+            changes,
+            status: 'AUTORIZADA',
+        });
+
+        return true;
+    },
+
+    async rejectSaleEdit(params: { saleId: string; taskId: string; rejectedBy: string; }) {
+        // Restore sale status (remove Edição Pendente)
+        await supabase.from('sales').update({ status: 'Aguardando Entrega' }).eq('id', params.saleId);
+        await supabase.from('tasks').update({ status: 'CONCLUIDA', resolved_at: new Date().toISOString(), notes: `Rejeitado por ${params.rejectedBy}` }).eq('id', params.taskId);
+        await supabase.from('sale_edit_logs').insert({
+            sale_id: params.saleId,
+            task_id: params.taskId,
+            rejected_by: params.rejectedBy,
+            rejected_at: new Date().toISOString(),
+            status: 'REJEITADA',
+        });
+        return true;
+    },
+
+    async confirmExpeditionReturn(saleItemId: string, targetLocationId: string) {
+        // Get item data
+        const { data: item, error: fetchErr } = await supabase.from('sale_items')
+            .select('product_id, quantity').eq('id', saleItemId).single();
+        if (fetchErr || !item) throw fetchErr || new Error('Item não encontrado');
+
+        // Credit inventory
+        const { data: invData } = await supabase.from('inventory')
+            .select('quantity, type').eq('product_id', item.product_id).eq('location_id', targetLocationId).single();
+        const newQty = (invData?.quantity || 0) + item.quantity;
+        await supabase.from('inventory').upsert({
+            product_id: item.product_id,
+            location_id: targetLocationId,
+            quantity: newQty,
+            ...(invData?.type ? { type: invData.type } : {})
+        }, { onConflict: 'product_id,location_id' });
+
+        // Mark item as returned
+        await supabase.from('sale_items').update({ dispatch_status: 'DEVOLVIDO' }).eq('id', saleItemId);
+        return true;
+    },
 };
+
 
