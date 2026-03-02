@@ -16,7 +16,7 @@ import Products from './views/Products.tsx';
 import Expedicao from './views/Expedicao.tsx';
 import Tarefas from './views/Tarefas.tsx';
 import ReceiptSettlement from './views/ReceiptSettlement.tsx';
-import { Bell, Search, User, Lock, Store as StoreIcon, AlertCircle, X, Menu, Loader2 } from 'lucide-react';
+import { Bell, Search, User, Lock, Store as StoreIcon, AlertCircle, X, Menu, Loader2, LogOut } from 'lucide-react';
 import { Employee, UserRole, Sale, InventoryItem, Store, Product, Customer } from './types.ts';
 import { CartProvider } from './components/CartContext.tsx';
 import { supabaseService } from './services/supabaseService.ts';
@@ -40,6 +40,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobilePlatform, setIsMobilePlatform] = useState(false);
+  const isFieldRole = user?.role === 'MOTORISTA' || user?.role === 'MONTADOR';
 
   useEffect(() => {
     // Restaurar usuário do localStorage imediatamente
@@ -231,10 +232,10 @@ const App: React.FC = () => {
       case 'stores': return <Stores stores={stores} setStores={setStores} employees={employees} />;
       case 'employees': return <EmployeesView user={user} employees={employees} setEmployees={setEmployees} stores={stores} />;
       case 'romaneios': return <Romaneios sales={sales} setSales={setSales} employees={employees} products={products} />;
-      case 'expedicao': return <Expedicao user={user} stores={stores} />;
+      case 'expedicao': return <Expedicao user={user} stores={stores} sales={sales} products={products} employees={employees} customers={customers} />;
       case 'tarefas': return <Tarefas user={user} stores={stores} />;
       case 'delivery':
-      case 'logistics': return <Logistics user={user} sales={sales} setSales={setSales} />;
+      case 'logistics': return <Logistics user={user} sales={sales} setSales={setSales} products={products} stores={stores} />;
       case 'assembly': return <Assembly user={user} sales={sales} setSales={setSales} products={products} />;
       case 'settlement': return <ReceiptSettlement sales={sales} setSales={setSales} employees={employees} stores={stores} />;
       case 'reports': return <Reports user={user} sales={sales} stores={stores} products={products} employees={employees} />;
@@ -306,17 +307,23 @@ const App: React.FC = () => {
     <div className="flex h-screen bg-slate-50 overflow-hidden relative">
       <div className={`fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsSidebarOpen(false)} />
 
-      <div className={`fixed lg:static inset-y-0 left-0 z-50 transform transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <Sidebar activeView={activeView} setActiveView={(view) => { setActiveView(view); setIsSidebarOpen(false); }} role={user.role} onLogout={handleLogout} />
-      </div>
+      {!isFieldRole && (
+        <div className={`fixed lg:static inset-y-0 left-0 z-50 transform transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <Sidebar activeView={activeView} setActiveView={(view) => { setActiveView(view); setIsSidebarOpen(false); }} role={user.role} onLogout={handleLogout} />
+        </div>
+      )}
 
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <header className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 md:px-8 shrink-0 no-print">
           <div className="flex items-center gap-4 flex-1">
-            <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 hover:bg-slate-100 rounded-xl lg:hidden">
-              <Menu className="w-5 h-5 text-slate-600" />
-            </button>
-            <h2 className="font-bold text-slate-900 uppercase text-xs truncate">{activeView}</h2>
+            {!isFieldRole && (
+              <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 hover:bg-slate-100 rounded-xl lg:hidden">
+                <Menu className="w-5 h-5 text-slate-600" />
+              </button>
+            )}
+            <h2 className="font-bold text-slate-900 uppercase text-xs truncate">
+              {activeView === 'delivery' || activeView === 'assembly' ? 'Minha Rota' : activeView}
+            </h2>
           </div>
           <div className="flex items-center gap-3 pl-2">
             <div className="text-right hidden xs:block">
@@ -324,6 +331,16 @@ const App: React.FC = () => {
               <p className="text-[9px] md:text-[10px] text-slate-400">{user.role}</p>
             </div>
             <div className="w-8 h-8 md:w-9 md:h-9 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs uppercase shrink-0">{user.name.substring(0, 2)}</div>
+
+            {isFieldRole && (
+              <button
+                onClick={handleLogout}
+                className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                title="Sair"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </header>
         <section className="flex-1 overflow-y-auto p-3 md:p-8 bg-slate-50/50">

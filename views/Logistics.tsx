@@ -1,15 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Truck, MapPin, CheckCircle2, Navigation, Package, Camera, X, Check, Eraser } from 'lucide-react';
-import { OrderStatus, Sale, Employee } from '../types.ts';
+import { Truck, MapPin, CheckCircle2, Navigation, Package, Camera, X, Check, Eraser, Phone, MessageSquare } from 'lucide-react';
+import { OrderStatus, Sale, Employee, Product, Store } from '../types.ts';
 import { supabaseService } from '../services/supabaseService';
 
 interface LogisticsProps {
   user: Employee | { id: string, name: string, role: string, storeId?: string } | null;
   sales: Sale[];
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
+  products: Product[];
+  stores: Store[];
 }
 
-const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales }) => {
+const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, stores }) => {
   const [activeDeliveryId, setActiveDeliveryId] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
@@ -208,9 +210,31 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales }) => {
 
               <div>
                 <h3 className="text-lg font-black text-slate-900 uppercase leading-tight">{delivery.customerName}</h3>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
-                  <MapPin className="w-3.5 h-3.5 text-blue-500" />
-                  <span className="font-bold">{delivery.deliveryAddress}</span>
+                <div className="flex flex-col gap-2 mt-2">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <MapPin className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="font-bold uppercase">{delivery.deliveryAddress}</span>
+                  </div>
+                  {delivery.customerPhone && (
+                    <div className="flex items-center gap-3 mt-1 underline-none">
+                      <a
+                        href={`tel:${delivery.customerPhone}`}
+                        className="flex items-center gap-1.5 text-xs text-blue-600 font-bold hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors border border-blue-100"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        {delivery.customerPhone}
+                      </a>
+                      <a
+                        href={`https://wa.me/${delivery.customerPhone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold hover:bg-emerald-50 px-2 py-1 rounded-lg transition-colors border border-emerald-100"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        WhatsApp
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -219,9 +243,20 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales }) => {
                   <Package className="w-3 h-3" /> Conferência
                 </p>
                 <div className="space-y-1">
-                  {delivery.items.map((item, i) => (
-                    <p key={i} className="text-xs font-bold text-slate-700 uppercase">• {item.quantity}x {item.productId}</p>
-                  ))}
+                  {delivery.items.map((item, i) => {
+                    const p = products.find(prod => prod.id === item.productId);
+                    const store = stores.find(s => s.id === item.locationId);
+                    return (
+                      <div key={i} className="flex justify-between items-center text-xs font-bold text-slate-700 uppercase">
+                        <span>• {item.quantity}x {p?.name || item.productId}</span>
+                        {store && (
+                          <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded ml-2 shrink-0">
+                            {store.name}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabase.ts';
-import { CheckCircle, XCircle, Package, RefreshCw, Search, AlertTriangle, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Package, RefreshCw, Search, AlertTriangle, ChevronDown, ChevronUp, Clock, FileText } from 'lucide-react';
+import { Sale, Product, Employee, Customer, Store } from '../types.ts';
+import SaleReceipt from './SaleReceipt.tsx';
 
 interface SaleItem {
     id: string;
@@ -24,8 +26,12 @@ interface SaleItem {
 }
 
 interface ExpedicaoProps {
-    user: any;
-    stores: any[];
+    user: Employee | null;
+    stores: Store[];
+    sales: Sale[];
+    products: Product[];
+    employees: Employee[];
+    customers: Customer[];
 }
 
 const DRIVE_PREFIX = 'https://drive.google.com/drive/folders/1V6M5rwQDy-1W4ZSmbIhR_x9zjsfS3ha3/';
@@ -36,11 +42,12 @@ const getImageUrl = (imageUrl?: string) => {
     return DRIVE_PREFIX + imageUrl;
 };
 
-const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores }) => {
+const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, employees, customers }) => {
     const [items, setItems] = useState<SaleItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [search, setSearch] = useState('');
+    const [selectedSaleForReceipt, setSelectedSaleForReceipt] = useState<Sale | null>(null);
 
     const [stats, setStats] = useState({ pendente: 0, separado: 0, indisponivel: 0 });
     const [filterStore, setFilterStore] = useState('Todos');
@@ -70,13 +77,13 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores }) => {
 
             if (error) throw error;
 
-            // Filtrar pelo CD do item (location_id), não pela loja que vendeu
+            // Filtrar estritamente pelo CD NORTE
             const filtered = (data || []).filter((item: any) => {
-                if (filterStore === 'Todos') return true;
-                if (item.location_id === filterStore) return true;
-                // fallback: comparar pelo nome
                 const locationName = stores.find(s => s.id === item.location_id)?.name || '';
-                return locationName.toLowerCase().includes('norte') || locationName.toLowerCase().includes('cd norte');
+                const isNorte = locationName.toLowerCase().includes('norte');
+
+                if (filterStore === 'Todos') return isNorte;
+                return item.location_id === filterStore && isNorte;
             });
 
             setItems(filtered as unknown as SaleItem[]);
@@ -88,9 +95,11 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores }) => {
 
             const counts = { pendente: 0, separado: 0, indisponivel: 0 };
             (statsData || []).forEach((r: any) => {
-                const matchesFilter = filterStore === 'Todos' || r.location_id === filterStore || (
-                    stores.find(s => s.id === r.location_id)?.name.toLowerCase().includes('norte') &&
-                    (filterStore.toLowerCase().includes('norte') || filterStore.toLowerCase().includes('cd norte'))
+                const locationName = stores.find(s => s.id === r.location_id)?.name || '';
+                const isNorte = locationName.toLowerCase().includes('norte');
+
+                const matchesFilter = isNorte && (
+                    filterStore === 'Todos' || r.location_id === filterStore
                 );
 
                 if (matchesFilter) {
@@ -338,24 +347,21 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores }) => {
                                                     {/* Background icon decoration */}
                                                     <Package className="absolute -right-4 -bottom-4 w-24 h-24 text-slate-50 opacity-[0.03] group-hover:scale-110 transition-transform" />
 
-                                                    <div className="flex gap-4">
-                                                        <div className="w-16 h-16 rounded-2xl bg-slate-50 overflow-hidden shrink-0 flex items-center justify-center border border-slate-100">
-                                                            {imgUrl ? (
-                                                                <img src={imgUrl} alt={item.products?.name} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <Package className="w-7 h-7 text-slate-300" />
-                                                            )}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex justify-between items-start gap-2">
+                                                            <p className="text-[10px] font-black text-blue-600 uppercase tracking-wider">{item.sale_id}</p>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const sale = sales.find(s => s.id === item.sale_id);
+                                                                    if (sale) setSelectedSaleForReceipt(sale);
+                                                                }}
+                                                                className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 hover:bg-blue-100"
+                                                            >
+                                                                <FileText className="w-3 h-3" /> VER NOTA
+                                                            </button>
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex justify-between items-start gap-2">
-                                                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-wider">{item.sale_id}</p>
-                                                                <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
-                                                                    {new Date(item.sales?.created_at || '').toLocaleDateString('pt-BR')}
-                                                                </span>
-                                                            </div>
-                                                            <h3 className="font-black text-slate-900 text-sm leading-tight mt-1 truncate">{item.products?.name}</h3>
-                                                            <p className="font-bold text-slate-500 text-xs mt-1 truncate">👤 {item.sales?.customer_name}</p>
-                                                        </div>
+                                                        <h3 className="font-black text-slate-900 text-sm leading-tight mt-1 truncate">{item.products?.name}</h3>
+                                                        <p className="font-bold text-slate-500 text-xs mt-1 truncate">👤 {item.sales?.customer_name}</p>
                                                     </div>
 
                                                     <div className="flex items-center justify-between text-xs pt-3 border-t border-slate-50">
@@ -475,6 +481,22 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores }) => {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Nota de Venda */}
+            {selectedSaleForReceipt && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+                    <div className="bg-white w-full max-w-5xl h-[90vh] rounded-3xl shadow-2xl overflow-y-auto p-2">
+                        <SaleReceipt
+                            sale={selectedSaleForReceipt}
+                            onBack={() => setSelectedSaleForReceipt(null)}
+                            stores={stores}
+                            products={products}
+                            employees={employees}
+                            customers={customers}
+                        />
                     </div>
                 </div>
             )}
