@@ -26,6 +26,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [isCreating, setIsCreating] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
 
+  const isShowroomPeriod = new Date() <= new Date('2026-03-10T23:59:59');
+
   const [newSale, setNewSale] = useState<Partial<Sale>>({
     customerName: '',
     items: [],
@@ -110,34 +112,31 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     return matchesSearch && matchesStatus;
   });
 
-  const handleAddItem = (product: Product) => {
-    const existing = newSale.items?.find(i => i.productId === product.id);
+  const handleAddItem = (product: Product, isMostruario: boolean = false, isEncomenda: boolean = false) => {
+    const locId = isMostruario ? 'mostruario' : (isEncomenda ? 'encomenda' : (inventory.find(i => i.productId === product.id && i.locationId === newSale.storeId && i.quantity > 0)?.locationId || inventory.find(i => i.productId === product.id && i.quantity > 0)?.locationId || newSale.storeId || stores[0]?.id || ''));
+
+    const existing = newSale.items?.find(i => i.productId === product.id && i.locationId === (isMostruario ? 'mostruario' : (isEncomenda ? 'encomenda' : i.locationId)));
     if (existing) {
-      // Só valida ao AUMENTAR a qtd além do saldo do CD já selecionado no item
-      const availableQty = inventory.find(i => i.productId === product.id && i.locationId === existing.locationId)?.quantity || 0;
-      if (existing.quantity + 1 > availableQty) {
-        const locationName = stores.find(s => s.id === existing.locationId)?.name || existing.locationId;
-        alert(`Saldo insuficiente em "${locationName}"! Disponível: ${availableQty} un.`);
-        return;
+      if (!isMostruario && !isEncomenda && existing.locationId !== 'mostruario' && existing.locationId !== 'encomenda') {
+        const availableQty = inventory.find(i => i.productId === product.id && i.locationId === existing.locationId)?.quantity || 0;
+        if (existing.quantity + 1 > availableQty) {
+          const locationName = stores.find(s => s.id === existing.locationId)?.name || existing.locationId;
+          alert(`Saldo insuficiente em "${locationName}"! Disponível: ${availableQty} un.`);
+          return;
+        }
       }
       setNewSale({
         ...newSale,
-        items: newSale.items?.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i)
+        items: newSale.items?.map(i => (i.productId === product.id && i.locationId === existing.locationId) ? { ...i, quantity: i.quantity + 1 } : i)
       });
     } else {
-      // Ao adicionar pela 1ª vez: seleciona automaticamente o CD com saldo
-      // Prefere o CD da loja atual se tiver saldo, senão usa o primeiro com saldo
-      const stockLocations = inventory.filter(i => i.productId === product.id && i.quantity > 0);
-      const preferred = stockLocations.find(i => i.locationId === newSale.storeId) || stockLocations[0];
-      const defaultLocationId = preferred?.locationId || newSale.storeId || (stores[0]?.id || '');
-
       const newItem: SaleItem = {
         productId: product.id,
         quantity: 1,
         price: product.price,
         discount: 0,
         originalPrice: product.price,
-        locationId: defaultLocationId,
+        locationId: locId,
         assemblyRequired: false
       };
       setNewSale({ ...newSale, items: [...(newSale.items || []), newItem] });
@@ -278,13 +277,32 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
 
     try {
       await supabaseService.createSale(sale);
-      const inventoryUpdates = sale.items.map(item => {
-        const currentQty = inventory.find(i => i.productId === item.productId && i.locationId === item.locationId)?.quantity || 0;
-        const locationStore = stores.find(s => s.id === item.locationId);
-        const storeType = locationStore?.type || 'STORE_STOCK';
-        return supabaseService.updateInventory(item.productId, item.locationId, Math.max(0, currentQty - item.quantity), storeType);
-      });
+      const inventoryUpdates = sale.items
+        .filter(item => item.locationId !== 'mostruario' && item.locationId !== 'encomenda') // NÃO DESCONTA MOSTRUÁRIO OU ENCOMENDA
+        .map(item => {
+          const currentQty = inventory.find(i => i.productId === item.productId && i.locationId === item.locationId)?.quantity || 0;
+          const locationStore = stores.find(s => s.id === item.locationId);
+          const storeType = locationStore?.type || 'STORE_STOCK';
+          return supabaseService.updateInventory(item.productId, item.locationId, Math.max(0, currentQty - item.quantity), storeType);
+        });
       await Promise.all(inventoryUpdates);
+
+      // Criar alertas para encomendas (Master/Supervisor)
+      const encomendaItems = sale.items.filter(item => item.locationId === 'encomenda');
+      if (encomendaItems.length > 0) {
+        const prodNames = encomendaItems.map(item => products.find(p => p.id === item.productId)?.name || item.productId).join(', ');
+        await supabaseService.createTask({
+          title: `Pedido de Encomenda Gerado`,
+          description: `Venda Nº ${sale.id} contém itens de ENCOMENDA: ${prodNames}.\nCliente: ${sale.customerName}`,
+          type: 'AVISO_SAIDA_ESTOQUE',
+          priority: 'ALTA',
+          status: 'ABERTA',
+          created_by: user?.name || 'Sistema',
+          assigned_to: 'MASTER', // Também visível para Supervisor no fluxo de tarefas
+          store_id: sale.storeId,
+          sale_id: sale.id,
+        });
+      }
 
 
       // Criar avisos automáticos para itens vendidos de outra loja
@@ -315,6 +333,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       setInventory(prev => {
         const updated = [...prev];
         sale.items.forEach(item => {
+          if (item.locationId === 'mostruario' || item.locationId === 'encomenda') return; // Ignora visualmente também
           const index = updated.findIndex(i => i.productId === item.productId && i.locationId === item.locationId);
           if (index !== -1) updated[index] = { ...updated[index], quantity: Math.max(0, updated[index].quantity - item.quantity) };
         });
@@ -431,7 +450,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
               <h3 className="text-sm font-black text-slate-400 uppercase mb-4 flex items-center gap-2"><Package className="w-4 h-4" /> Itens do Pedido</h3>
               <div className="relative mb-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" placeholder="Buscar produto..." className="w-full pl-10 pr-4 py-3 bg-slate-50 rounded-2xl text-sm" value={productSearch} onChange={e => setProductSearch(e.target.value)} /></div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 gap-1.5 max-h-80 overflow-y-auto pr-1">
                 {products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()) || (p.sku || '').toLowerCase().includes(productSearch.toLowerCase())).map(p => {
                   const totalStock = inventory.filter(i => i.productId === p.id).reduce((acc: number, i) => acc + (i.quantity || 0), 0);
                   const hasStock = totalStock > 0;
@@ -445,12 +464,22 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                         <p className="text-blue-600 font-bold text-[10px]">R$ {p.price.toFixed(2)}</p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${hasStock ? 'text-emerald-700 bg-emerald-50' : 'text-red-500 bg-red-50'}`}>
-                          SALDO: {totalStock}
+                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${hasStock ? 'text-emerald-700 bg-emerald-50 border border-emerald-100' : 'text-red-500 bg-red-50 border border-red-100'}`}>
+                          {totalStock}
                         </span>
                         {hasStock && (
-                          <button onClick={() => handleAddItem(p)} className="w-6 h-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all">
-                            <Plus className="w-3.5 h-3.5" />
+                          <button onClick={() => handleAddItem(p, false)} title="Venda Normal" className="w-7 h-7 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95">
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        )}
+                        {isShowroomPeriod && (
+                          <button onClick={() => handleAddItem(p, true)} title="Venda Mostruário" className="w-7 h-7 bg-amber-500 hover:bg-amber-600 text-white rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95 font-black text-xs">
+                            M
+                          </button>
+                        )}
+                        {!hasStock && (
+                          <button onClick={() => handleAddItem(p, false, true)} title="Venda Encomenda" className="w-7 h-7 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95 font-black text-xs">
+                            E
                           </button>
                         )}
                       </div>
@@ -470,22 +499,26 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                         <div className="flex flex-wrap items-center gap-2">
                           <input type="number" min="1" className="w-14 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" value={item.quantity} onChange={e => {
                             const newQty = parseInt(e.target.value) || 1;
-                            const availableQty = inventory.find(inv => inv.productId === item.productId && inv.locationId === item.locationId)?.quantity || 0;
-                            if (newQty > availableQty) {
-                              const locationName = stores.find(s => s.id === item.locationId)?.name || item.locationId;
-                              alert(`Saldo insuficiente em "${locationName}"! Disponível: ${availableQty} un.`);
-                              return;
+                            const isVirtual = item.locationId === 'mostruario' || item.locationId === 'encomenda';
+                            if (!isVirtual) {
+                              const availableQty = inventory.find(inv => inv.productId === item.productId && inv.locationId === item.locationId)?.quantity || 0;
+                              if (newQty > availableQty) {
+                                const locationName = stores.find(s => s.id === item.locationId)?.name || item.locationId;
+                                alert(`Saldo insuficiente em "${locationName}"! Disponível: ${availableQty} un.`);
+                                return;
+                              }
                             }
-                            setNewSale({ ...newSale, items: newSale.items?.map(i => i.productId === item.productId ? { ...i, quantity: newQty } : i) });
+                            setNewSale({ ...newSale, items: newSale.items?.map(i => (i.productId === item.productId && i.locationId === item.locationId) ? { ...i, quantity: newQty } : i) });
                           }} />
                           <span className="text-[10px] text-slate-400 font-bold">x</span>
                           <input type="number" className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" value={item.price} onChange={e => handlePriceChange(item.productId, parseFloat(e.target.value) || 0)} />
                           <span className="text-[9px] text-slate-400 font-bold">Desc.</span>
                           <input type="number" min="0" max="100" className="w-12 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" value={Math.round(item.discount)} onChange={e => handleDiscountChange(item.productId, parseFloat(e.target.value) || 0)} />
                           <span className="text-[9px] text-slate-400 font-bold">%</span>
-                          <select className="flex-1 min-w-[130px] px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold outline-none" value={item.locationId} onChange={e => setNewSale({ ...newSale, items: newSale.items?.map(i => i.productId === item.productId ? { ...i, locationId: e.target.value } : i) })}>
+                          <select className="flex-1 min-w-[130px] px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold outline-none" value={item.locationId} onChange={e => setNewSale({ ...newSale, items: newSale.items?.map(i => (i.productId === item.productId && i.locationId === item.locationId) ? { ...i, locationId: e.target.value } : i) })}>
                             {itemStocks.map(s => { const sn = stores.find(st => st.id === s.locationId)?.name || s.locationId; return <option key={s.locationId} value={s.locationId}>{sn} (Saldo: {s.quantity})</option>; })}
-                            {itemStocks.length === 0 && <option value={item.locationId}>Sem estoque</option>}
+                            {(itemStocks.length === 0 || item.locationId === 'mostruario' || isShowroomPeriod) && <option value="mostruario">Mostruário (Avulso)</option>}
+                            {(itemStocks.length === 0 || item.locationId === 'encomenda') && <option value="encomenda">Encomenda (Avulso)</option>}
                           </select>
                           <label className="flex items-center gap-1 cursor-pointer shrink-0">
                             <input type="checkbox" className="w-3.5 h-3.5 rounded" checked={item.assemblyRequired} onChange={e => setNewSale({ ...newSale, items: newSale.items?.map(i => i.productId === item.productId ? { ...i, assemblyRequired: e.target.checked } : i) })} />

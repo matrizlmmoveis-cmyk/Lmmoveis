@@ -12,6 +12,9 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ user, sales, stores }) => {
   const filteredSales = useMemo(() => {
+    if (user?.role === 'VENDEDOR') {
+      return sales.filter(sale => sale.sellerId === user.id);
+    }
     if (user?.role === 'GERENTE' && user.storeId) {
       return sales.filter(sale => sale.storeId === user.storeId);
     }
@@ -34,8 +37,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, sales, stores }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <header>
-        <h1 className="text-2xl font-bold text-slate-900">Visão Geral {user?.role === 'GERENTE' && user.storeId ? `da Loja ${stores.find(s => s.id === user.storeId)?.name}` : ''}</h1>
-        <p className="text-slate-500">Resumo de operações de hoje</p>
+        <h1 className="text-2xl font-bold text-slate-900">
+          {user?.role === 'VENDEDOR' ? 'Meus Resultados' :
+            (user?.role === 'GERENTE' && user.storeId) ? `Resultados: ${stores.find(s => s.id === user.storeId)?.name}` :
+              'Faturamento Geral'}
+        </h1>
+        <p className="text-slate-500">Resumo de desempenho e vendas</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
