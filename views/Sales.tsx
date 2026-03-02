@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Employee, Store, OrderStatus, Sale, Product, Customer, SaleItem, Payment, InventoryItem } from '../types.ts';
-import { Search, Plus, Eye, X, ShoppingCart, User, Package, CheckCircle2, ArrowLeft, Trash2, AlertCircle, CreditCard, DollarSign, Box, Filter } from 'lucide-react';
+import { Search, Plus, Eye, X, ShoppingCart, User, Package, CheckCircle2, ArrowLeft, Trash2, AlertCircle, CreditCard, DollarSign, Box, Filter, Calendar, Printer, Check, CheckSquare, Square } from 'lucide-react';
 import SaleReceipt from './SaleReceipt.tsx';
 import CustomerModal from '../components/CustomerModal.tsx';
 
@@ -25,6 +25,10 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [startDate, setStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
+  const [isBulkPrinting, setIsBulkPrinting] = useState(false);
 
   const isShowroomPeriod = new Date() <= new Date('2026-03-10T23:59:59');
 
@@ -100,24 +104,31 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   };
 
   const filteredSales = (sales || []).filter(s => {
+    const saleDate = new Date(s.date).toISOString().split('T')[0];
+    const isInDateRange = (!startDate || saleDate >= startDate) && (!endDate || saleDate <= endDate);
+    if (!isInDateRange) return false;
+
     const matchesSearch = (s.customerName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (s.id?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
-    if (user?.role === 'GERENTE') {
-      return matchesSearch && matchesStatus && s.storeId === user.storeId;
-    }
-    if (user?.role === 'VENDEDOR') {
-      return matchesSearch && matchesStatus && s.sellerId === user.id;
-    }
-    return matchesSearch && matchesStatus;
+
+    let matchesRole = true;
+    if (user?.role === 'GERENTE') matchesRole = s.storeId === user.storeId;
+    if (user?.role === 'VENDEDOR') matchesRole = s.sellerId === user.id;
+
+    return matchesSearch && matchesStatus && matchesRole;
   });
 
-  const handleAddItem = (product: Product, isMostruario: boolean = false, isEncomenda: boolean = false) => {
-    const locId = isMostruario ? 'mostruario' : (isEncomenda ? 'encomenda' : (inventory.find(i => i.productId === product.id && i.locationId === newSale.storeId && i.quantity > 0)?.locationId || inventory.find(i => i.productId === product.id && i.quantity > 0)?.locationId || newSale.storeId || stores[0]?.id || ''));
+  useEffect(() => {
+    setSelectedSaleIds([]);
+  }, [startDate, endDate, statusFilter, searchTerm]);
 
-    const existing = newSale.items?.find(i => i.productId === product.id && i.locationId === (isMostruario ? 'mostruario' : (isEncomenda ? 'encomenda' : i.locationId)));
+  const handleAddItem = (product: Product, isMostruario: boolean = false, isEncomenda: boolean = false) => {
+    const locId = isMostruario ? 'ST-MOSTRUARIO' : (isEncomenda ? 'ST-ENCOMENDA' : (inventory.find(i => i.productId === product.id && i.locationId === newSale.storeId && i.quantity > 0)?.locationId || inventory.find(i => i.productId === product.id && i.quantity > 0)?.locationId || newSale.storeId || stores[0]?.id || ''));
+
+    const existing = newSale.items?.find(i => i.productId === product.id && i.locationId === (isMostruario ? 'ST-MOSTRUARIO' : (isEncomenda ? 'ST-ENCOMENDA' : i.locationId)));
     if (existing) {
-      if (!isMostruario && !isEncomenda && existing.locationId !== 'mostruario' && existing.locationId !== 'encomenda') {
+      if (!isMostruario && !isEncomenda && existing.locationId !== 'ST-MOSTRUARIO' && existing.locationId !== 'ST-ENCOMENDA') {
         const availableQty = inventory.find(i => i.productId === product.id && i.locationId === existing.locationId)?.quantity || 0;
         if (existing.quantity + 1 > availableQty) {
           const locationName = stores.find(s => s.id === existing.locationId)?.name || existing.locationId;
@@ -278,7 +289,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     try {
       await supabaseService.createSale(sale);
       const inventoryUpdates = sale.items
-        .filter(item => item.locationId !== 'mostruario' && item.locationId !== 'encomenda') // NÃO DESCONTA MOSTRUÁRIO OU ENCOMENDA
+        .filter(item => item.locationId !== 'ST-MOSTRUARIO' && item.locationId !== 'ST-ENCOMENDA') // NÃO DESCONTA MOSTRUÁRIO OU ENCOMENDA
         .map(item => {
           const currentQty = inventory.find(i => i.productId === item.productId && i.locationId === item.locationId)?.quantity || 0;
           const locationStore = stores.find(s => s.id === item.locationId);
@@ -333,7 +344,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       setInventory(prev => {
         const updated = [...prev];
         sale.items.forEach(item => {
-          if (item.locationId === 'mostruario' || item.locationId === 'encomenda') return; // Ignora visualmente também
+          if (item.locationId === 'ST-MOSTRUARIO' || item.locationId === 'ST-ENCOMENDA') return; // Ignora visualmente também
           const index = updated.findIndex(i => i.productId === item.productId && i.locationId === item.locationId);
           if (index !== -1) updated[index] = { ...updated[index], quantity: Math.max(0, updated[index].quantity - item.quantity) };
         });
@@ -499,7 +510,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                         <div className="flex flex-wrap items-center gap-2">
                           <input type="number" min="1" className="w-14 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" value={item.quantity} onChange={e => {
                             const newQty = parseInt(e.target.value) || 1;
-                            const isVirtual = item.locationId === 'mostruario' || item.locationId === 'encomenda';
+                            const isVirtual = item.locationId === 'ST-MOSTRUARIO' || item.locationId === 'ST-ENCOMENDA';
                             if (!isVirtual) {
                               const availableQty = inventory.find(inv => inv.productId === item.productId && inv.locationId === item.locationId)?.quantity || 0;
                               if (newQty > availableQty) {
@@ -517,8 +528,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           <span className="text-[9px] text-slate-400 font-bold">%</span>
                           <select className="flex-1 min-w-[130px] px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold outline-none" value={item.locationId} onChange={e => setNewSale({ ...newSale, items: newSale.items?.map(i => (i.productId === item.productId && i.locationId === item.locationId) ? { ...i, locationId: e.target.value } : i) })}>
                             {itemStocks.map(s => { const sn = stores.find(st => st.id === s.locationId)?.name || s.locationId; return <option key={s.locationId} value={s.locationId}>{sn} (Saldo: {s.quantity})</option>; })}
-                            {(itemStocks.length === 0 || item.locationId === 'mostruario' || isShowroomPeriod) && <option value="mostruario">Mostruário (Avulso)</option>}
-                            {(itemStocks.length === 0 || item.locationId === 'encomenda') && <option value="encomenda">Encomenda (Avulso)</option>}
+                            {(itemStocks.length === 0 || item.locationId === 'ST-MOSTRUARIO' || isShowroomPeriod) && <option value="ST-MOSTRUARIO">Mostruário (Avulso)</option>}
+                            {(itemStocks.length === 0 || item.locationId === 'ST-ENCOMENDA') && <option value="ST-ENCOMENDA">Encomenda (Avulso)</option>}
                           </select>
                           <label className="flex items-center gap-1 cursor-pointer shrink-0">
                             <input type="checkbox" className="w-3.5 h-3.5 rounded" checked={item.assemblyRequired} onChange={e => setNewSale({ ...newSale, items: newSale.items?.map(i => i.productId === item.productId ? { ...i, assemblyRequired: e.target.checked } : i) })} />
@@ -641,14 +652,28 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         </div>
       </header>
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" placeholder="Buscar venda ou cliente..." className="w-full pl-10 pr-4 py-2 bg-slate-50 rounded-xl text-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
-          <div className="flex gap-2">
-            <div className="relative"><Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <select className="pl-10 pr-4 py-2 bg-slate-50 rounded-xl text-sm uppercase font-bold" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                <option value="all">Todos Status</option>
-                {Object.values(OrderStatus).map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+        <div className="p-4 border-b border-slate-100 flex flex-col lg:flex-row gap-4 lg:items-end">
+          <div className="flex-1 space-y-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Busca Geral</label>
+            <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" placeholder="Buscar venda ou cliente..." className="w-full pl-10 pr-4 py-2 bg-slate-50 rounded-xl text-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
+          </div>
+          <div className="flex flex-wrap md:flex-nowrap gap-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Início</label>
+              <div className="relative"><Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><input type="date" className="pl-9 pr-4 py-2 bg-slate-50 rounded-xl text-sm font-bold" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Fim</label>
+              <div className="relative"><Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><input type="date" className="pl-9 pr-4 py-2 bg-slate-50 rounded-xl text-sm font-bold" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Status</label>
+              <div className="relative"><Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <select className="pl-10 pr-4 py-2 bg-slate-50 rounded-xl text-sm uppercase font-bold" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                  <option value="all">Todos</option>
+                  {Object.values(OrderStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -656,6 +681,19 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
+                {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && (
+                  <th className="px-6 py-4 w-10">
+                    <button
+                      onClick={() => {
+                        if (selectedSaleIds.length === filteredSales.length) setSelectedSaleIds([]);
+                        else setSelectedSaleIds(filteredSales.map(s => s.id));
+                      }}
+                      className="text-slate-400 hover:text-blue-600 transition-colors"
+                    >
+                      {selectedSaleIds.length === filteredSales.length && filteredSales.length > 0 ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                    </button>
+                  </th>
+                )}
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Nº</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Cliente</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Unidade</th>
@@ -665,7 +703,17 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredSales.map(sale => (
-                <tr key={sale.id} className="hover:bg-slate-50/50 transition-colors">
+                <tr key={sale.id} className={`hover:bg-slate-50/50 transition-colors ${selectedSaleIds.includes(sale.id) ? 'bg-blue-50/30' : ''}`}>
+                  {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && (
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => setSelectedSaleIds(prev => prev.includes(sale.id) ? prev.filter(id => id !== sale.id) : [...prev, sale.id])}
+                        className={`${selectedSaleIds.includes(sale.id) ? 'text-blue-600' : 'text-slate-300'} transition-colors`}
+                      >
+                        {selectedSaleIds.includes(sale.id) ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                      </button>
+                    </td>
+                  )}
                   <td className="px-6 py-4 font-black text-blue-600 text-sm">{sale.id}</td>
                   <td className="px-6 py-4"><p className="font-medium text-slate-700 text-sm uppercase">{sale.customerName}</p><p className="text-[10px] text-slate-400">{new Date(sale.date).toLocaleDateString()}</p></td>
                   <td className="px-6 py-4"><span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{stores.find(s => s.id === sale.storeId)?.name}</span></td>
@@ -996,6 +1044,67 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Barra de Ações em Massa */}
+      {selectedSaleIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-8 duration-300 border border-slate-800">
+          <div className="flex items-center gap-3 pr-6 border-r border-slate-700">
+            <span className="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full text-sm font-black">{selectedSaleIds.length}</span>
+            <span className="text-xs font-black uppercase text-slate-300">Selecionados</span>
+          </div>
+          <button
+            onClick={() => setIsBulkPrinting(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-slate-900 rounded-xl text-xs font-black uppercase hover:bg-blue-50 transition-all active:scale-95"
+          >
+            <Printer className="w-4 h-4" /> Imprimir Selecionados
+          </button>
+          <button
+            onClick={() => setSelectedSaleIds([])}
+            className="text-slate-400 hover:text-white text-xs font-bold uppercase"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {/* Modal de Impressão em Massa */}
+      {isBulkPrinting && (
+        <div className="fixed inset-0 z-[60] bg-white overflow-y-auto no-scrollbar bulk-print-modal">
+          <div className="no-print sticky top-0 bg-white/80 backdrop-blur-md p-4 border-b flex justify-between items-center z-10 shadow-sm">
+            <div>
+              <h3 className="font-black text-slate-900 uppercase">Impressão Agrupada</h3>
+              <p className="text-[10px] text-slate-500 font-bold uppercase">{selectedSaleIds.length} Recibos prontos para impressão</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => window.print()} className="bg-slate-900 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black uppercase text-xs shadow-lg shadow-slate-200">
+                <Printer className="w-4 h-4" /> Confirmar Impressão
+              </button>
+              <button onClick={() => setIsBulkPrinting(false)} className="bg-slate-100 text-slate-600 px-6 py-2.5 rounded-xl font-black uppercase text-xs">
+                Fechar
+              </button>
+            </div>
+          </div>
+          <div className="p-4 md:p-8 space-y-8 flex flex-col items-center">
+            {selectedSaleIds.map((id, index) => {
+              const sale = sales.find(s => s.id === id);
+              if (!sale) return null;
+              return (
+                <div key={id} className={`w-full max-w-[800px] bg-white ${index > 0 ? 'print:break-before-page' : ''}`} style={index > 0 ? { pageBreakBefore: 'always' } : {}}>
+                  <SaleReceipt
+                    sale={sale}
+                    stores={stores}
+                    products={products}
+                    employees={employees}
+                    customers={customers}
+                    onBack={() => setIsBulkPrinting(false)}
+                    hideControls={true}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

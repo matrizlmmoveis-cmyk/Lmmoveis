@@ -12,9 +12,10 @@ interface SaleReceiptProps {
   products: Product[];
   employees: Employee[];
   customers: Customer[];
+  hideControls?: boolean;
 }
 
-const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, products, employees, customers }) => {
+const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, products, employees, customers, hideControls }) => {
   const [isEmitting, setIsEmitting] = React.useState(false);
   const [nfeStatus, setNfeStatus] = React.useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = React.useState('');
@@ -103,61 +104,63 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, product
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-2 md:p-8 bg-white shadow-lg min-h-screen">
-      <div className="no-print flex flex-col md:flex-row justify-between items-center gap-4 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-slate-600 font-semibold hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar para Vendas
-        </button>
-
-        <div className="flex items-center gap-3">
-          {nfeStatus === 'success' && (
-            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 text-xs font-bold animate-in fade-in zoom-in duration-300">
-              <CheckCircle className="w-4 h-4" />
-              <span>NF-e Emitida!</span>
-            </div>
-          )}
-
-          {nfeStatus === 'error' && (
-            <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 text-[10px] font-bold max-w-[200px] truncate animate-in fade-in zoom-in duration-300" title={errorMessage}>
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>Erro: {errorMessage}</span>
-            </div>
-          )}
-
+    <div className={hideControls ? "bg-white" : "max-w-4xl mx-auto p-2 md:p-8 bg-white shadow-lg min-h-screen"}>
+      {!hideControls && (
+        <div className="no-print flex flex-col md:flex-row justify-between items-center gap-4 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
           <button
-            onClick={handleEmitNFe}
-            disabled={isEmitting || nfeStatus === 'success'}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg font-bold shadow-lg transition-all ${nfeStatus === 'success'
-              ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
-              : 'bg-emerald-600 text-white shadow-emerald-100 hover:bg-emerald-700 disabled:opacity-70'
-              }`}
+            onClick={onBack}
+            className="flex items-center gap-2 text-slate-600 font-semibold hover:text-slate-900 transition-colors"
           >
-            {isEmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Transmitindo...
-              </>
-            ) : (
-              <>
-                <FileText className="w-4 h-4" />
-                Emitir NF-e
-              </>
+            <ArrowLeft className="w-4 h-4" />
+            Voltar para Vendas
+          </button>
+
+          <div className="flex items-center gap-3">
+            {nfeStatus === 'success' && (
+              <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 text-xs font-bold animate-in fade-in zoom-in duration-300">
+                <CheckCircle className="w-4 h-4" />
+                <span>NF-e Emitida!</span>
+              </div>
             )}
-          </button>
 
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
-          >
-            <Printer className="w-4 h-4" />
-            Imprimir Recibo
-          </button>
+            {nfeStatus === 'error' && (
+              <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 text-[10px] font-bold max-w-[200px] truncate animate-in fade-in zoom-in duration-300" title={errorMessage}>
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>Erro: {errorMessage}</span>
+              </div>
+            )}
+
+            <button
+              onClick={handleEmitNFe}
+              disabled={isEmitting || nfeStatus === 'success'}
+              className={`flex items-center gap-2 px-6 py-2 rounded-lg font-bold shadow-lg transition-all ${nfeStatus === 'success'
+                ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
+                : 'bg-emerald-600 text-white shadow-emerald-100 hover:bg-emerald-700 disabled:opacity-70'
+                }`}
+            >
+              {isEmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Transmitindo...
+                </>
+              ) : (
+                <>
+                  <FileText className="w-4 h-4" />
+                  Emitir NF-e
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
+            >
+              <Printer className="w-4 h-4" />
+              Imprimir Recibo
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* PRINTABLE RECEIPT */}
       <style dangerouslySetInnerHTML={{
