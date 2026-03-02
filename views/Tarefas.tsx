@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Employee, Store, OrderStatus, Sale } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
 import { supabaseService } from '../services/supabaseService.ts';
 import {
@@ -31,8 +32,10 @@ interface Task {
 }
 
 interface TarefasProps {
-    user: any;
-    stores: any[];
+    user: Employee | { id: string, name: string, role: string, storeId?: string, username?: string } | null;
+    stores: Store[];
+    sales?: Sale[];
+    setSales?: React.Dispatch<React.SetStateAction<Sale[]>>;
 }
 
 const priorityColors: Record<string, string> = {
@@ -47,7 +50,7 @@ const statusColors: Record<string, string> = {
     CONCLUIDA: 'bg-emerald-50 border-emerald-300',
 };
 
-const Tarefas: React.FC<TarefasProps> = ({ user, stores }) => {
+const Tarefas: React.FC<TarefasProps> = ({ user, stores, sales, setSales }) => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [employees, setEmployees] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -601,6 +604,12 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores }) => {
                                         try {
                                             await supabaseService.rejectSaleEdit({ saleId: task.sale_id!, taskId: task.id, rejectedBy: user?.name || user?.username });
                                             setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'CONCLUIDA' } : t));
+
+                                            // Sincronizar estado global de vendas (voltar status original)
+                                            if (setSales && task.sale_id) {
+                                                setSales(prev => prev.map(s => s.id === task.sale_id ? { ...s, status: OrderStatus.PENDING } : s));
+                                            }
+
                                             setEditApprovalModal(null);
                                             showToast('❌ Edição rejeitada.');
                                         } catch { showToast('Erro ao rejeitar.', 'error'); setEditApprovalModal(m => m ? { ...m, processing: false } : null); }
@@ -624,6 +633,20 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores }) => {
                                                 stores,
                                             });
                                             setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'CONCLUIDA' } : t));
+
+                                            // Sincronizar estado global de vendas com novos dados
+                                            if (setSales && task.sale_id && snap?.proposed) {
+                                                const prop = snap.proposed;
+                                                const prevStatus = snap.original?.prevStatus || OrderStatus.PENDING;
+                                                setSales(prev => prev.map(s => s.id === task.sale_id ? {
+                                                    ...s,
+                                                    items: prop.items,
+                                                    payments: prop.payments,
+                                                    total: prop.total,
+                                                    status: prevStatus
+                                                } : s));
+                                            }
+
                                             setEditApprovalModal(null);
                                             showToast('✅ Edição autorizada e aplicada!');
                                         } catch { showToast('Erro ao autorizar.', 'error'); setEditApprovalModal(m => m ? { ...m, processing: false } : null); }
@@ -685,6 +708,12 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores }) => {
                                             await supabaseService.restoreInventoryToLocation(stockReturnModal.task.sale_id!, stockReturnModal.selectedLocationId);
                                             await supabase.from('tasks').update({ status: 'CONCLUIDA', resolved_at: new Date().toISOString(), notes: `Saldo devolvido ao CD: ${stores.find(s => s.id === stockReturnModal.selectedLocationId)?.name}` }).eq('id', stockReturnModal.task.id);
                                             setTasks(prev => prev.map(t => t.id === stockReturnModal.task.id ? { ...t, status: 'CONCLUIDA', resolved_at: new Date().toISOString() } : t));
+
+                                            // Sincronizar estado global de vendas para Cancelada
+                                            if (setSales && stockReturnModal.task.sale_id) {
+                                                setSales(prev => prev.map(s => s.id === stockReturnModal.task.sale_id ? { ...s, status: OrderStatus.CANCELED } : s));
+                                            }
+
                                             setStockReturnModal(null);
                                             showToast('✅ Cancelamento autorizado e saldo devolvido!');
                                             loadTasks();
