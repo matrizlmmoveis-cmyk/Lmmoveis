@@ -1,5 +1,17 @@
 import { supabase } from './supabase';
-import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer, Romaneio } from '../types';
+import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer, Romaneio, OrderStatus } from '../types';
+
+const base64ToBlob = (base64: string) => {
+    const parts = base64.split(';base64,');
+    const contentType = parts[0].split(':')[1];
+    const raw = window.atob(parts[1]);
+    const rawLength = raw.length;
+    const uInt8Array = new Uint8Array(rawLength);
+    for (let i = 0; i < rawLength; ++i) {
+        uInt8Array[i] = raw.charCodeAt(i);
+    }
+    return new Blob([uInt8Array], { type: contentType });
+};
 
 export const supabaseService = {
     // STORES
@@ -263,13 +275,58 @@ export const supabaseService = {
 
     async updateSaleStatus(saleId: string, status: string, extra?: any) {
         const payload: any = { status };
-        if (extra?.deliverySignature) payload.delivery_signature = extra.deliverySignature;
-        if (extra?.deliveryPhoto) payload.delivery_photo = extra.deliveryPhoto;
-        if (extra?.assemblySignature) payload.assembly_signature = extra.assemblySignature;
-        if (extra?.assemblyPhoto) payload.assembly_photo = extra.assemblyPhoto;
 
         if (status === 'Entregue' || status === 'Entregue - Aguardando Montagem') {
             payload.delivery_date = new Date().toISOString().split('T')[0];
+        }
+
+        // --- EXCESSO DE USO FIX: Mudar Base64 para Storage ---
+        if (extra?.deliverySignature && extra.deliverySignature.startsWith('data:image')) {
+            try {
+                const blob = base64ToBlob(extra.deliverySignature);
+                const path = `signatures/${saleId}_${Date.now()}.png`;
+                const { error: upErr } = await supabase.storage.from('delivery-comprovantes').upload(path, blob);
+                if (!upErr) {
+                    const { data: urlData } = supabase.storage.from('delivery-comprovantes').getPublicUrl(path);
+                    payload.delivery_signature = urlData.publicUrl;
+                }
+            } catch (err) {
+                console.error("Erro ao subir assinatura:", err);
+            }
+        } else if (extra?.deliverySignature) {
+            payload.delivery_signature = extra.deliverySignature;
+        }
+
+        if (extra?.deliveryPhoto && extra.deliveryPhoto.startsWith('data:image')) {
+            try {
+                const blob = base64ToBlob(extra.deliveryPhoto);
+                const path = `photos/${saleId}_${Date.now()}.jpg`;
+                const { error: upErr } = await supabase.storage.from('delivery-comprovantes').upload(path, blob);
+                if (!upErr) {
+                    const { data: urlData } = supabase.storage.from('delivery-comprovantes').getPublicUrl(path);
+                    payload.delivery_photo = urlData.publicUrl;
+                }
+            } catch (err) {
+                console.error("Erro ao subir foto:", err);
+            }
+        } else if (extra?.deliveryPhoto) {
+            payload.delivery_photo = extra.deliveryPhoto;
+        }
+
+        if (extra?.assemblySignature && extra.assemblySignature.startsWith('data:image')) {
+            try {
+                const blob = base64ToBlob(extra.assemblySignature);
+                const path = `assembly_sigs/${saleId}_${Date.now()}.png`;
+                const { error: upErr } = await supabase.storage.from('delivery-comprovantes').upload(path, blob);
+                if (!upErr) {
+                    const { data: urlData } = supabase.storage.from('delivery-comprovantes').getPublicUrl(path);
+                    payload.assembly_signature = urlData.publicUrl;
+                }
+            } catch (err) {
+                console.error("Erro ao subir assinatura montagem:", err);
+            }
+        } else if (extra?.assemblySignature) {
+            payload.assembly_signature = extra.assemblySignature;
         }
 
         const { error } = await supabase

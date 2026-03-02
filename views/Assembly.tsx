@@ -8,47 +8,11 @@ interface AssemblyProps {
   sales: Sale[];
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   products: Product[];
+  refreshData: (force?: boolean) => Promise<void>;
 }
 
-const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products }) => {
-  // Auto-refresh inteligente (apenas para MONTADOR e em primeiro plano)
-  React.useEffect(() => {
-    if (user?.role !== 'MONTADOR') return;
-
-    let intervalId: NodeJS.Timeout;
-
-    const fetchSales = async () => {
-      try {
-        const data = await supabaseService.getSales();
-        setSales(data);
-      } catch (err) {
-        console.error("Erro no auto-refresh de montagem:", err);
-      }
-    };
-
-    const startInterval = () => {
-      intervalId = setInterval(() => {
-        if (document.visibilityState === 'visible') fetchSales();
-      }, 30000); // 30 segundos
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchSales();
-        startInterval();
-      } else {
-        clearInterval(intervalId);
-      }
-    };
-
-    if (document.visibilityState === 'visible') startInterval();
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [user?.role, setSales]);
+const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, refreshData }) => {
+  // Polling removido por solicitação do usuário para economizar dados
   // Filtrar ordens de montagem designadas (aparecem se estiverem em rota ou entregues)
   const myTasks = sales.filter(s =>
     s.assemblyRequired &&
@@ -81,7 +45,15 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products }) 
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-black uppercase tracking-tight">Agenda de Montagem</h1>
-            <p className="text-emerald-400 text-xs font-bold uppercase mt-1">Ganhos Estimados: R$ {myTasks.reduce((a, b) => a + calculateTotalAssembly(b), 0).toFixed(2)}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-emerald-400 text-xs font-bold uppercase">Ganhos Estimados: R$ {myTasks.reduce((a, b) => a + calculateTotalAssembly(b), 0).toFixed(2)}</p>
+              <button
+                onClick={() => refreshData(true)}
+                className="bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
+              >
+                <Wrench className="w-3 h-3" /> Atualizar
+              </button>
+            </div>
           </div>
           <Wrench className="w-10 h-10 text-white/20" />
         </div>

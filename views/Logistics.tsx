@@ -9,50 +9,14 @@ interface LogisticsProps {
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   products: Product[];
   stores: Store[];
+  refreshData: (force?: boolean) => Promise<void>;
 }
 
-const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, stores }) => {
+const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, stores, refreshData }) => {
   const [activeDeliveryId, setActiveDeliveryId] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
-  // Auto-refresh inteligente (apenas para MOTORISTA e em primeiro plano)
-  useEffect(() => {
-    if (user?.role !== 'MOTORISTA') return;
-
-    let intervalId: NodeJS.Timeout;
-
-    const fetchSales = async () => {
-      try {
-        const data = await supabaseService.getSales();
-        setSales(data);
-      } catch (err) {
-        console.error("Erro no auto-refresh de logística:", err);
-      }
-    };
-
-    const startInterval = () => {
-      intervalId = setInterval(() => {
-        if (document.visibilityState === 'visible') fetchSales();
-      }, 30000); // 30 segundos
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchSales();
-        startInterval();
-      } else {
-        clearInterval(intervalId);
-      }
-    };
-
-    if (document.visibilityState === 'visible') startInterval();
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [user?.role, setSales]);
+  // Polling removido por solicitação do usuário para economizar dados
   const [photo, setPhoto] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null); // Para assinatura
@@ -172,7 +136,15 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-black uppercase tracking-tight">Rota de Entrega</h1>
-            <p className="text-blue-400 text-xs font-bold uppercase mt-1">Status: Em Operação</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-blue-400 text-xs font-bold uppercase">Status: Em Operação</p>
+              <button
+                onClick={() => refreshData(true)}
+                className="bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
+              >
+                <Navigation className="w-3 h-3 rotate-90" /> Atualizar
+              </button>
+            </div>
           </div>
           <Truck className="w-10 h-10 text-white/20" />
         </div>

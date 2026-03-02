@@ -66,40 +66,42 @@ const App: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    const initData = async (force = false) => {
-      // Always fetch employees for login check
-      try {
-        const eItems = await supabaseService.getEmployees();
-        setEmployees(eItems);
-      } catch (err) {
-        console.error("Erro ao carregar funcionários:", err);
-      }
+  const initData = async (force = false) => {
+    setIsLoading(true);
+    // Always fetch employees for login check
+    try {
+      const eItems = await supabaseService.getEmployees();
+      setEmployees(eItems);
+    } catch (err) {
+      console.error("Erro ao carregar funcionários:", err);
+    }
 
-      // Only fetch everything else if we have a user
-      if (user || force) {
-        try {
-          const [sItems, iItems, stItems, pItems, cItems] = await Promise.all([
-            supabaseService.getSales(),
-            supabaseService.getInventory(),
-            supabaseService.getStores(),
-            supabaseService.getProducts(),
-            supabaseService.getCustomers()
-          ]);
-          setSales(sItems);
-          setInventory(iItems);
-          setStores(stItems);
-          setProducts(pItems);
-          setCustomers(cItems);
-        } catch (err) {
-          console.error("Erro ao carregar dados do Supabase:", err);
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
+    // Only fetch everything else if we have a user
+    if (user || force) {
+      try {
+        const [sItems, iItems, stItems, pItems, cItems] = await Promise.all([
+          supabaseService.getSales(),
+          supabaseService.getInventory(),
+          supabaseService.getStores(),
+          supabaseService.getProducts(),
+          supabaseService.getCustomers()
+        ]);
+        setSales(sItems);
+        setInventory(iItems);
+        setStores(stItems);
+        setProducts(pItems);
+        setCustomers(cItems);
+      } catch (err) {
+        console.error("Erro ao carregar dados do Supabase:", err);
+      } finally {
         setIsLoading(false);
       }
-    };
+    } else {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     initData();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -223,22 +225,22 @@ const App: React.FC = () => {
     if (isLoading) return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
 
     switch (activeView) {
-      case 'dashboard': return <Dashboard user={user!} sales={sales} stores={stores} />;
-      case 'catalog': return <ProductCatalog user={user} inventory={inventory} stores={stores} products={products} setProducts={setProducts} />;
-      case 'customers': return <Customers customers={customers} setCustomers={setCustomers} />;
-      case 'products': return <Products user={user} products={products} inventory={inventory} stores={stores} employees={employees} />;
-      case 'sales': return <Sales user={user} sales={sales} setSales={setSales} inventory={inventory} setInventory={setInventory} stores={stores} products={products} customers={customers} setCustomers={setCustomers} employees={employees} />;
-      case 'inventory': return <Inventory inventory={inventory} setInventory={setInventory} products={products} stores={stores} />;
-      case 'stores': return <Stores stores={stores} setStores={setStores} employees={employees} />;
-      case 'employees': return <EmployeesView user={user} employees={employees} setEmployees={setEmployees} stores={stores} />;
-      case 'romaneios': return <Romaneios sales={sales} setSales={setSales} employees={employees} products={products} />;
-      case 'expedicao': return <Expedicao user={user} stores={stores} sales={sales} products={products} employees={employees} customers={customers} />;
-      case 'tarefas': return <Tarefas user={user} stores={stores} sales={sales} setSales={setSales} />;
+      case 'dashboard': return <Dashboard user={user!} sales={sales} stores={stores} refreshData={initData} />;
+      case 'catalog': return <ProductCatalog user={user} inventory={inventory} stores={stores} products={products} setProducts={setProducts} refreshData={initData} />;
+      case 'customers': return <Customers customers={customers} setCustomers={setCustomers} refreshData={initData} />;
+      case 'products': return <Products user={user} products={products} inventory={inventory} stores={stores} employees={employees} refreshData={initData} />;
+      case 'sales': return <Sales user={user} sales={sales} setSales={setSales} inventory={inventory} setInventory={setInventory} stores={stores} products={products} customers={customers} setCustomers={setCustomers} employees={employees} refreshData={initData} />;
+      case 'inventory': return <Inventory inventory={inventory} setInventory={setInventory} products={products} stores={stores} refreshData={initData} />;
+      case 'stores': return <Stores stores={stores} setStores={setStores} employees={employees} refreshData={initData} />;
+      case 'employees': return <EmployeesView user={user} employees={employees} setEmployees={setEmployees} stores={stores} refreshData={initData} />;
+      case 'romaneios': return <Romaneios sales={sales} setSales={setSales} employees={employees} products={products} refreshData={initData} />;
+      case 'expedicao': return <Expedicao user={user} stores={stores} sales={sales} products={products} employees={employees} customers={customers} refreshData={initData} />;
+      case 'tarefas': return <Tarefas user={user} stores={stores} sales={sales} setSales={setSales} refreshData={initData} />;
       case 'delivery':
-      case 'logistics': return <Logistics user={user} sales={sales} setSales={setSales} products={products} stores={stores} />;
-      case 'assembly': return <Assembly user={user} sales={sales} setSales={setSales} products={products} />;
-      case 'settlement': return <ReceiptSettlement sales={sales} setSales={setSales} employees={employees} stores={stores} />;
-      case 'reports': return <Reports user={user} sales={sales} stores={stores} products={products} employees={employees} />;
+      case 'logistics': return <Logistics user={user} sales={sales} setSales={setSales} products={products} stores={stores} refreshData={initData} />;
+      case 'assembly': return <Assembly user={user} sales={sales} setSales={setSales} products={products} refreshData={initData} />;
+      case 'settlement': return <ReceiptSettlement sales={sales} setSales={setSales} employees={employees} stores={stores} refreshData={initData} />;
+      case 'reports': return <Reports user={user} sales={sales} stores={stores} products={products} employees={employees} refreshData={initData} />;
       default: return <Dashboard user={user!} sales={sales} stores={stores} />;
     }
   };

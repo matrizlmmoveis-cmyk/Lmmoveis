@@ -8,9 +8,10 @@ interface DashboardProps {
   user: Employee | { id: 'admin', name: 'Lucas', role: 'ADMIN', storeId?: string } | null;
   sales: Sale[];
   stores: Store[];
+  refreshData: (force?: boolean) => Promise<void>;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, sales, stores }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, sales, stores, refreshData }) => {
   const filteredSales = useMemo(() => {
     if (user?.role === 'VENDEDOR') {
       return sales.filter(sale => sale.sellerId === user.id);
@@ -36,13 +37,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user, sales, stores }) => {
   ];
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900">
-          {user?.role === 'VENDEDOR' ? 'Meus Resultados' :
-            (user?.role === 'GERENTE' && user.storeId) ? `Resultados: ${stores.find(s => s.id === user.storeId)?.name}` :
-              'Faturamento Geral'}
-        </h1>
-        <p className="text-slate-500">Resumo de desempenho e vendas</p>
+      <header className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {user?.role === 'VENDEDOR' ? 'Meus Resultados' :
+              (user?.role === 'GERENTE' && user.storeId) ? `Resultados: ${stores.find(s => s.id === user.storeId)?.name}` :
+                'Faturamento Geral'}
+          </h1>
+          <p className="text-slate-500">Resumo de desempenho e vendas</p>
+        </div>
+        <button
+          onClick={() => refreshData(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+        >
+          <ShoppingBag className="w-4 h-4" />
+          Atualizar Dados
+        </button>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

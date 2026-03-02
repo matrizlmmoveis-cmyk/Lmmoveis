@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Box, MapPin, MoveHorizontal, Search, Settings2, X, Plus, Minus, FileText } from 'lucide-react';
+import { Box, MapPin, MoveHorizontal, Search, Settings2, X, Plus, Minus, FileText, RefreshCw } from 'lucide-react';
 import { InventoryItem, Product, Store } from '../types.ts';
 import { supabaseService } from '../services/supabaseService.ts';
 
@@ -9,9 +9,10 @@ interface InventoryProps {
   setInventory: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
   products: Product[];
   stores: Store[];
+  refreshData: (force?: boolean) => Promise<void>;
 }
 
-const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products, stores }) => {
+const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products, stores, refreshData }) => {
   const [selectedStockType, setSelectedStockType] = useState<'CD' | 'STORE_STOCK'>('CD');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,6 +89,13 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
           <p className="text-slate-500">Gerencie o estoque de CDs e Lojas</p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => refreshData(true)}
+            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all shadow-sm"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Atualizar</span>
+          </button>
           <button
             onClick={() => setIsAdjustModalOpen(true)}
             className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-800 transition-all shadow-lg"

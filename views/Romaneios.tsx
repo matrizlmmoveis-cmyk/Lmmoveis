@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, Wrench, Plus, Trash2, Printer, Search, User, ClipboardList, CheckCircle2, AlertCircle, History, ArrowLeft, Calendar, Package, Phone, MapPin, MessageSquare } from 'lucide-react';
+import { Truck, Wrench, Plus, Trash2, Printer, Search, User, ClipboardList, CheckCircle2, AlertCircle, History, ArrowLeft, Calendar, Package, Phone, MapPin, MessageSquare, RefreshCw } from 'lucide-react';
 import { OrderStatus, Sale, Employee, Romaneio, Product } from '../types.ts';
 import { supabaseService } from '../services/supabaseService.ts';
 
@@ -8,9 +8,10 @@ interface RomaneiosProps {
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   employees: Employee[];
   products: Product[];
+  refreshData: (force?: boolean) => Promise<void>;
 }
 
-const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEmployees, products }) => {
+const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEmployees, products, refreshData }) => {
   const [view, setView] = useState<'create' | 'history'>('create');
   const [romaneios, setRomaneios] = useState<Romaneio[]>([]);
   const [type, setType] = useState<'entrega' | 'montagem'>('entrega');
@@ -273,6 +274,12 @@ const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEm
               <Calendar className="w-4 h-4 text-blue-500" />
               Histórico de Cargas Lançadas
             </h3>
+            <button
+              onClick={() => { loadRomaneios(); refreshData(true); }}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all"
+            >
+              <RefreshCw className="w-3 h-3" /> Atualizar Tudo
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">

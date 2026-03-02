@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Employee, Store, OrderStatus, Sale, Product, Customer, SaleItem, Payment, InventoryItem } from '../types.ts';
-import { Search, Plus, Eye, X, ShoppingCart, User, Package, CheckCircle2, ArrowLeft, Trash2, AlertCircle, CreditCard, DollarSign, Box, Filter, Calendar, Printer, Check, CheckSquare, Square } from 'lucide-react';
+import { Search, Plus, Eye, X, ShoppingCart, User, Package, CheckCircle2, ArrowLeft, Trash2, AlertCircle, CreditCard, DollarSign, Box, Filter, Calendar, Printer, Check, CheckSquare, Square, RefreshCw } from 'lucide-react';
 import SaleReceipt from './SaleReceipt.tsx';
 import CustomerModal from '../components/CustomerModal.tsx';
 
@@ -18,9 +18,10 @@ interface SalesProps {
   customers: Customer[];
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
   employees: Employee[];
+  refreshData: (force?: boolean) => Promise<void>;
 }
 
-const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInventory, stores, products, customers, setCustomers, employees }) => {
+const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInventory, stores, products, customers, setCustomers, employees, refreshData }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -648,6 +649,13 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
           <p className="text-slate-500">Histórico completo e novo pedido sequencial</p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => refreshData(true)}
+            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all shadow-sm"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Atualizar</span>
+          </button>
           <button onClick={() => setIsCreating(true)} className="bg-slate-900 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-lg shadow-slate-200 transition-all active:scale-95"><Plus className="w-5 h-5" /> Nova Venda</button>
         </div>
       </header>

@@ -32,6 +32,7 @@ interface ExpedicaoProps {
     products: Product[];
     employees: Employee[];
     customers: Customer[];
+    refreshData: (force?: boolean) => Promise<void>;
 }
 
 const DRIVE_PREFIX = 'https://drive.google.com/drive/folders/1V6M5rwQDy-1W4ZSmbIhR_x9zjsfS3ha3/';
@@ -42,7 +43,7 @@ const getImageUrl = (imageUrl?: string) => {
     return DRIVE_PREFIX + imageUrl;
 };
 
-const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, employees, customers }) => {
+const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, employees, customers, refreshData }) => {
     const [items, setItems] = useState<SaleItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
@@ -137,40 +138,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Auto-refresh inteligente (apenas para Conferente e em primeiro plano)
-    useEffect(() => {
-        if (user?.role !== 'CONFERENTE') return;
-
-        let intervalId: NodeJS.Timeout;
-
-        const startInterval = () => {
-            intervalId = setInterval(() => {
-                if (document.visibilityState === 'visible') {
-                    loadItems(true); // Atualiza silenciosamente sem recarregar a tela (sem spinner)
-                }
-            }, 30000); // 30 segundos
-        };
-
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                loadItems(true);
-                startInterval();
-            } else {
-                clearInterval(intervalId);
-            }
-        };
-
-        if (document.visibilityState === 'visible') {
-            startInterval();
-        }
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-            clearInterval(intervalId);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }, [user?.role, loadItems]);
+    // Polling removido por solicitação do usuário para economizar dados
 
     const markSeparado = async (item: SaleItem) => {
         setProcessingId(item.id);
@@ -271,12 +239,12 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                     <p className="text-slate-500 text-sm mt-0.5">Separação de itens para entrega — CD Norte</p>
                 </div>
                 <button
-                    onClick={() => { loadItems(); loadDevolutions(); }}
+                    onClick={() => { loadItems(); loadDevolutions(); refreshData(true); }}
                     disabled={loading}
                     className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
                 >
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                    Atualizar
+                    Atualizar Dados
                 </button>
             </div>
 

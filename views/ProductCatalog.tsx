@@ -2,7 +2,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { PRODUCTS as INITIAL_PRODUCTS, INITIAL_INVENTORY, STORES, SUPPLIERS, CATEGORIES } from '../constants.tsx';
 import { Product, ProductImage, Supplier, Employee, InventoryItem, Store, OrderStatus } from '../types.ts';
-import { Search, Plus, X, Truck, Box, ShoppingCart, Trash2, CheckCircle2, Edit2, ImagePlus, Loader2, AlertCircle, Upload } from 'lucide-react';
+import { Search, Plus, X, Truck, Box, ShoppingCart, Trash2, CheckCircle2, Edit2, ImagePlus, Loader2, AlertCircle, Upload, RefreshCw } from 'lucide-react';
 import { useCart } from '../components/CartContext.tsx';
 import { supabaseService } from '../services/supabaseService';
 import { compressImage, formatFileSize } from '../services/imageCompressor';
@@ -13,11 +13,12 @@ interface ProductCatalogProps {
   stores: Store[];
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  refreshData: (force?: boolean) => Promise<void>;
 }
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=500&auto=format&fit=crop';
 
-const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores, products, setProducts }) => {
+const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores, products, setProducts, refreshData }) => {
   const [suppliers, setSuppliers] = useState<Supplier[]>(SUPPLIERS);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -188,6 +189,13 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input type="text" placeholder="Busca..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
+          <button
+            onClick={() => refreshData(true)}
+            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all shadow-sm"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Atualizar</span>
+          </button>
           {user && (
             <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-lg shadow-blue-100"><Plus className="w-5 h-5" /> Novo</button>
           )}
