@@ -116,7 +116,7 @@ const App: React.FC = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [employees]); // Re-run if employees state changes to ensure we can find the profile
+  }, []); // Run only once on mount
 
   const redirectByRole = (employee: Employee) => {
     if (employee.role === 'MOTORISTA') setActiveView('delivery');
