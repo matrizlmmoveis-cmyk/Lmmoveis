@@ -16,7 +16,7 @@ import Products from './views/Products.tsx';
 import Expedicao from './views/Expedicao.tsx';
 import Tarefas from './views/Tarefas.tsx';
 import ReceiptSettlement from './views/ReceiptSettlement.tsx';
-import { Bell, Search, User, Lock, Store as StoreIcon, AlertCircle, X, Menu } from 'lucide-react';
+import { Bell, Search, User, Lock, Store as StoreIcon, AlertCircle, X, Menu, Loader2 } from 'lucide-react';
 import { Employee, UserRole, Sale, InventoryItem, Store, Product, Customer } from './types.ts';
 import { CartProvider } from './components/CartContext.tsx';
 import { supabaseService } from './services/supabaseService.ts';
@@ -66,25 +66,36 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const initData = async () => {
+    const initData = async (force = false) => {
+      // Always fetch employees for login check
       try {
-        const [sItems, iItems, stItems, eItems, pItems, cItems] = await Promise.all([
-          supabaseService.getSales(),
-          supabaseService.getInventory(),
-          supabaseService.getStores(),
-          supabaseService.getEmployees(),
-          supabaseService.getProducts(),
-          supabaseService.getCustomers()
-        ]);
-        setSales(sItems);
-        setInventory(iItems);
-        setStores(stItems);
+        const eItems = await supabaseService.getEmployees();
         setEmployees(eItems);
-        setProducts(pItems);
-        setCustomers(cItems);
       } catch (err) {
-        console.error("Erro ao carregar dados do Supabase:", err);
-      } finally {
+        console.error("Erro ao carregar funcionários:", err);
+      }
+
+      // Only fetch everything else if we have a user
+      if (user || force) {
+        try {
+          const [sItems, iItems, stItems, pItems, cItems] = await Promise.all([
+            supabaseService.getSales(),
+            supabaseService.getInventory(),
+            supabaseService.getStores(),
+            supabaseService.getProducts(),
+            supabaseService.getCustomers()
+          ]);
+          setSales(sItems);
+          setInventory(iItems);
+          setStores(stItems);
+          setProducts(pItems);
+          setCustomers(cItems);
+        } catch (err) {
+          console.error("Erro ao carregar dados do Supabase:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
         setIsLoading(false);
       }
     };
@@ -116,7 +127,7 @@ const App: React.FC = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, []); // Run only once on mount
+  }, [user?.id]); // Re-run if user changes to fetch their specific data
 
   const redirectByRole = (employee: Employee) => {
     if (employee.role === 'MOTORISTA') setActiveView('delivery');
@@ -203,13 +214,12 @@ const App: React.FC = () => {
     await supabaseService.signOut();
     setUser(null);
     localStorage.removeItem('lm_user');
-    setActiveView('catalog');
+    setLoginForm({ user: '', pass: '' }); // Clear login and password fields
+    setActiveView('dashboard');
   };
 
   const renderView = () => {
     if (isLoading) return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
-
-    if (!user && activeView !== 'catalog') return <ProductCatalog user={null} inventory={inventory} stores={stores} products={products} setProducts={setProducts} />;
 
     switch (activeView) {
       case 'dashboard': return <Dashboard user={user!} sales={sales} stores={stores} />;
@@ -228,75 +238,66 @@ const App: React.FC = () => {
       case 'assembly': return <Assembly user={user} sales={sales} setSales={setSales} products={products} />;
       case 'settlement': return <ReceiptSettlement sales={sales} setSales={setSales} employees={employees} stores={stores} />;
       case 'reports': return <Reports user={user} sales={sales} stores={stores} products={products} employees={employees} />;
-      default: return <ProductCatalog user={user} inventory={inventory} stores={stores} products={products} setProducts={setProducts} />;
+      default: return <Dashboard user={user!} sales={sales} stores={stores} />;
     }
   };
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
-        <header className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
-              <StoreIcon className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-lg font-black text-slate-900 tracking-tight">Móveis LM</h1>
-          </div>
-          <button
-            onClick={() => setShowLogin(true)}
-            className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all"
-          >
-            <Lock className="w-4 h-4" />
-            <span>Acesso Restrito</span>
-          </button>
-        </header>
-
-        <main className="flex-1 overflow-y-auto p-8">
-          <div className="max-w-7xl mx-auto">
-            {isLoading ? (
-              <div className="flex items-center justify-center p-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
-            ) : (
-              <ProductCatalog user={null} inventory={inventory} stores={stores} products={products} setProducts={setProducts} />
-            )}
-          </div>
-        </main>
-
-        {showLogin && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-            <div className="w-full max-w-md animate-in zoom-in-95 duration-200">
-              <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl border border-slate-100 relative">
-                <button
-                  onClick={() => setShowLogin(false)}
-                  className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-                <div className="text-center mb-10">
-                  <h1 className="text-3xl font-black text-slate-900 tracking-tight">Móveis LM</h1>
-                  <p className="text-slate-400 font-medium mt-1">Acesso ao Sistema ERP</p>
-                </div>
-                <form onSubmit={handleLogin} className="space-y-5">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Usuário</label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input required type="text" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-blue-500 transition-all outline-none font-semibold text-slate-900" placeholder="Seu usuário" value={loginForm.user} onChange={e => setLoginForm({ ...loginForm, user: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Senha</label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input required type="password" name="password" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-blue-500 transition-all outline-none font-semibold text-slate-900" placeholder="••••••••" value={loginForm.pass} onChange={e => setLoginForm({ ...loginForm, pass: e.target.value })} />
-                    </div>
-                  </div>
-                  {error && <div className="bg-red-50 text-red-600 p-4 rounded-2xl flex items-center gap-3 text-sm font-bold border border-red-100 animate-in shake duration-300"><AlertCircle className="w-5 h-5 shrink-0" />{error}</div>}
-                  <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-widest mt-4">Entrar no Sistema</button>
-                </form>
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=1920&auto=format&fit=crop")' }}>
+        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
+        <div className="w-full max-w-md animate-in zoom-in-95 duration-200 relative z-10">
+          <div className="bg-white/90 backdrop-blur-xl rounded-[2.5rem] p-10 shadow-2xl border border-white/20">
+            <div className="text-center mb-10">
+              <div className="bg-blue-600 w-16 h-16 rounded-3xl shadow-xl shadow-blue-500/30 flex items-center justify-center mx-auto mb-4">
+                <StoreIcon className="w-8 h-8 text-white" />
               </div>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight">Móveis LM</h1>
+              <p className="text-slate-400 font-medium mt-1 uppercase text-[10px] tracking-widest">Painel Administrativo v2.0</p>
             </div>
+
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Usuário</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input required type="text" className="w-full pl-12 pr-4 py-4 bg-white/50 border border-slate-100 rounded-2xl focus:border-blue-500 transition-all outline-none font-semibold text-slate-900" placeholder="Seu usuário" value={loginForm.user} onChange={e => setLoginForm({ ...loginForm, user: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Senha</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input required type="password" name="password" className="w-full pl-12 pr-4 py-4 bg-white/50 border border-slate-100 rounded-2xl focus:border-blue-500 transition-all outline-none font-semibold text-slate-900" placeholder="••••••••" value={loginForm.pass} onChange={e => setLoginForm({ ...loginForm, pass: e.target.value })} />
+                </div>
+              </div>
+
+              {error && (
+                <div className="bg-red-50 text-red-600 p-4 rounded-2xl flex items-center gap-3 text-sm font-bold border border-red-100 animate-in shake duration-300">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-widest mt-4 flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    Entrar no Sistema
+                  </>
+                )}
+              </button>
+            </form>
           </div>
-        )}
+          <p className="text-center mt-6 text-white/60 text-[10px] font-bold uppercase tracking-widest">© 2026 Móveis LM • Todos os direitos reservados</p>
+        </div>
       </div>
     );
   }
