@@ -232,10 +232,10 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
         }
     };
 
-    // Agrupar itens por Unidade (CD/Loja)
+    // Agrupar itens por Loja da Venda
     const unitsMap = new Map<string, SaleItem[]>();
     items.forEach(item => {
-        const key = item.location_id || 'Indefinido';
+        const key = item.sales?.store_id || 'Indefinido';
         if (!unitsMap.has(key)) unitsMap.set(key, []);
         unitsMap.get(key)!.push(item);
     });
@@ -329,7 +329,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                 ) : (
                     <div className="space-y-8">
                         {filteredUnits.map(({ unitId, items: unitItems }) => {
-                            const unitName = stores.find(s => s.id === unitId)?.name || 'CD Indefinido';
+                            const unitName = stores.find(s => s.id === unitId)?.name || 'Loja Indefinida';
                             return (
                                 <div key={unitId} className="space-y-4">
                                     <div className="flex items-center gap-3 px-1">
