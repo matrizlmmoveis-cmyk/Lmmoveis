@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Employee, Store, OrderStatus, Sale } from '../types.ts';
+import { Employee, Store, OrderStatus, Sale, Product } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
 import { supabaseService } from '../services/supabaseService.ts';
 import {
@@ -34,6 +34,7 @@ interface Task {
 interface TarefasProps {
     user: Employee | { id: string, name: string, role: string, storeId?: string, username?: string } | null;
     stores: Store[];
+    products: Product[];
     sales?: Sale[];
     setSales?: React.Dispatch<React.SetStateAction<Sale[]>>;
 }
@@ -50,7 +51,7 @@ const statusColors: Record<string, string> = {
     CONCLUIDA: 'bg-emerald-50 border-emerald-300',
 };
 
-const Tarefas: React.FC<TarefasProps> = ({ user, stores, sales, setSales }) => {
+const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSales }) => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [employees, setEmployees] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -525,13 +526,16 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, sales, setSales }) => {
                 const origItems: any[] = orig.items || [];
                 const propItems: any[] = prop.items || [];
 
-                const renderItems = (items: any[], highlight?: 'add' | 'remove') => items.map((item: any, idx: number) => (
-                    <div key={idx} className={`flex justify-between items-center py-1.5 px-2 rounded-lg text-xs ${highlight === 'add' ? 'bg-emerald-50' : highlight === 'remove' ? 'bg-red-50' : 'bg-slate-50'}`}>
-                        <span className="font-bold text-slate-700 truncate flex-1">{item.productId}</span>
-                        <span className="text-slate-500 ml-2">Qtd: {item.quantity}</span>
-                        <span className="text-slate-500 ml-2">R$ {(item.price || 0).toFixed(2)}</span>
-                    </div>
-                ));
+                const renderItems = (items: any[], highlight?: 'add' | 'remove') => items.map((item: any, idx: number) => {
+                    const prod = products.find(p => p.id === item.productId);
+                    return (
+                        <div key={idx} className={`flex justify-between items-center py-1.5 px-2 rounded-lg text-xs ${highlight === 'add' ? 'bg-emerald-50' : highlight === 'remove' ? 'bg-red-50' : 'bg-slate-50'}`}>
+                            <span className="font-bold text-slate-700 truncate flex-1">{prod?.name || item.productId}</span>
+                            <span className="text-slate-500 ml-2">Qtd: {item.quantity}</span>
+                            <span className="text-slate-500 ml-2">R$ {(item.price || 0).toFixed(2)}</span>
+                        </div>
+                    );
+                });
 
                 return (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4 bg-slate-900/80 backdrop-blur-sm">
@@ -567,20 +571,24 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, sales, setSales }) => {
                                                 const isNew = !origItems.some((o: any) => o.productId === item.productId);
                                                 const origItem = origItems.find((o: any) => o.productId === item.productId);
                                                 const changed = origItem && (origItem.quantity !== item.quantity || origItem.price !== item.price);
+                                                const prod = products.find(p => p.id === item.productId);
                                                 return <div key={idx} className={`flex justify-between items-center py-1.5 px-2 rounded-lg text-xs ${isNew ? 'bg-emerald-50 border border-emerald-200' : changed ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50'}`}>
-                                                    <span className="font-bold text-slate-700 truncate flex-1">{item.productId}</span>
+                                                    <span className="font-bold text-slate-700 truncate flex-1">{prod?.name || item.productId}</span>
                                                     {isNew && <span className="text-[9px] text-emerald-700 font-black mr-1">NOVO</span>}
                                                     {changed && !isNew && <span className="text-[9px] text-amber-700 font-black mr-1">ALTERADO</span>}
                                                     <span className="text-slate-500">Qtd: {item.quantity}</span>
                                                     <span className="text-slate-500 ml-2">R$ {(item.price || 0).toFixed(2)}</span>
                                                 </div>;
                                             })}
-                                            {origItems.filter((o: any) => !propItems.some((p: any) => p.productId === o.productId)).map((item: any, idx: number) => (
-                                                <div key={`removed-${idx}`} className="flex justify-between items-center py-1.5 px-2 rounded-lg text-xs bg-red-50 border border-red-200">
-                                                    <span className="font-bold text-red-500 line-through truncate flex-1">{item.productId}</span>
-                                                    <span className="text-[9px] text-red-600 font-black">REMOVIDO</span>
-                                                </div>
-                                            ))}
+                                            {origItems.filter((o: any) => !propItems.some((p: any) => p.productId === o.productId)).map((item: any, idx: number) => {
+                                                const prod = products.find(p => p.id === item.productId);
+                                                return (
+                                                    <div key={`removed-${idx}`} className="flex justify-between items-center py-1.5 px-2 rounded-lg text-xs bg-red-50 border border-red-200">
+                                                        <span className="font-bold text-red-500 line-through truncate flex-1">{prod?.name || item.productId}</span>
+                                                        <span className="text-[9px] text-red-600 font-black">REMOVIDO</span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                         <div className="mt-3 pt-3 border-t border-slate-100">
                                             <p className="text-xs text-slate-500">Total: <span className="font-black text-amber-700">R$ {(prop.total || 0).toFixed(2)}</span></p>

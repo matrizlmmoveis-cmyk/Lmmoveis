@@ -37,9 +37,9 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
     name: '',
     sku: '',
     category: CATEGORIES[0],
-    price: '',
-    costPrice: '',
-    assemblyPrice: '',
+    price: 0,
+    costPrice: 0,
+    assemblyPrice: 0,
     imageUrl: '',
     supplierId: ''
   });
@@ -56,6 +56,19 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
     p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const formatCurrencyBRL = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
+  const handleCurrencyChange = (e: React.ChangeEvent<HTMLInputElement>, callback: (num: number) => void) => {
+    const value = e.target.value.replace(/\D/g, '');
+    const numberValue = value ? parseInt(value) / 100 : 0;
+    callback(numberValue);
+  };
+
   // ========================
   // NOVO PRODUTO
   // ========================
@@ -66,14 +79,14 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
       name: newProduct.name,
       sku: newProduct.sku,
       category: newProduct.category,
-      price: parseFloat(newProduct.price),
-      costPrice: parseFloat(newProduct.costPrice) || 0,
-      assemblyPrice: parseFloat(newProduct.assemblyPrice) || 0,
+      price: newProduct.price,
+      costPrice: newProduct.costPrice,
+      assemblyPrice: newProduct.assemblyPrice,
       supplierId: newProduct.supplierId || undefined
     };
     setProducts([product, ...products]);
     setIsModalOpen(false);
-    setNewProduct({ name: '', sku: '', category: CATEGORIES[0], price: '', costPrice: '', assemblyPrice: '', imageUrl: '', supplierId: '' });
+    setNewProduct({ name: '', sku: '', category: CATEGORIES[0], price: 0, costPrice: 0, assemblyPrice: 0, imageUrl: '', supplierId: '' });
   };
 
   const handleAddSupplier = (e: React.FormEvent) => {
@@ -417,28 +430,28 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase mb-1">Preço Venda (R$)</label>
                   <input
-                    type="number" step="0.01"
+                    type="text"
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm focus:border-blue-500"
-                    value={editingProduct.price}
-                    onChange={e => setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) || 0 })}
+                    value={formatCurrencyBRL(editingProduct.price)}
+                    onChange={e => handleCurrencyChange(e, (num) => setEditingProduct({ ...editingProduct, price: num }))}
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase mb-1">Preço Montagem (R$)</label>
                   <input
-                    type="number" step="0.01"
+                    type="text"
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm text-emerald-600 focus:border-blue-500"
-                    value={editingProduct.assemblyPrice}
-                    onChange={e => setEditingProduct({ ...editingProduct, assemblyPrice: parseFloat(e.target.value) || 0 })}
+                    value={formatCurrencyBRL(editingProduct.assemblyPrice)}
+                    onChange={e => handleCurrencyChange(e, (num) => setEditingProduct({ ...editingProduct, assemblyPrice: num }))}
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase mb-1">Custo (R$)</label>
                   <input
-                    type="number" step="0.01"
+                    type="text"
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm text-red-600 focus:border-blue-500"
-                    value={editingProduct.costPrice}
-                    onChange={e => setEditingProduct({ ...editingProduct, costPrice: parseFloat(e.target.value) || 0 })}
+                    value={formatCurrencyBRL(editingProduct.costPrice)}
+                    onChange={e => handleCurrencyChange(e, (num) => setEditingProduct({ ...editingProduct, costPrice: num }))}
                   />
                 </div>
                 <div>
@@ -649,9 +662,9 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                     <button type="button" onClick={() => setIsSupplierModalOpen(true)} className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors"><Plus className="w-5 h-5" /></button>
                   </div>
                 </div>
-                <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Venda (R$)</label><input required type="number" step="0.01" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} /></div>
-                <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Custo (R$)</label><input type="number" step="0.01" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-red-600" value={newProduct.costPrice} onChange={e => setNewProduct({ ...newProduct, costPrice: e.target.value })} /></div>
-                <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Montagem (R$)</label><input type="number" step="0.01" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-emerald-600" value={newProduct.assemblyPrice} onChange={e => setNewProduct({ ...newProduct, assemblyPrice: e.target.value })} /></div>
+                <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Venda (R$)</label><input required type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold" value={formatCurrencyBRL(newProduct.price)} onChange={e => handleCurrencyChange(e, (num) => setNewProduct({ ...newProduct, price: num }))} /></div>
+                <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Custo (R$)</label><input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-red-600" value={formatCurrencyBRL(newProduct.costPrice)} onChange={e => handleCurrencyChange(e, (num) => setNewProduct({ ...newProduct, costPrice: num }))} /></div>
+                <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Montagem (R$)</label><input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-emerald-600" value={formatCurrencyBRL(newProduct.assemblyPrice)} onChange={e => handleCurrencyChange(e, (num) => setNewProduct({ ...newProduct, assemblyPrice: num }))} /></div>
               </div>
               <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black shadow-xl transition-all">SALVAR PRODUTO</button>
             </form>

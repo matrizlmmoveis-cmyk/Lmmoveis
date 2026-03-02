@@ -67,6 +67,19 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     setIsCustomerModalOpen(false);
   };
 
+  const formatCurrencyBRL = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
+  const handleCurrencyChange = (e: React.ChangeEvent<HTMLInputElement>, callback: (num: number) => void) => {
+    const value = e.target.value.replace(/\D/g, '');
+    const numberValue = value ? parseInt(value) / 100 : 0;
+    callback(numberValue);
+  };
+
   const getStock = (productId: string, locationId?: string) => {
     if (locationId) {
       return inventory.find(i => i.productId === productId && i.locationId === locationId)?.quantity || 0;
@@ -217,9 +230,10 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       await supabaseService.markSaleCancelPending(saleId);
       setSales(prev => prev.map(s => s.id === saleId ? { ...s, status: OrderStatus.CANCEL_PENDING } : s));
 
+      const productNames = sale?.items?.map(i => products.find(p => p.id === i.productId)?.name || i.productId).filter(Boolean).join(', ') || '';
       await supabaseService.createTask({
         title: `Autorização de Cancelamento — Venda Nº ${saleId}`,
-        description: `A venda Nº ${saleId} (Cliente: ${sale?.customerName || '?'}, Total: R$ ${sale?.total?.toFixed(2) || '0,00'}) solicitada para cancelamento por ${user?.name || 'operador'} (${user?.role}).\n\nJustificativa: ${justification}\n\nProdutos: ${sale?.items?.map(i => products.find(p => p.id === i.productId)?.name).filter(Boolean).join(', ')}\n\nApós autorizar, escolha o CD para devolução do saldo.`,
+        description: `A venda Nº ${saleId} (Cliente: ${sale?.customerName || '?'}, Total: R$ ${sale?.total?.toFixed(2) || '0,00'}) solicitada para cancelamento por ${user?.name || 'operador'} (${user?.role}).\n\nJustificativa: ${justification}\n\nProdutos: ${productNames}\n\nApós autorizar, escolha o CD para devolução do saldo.`,
         type: 'CANCELAMENTO_PENDENTE',
         priority: 'ALTA',
         status: 'ABERTA',
@@ -227,7 +241,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         assigned_to: 'MASTER',
         store_id: sale?.storeId || user?.storeId || '',
         sale_id: saleId,
-        product_name: sale?.items?.map(i => products.find(p => p.id === i.productId)?.name).filter(Boolean).join(', ') || '',
+        product_name: productNames,
       });
 
       setCancelRequest(null);
@@ -300,8 +314,11 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       await Promise.all(inventoryUpdates);
 
       // Criar alertas para encomendas (Master/Supervisor)
-      const encomendaItems = sale.items.filter(item => item.locationId === 'encomenda');
-      if (encomendaItems.length > 0) {
+      const encomendaItems = sale.items.filter(item => item.locationId === 'ST-ENCOMENDA');
+      const hasCdnorte = sale.items.some(item => item.locationId === 'W-NORTE');
+      const hasMostruario = sale.items.some(item => item.locationId === 'ST-MOSTRUARIO');
+
+      if (encomendaItems.length > 0 && !hasCdnorte && !hasMostruario) {
         const prodNames = encomendaItems.map(item => products.find(p => p.id === item.productId)?.name || item.productId).join(', ');
         await supabaseService.createTask({
           title: `Pedido de Encomenda Gerado`,
@@ -320,7 +337,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       // Criar avisos automáticos para itens vendidos de outra loja
       const crossStoreItems = sale.items.filter(item => item.locationId && item.locationId !== sale.storeId);
       const saleStoreName = stores.find(s => s.id === sale.storeId)?.name || sale.storeId;
-      if (crossStoreItems.length > 0) {
+      if (crossStoreItems.length > 0 && !hasCdnorte) {
         const notificationPromises = crossStoreItems.map(item => {
           const productName = products.find(p => p.id === item.productId)?.name || item.productId;
           const sourceStoreName = stores.find(s => s.id === item.locationId)?.name || item.locationId;
@@ -523,7 +540,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                             setNewSale({ ...newSale, items: newSale.items?.map(i => (i.productId === item.productId && i.locationId === item.locationId) ? { ...i, quantity: newQty } : i) });
                           }} />
                           <span className="text-[10px] text-slate-400 font-bold">x</span>
-                          <input type="number" className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" value={item.price} onChange={e => handlePriceChange(item.productId, parseFloat(e.target.value) || 0)} />
+                          <input type="text" className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" value={formatCurrencyBRL(item.price)} onChange={e => handleCurrencyChange(e, (num) => handlePriceChange(item.productId, num))} />
                           <span className="text-[9px] text-slate-400 font-bold">Desc.</span>
                           <input type="number" min="0" max="100" className="w-12 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" value={Math.round(item.discount)} onChange={e => handleDiscountChange(item.productId, parseFloat(e.target.value) || 0)} />
                           <span className="text-[9px] text-slate-400 font-bold">%</span>
@@ -568,9 +585,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                         <option value="Cartão Débito">Débito</option>
                         <option value="Cartão Crédito">Crédito</option>
                         <option value="PIX">PIX</option>
-                        <option value="Entrega">Receber na Entrega</option>
                       </select>
-                      <input type="number" className="w-24 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-blue-400" value={p.amount} onChange={e => handlePaymentChange(idx, 'amount', parseFloat(e.target.value) || 0)} />
+                      <input type="text" className="w-24 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-blue-400" value={formatCurrencyBRL(p.amount)} onChange={e => handleCurrencyChange(e, (num) => handlePaymentChange(idx, 'amount', num))} />
                       <button onClick={() => handleRemovePayment(idx)} className="p-1.5 text-red-400 hover:text-red-600 transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
