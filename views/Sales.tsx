@@ -836,8 +836,12 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Cliente</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Unidade</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Motorista</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Montador</th>
+                {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && (
+                  <>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Motorista</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Montador</th>
+                  </>
+                )}
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Ações</th>
               </tr>
             </thead>
@@ -878,26 +882,30 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    <select
-                      className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-blue-500"
-                      value={sale.assignedDriverId || ''}
-                      onChange={(e) => handleAssignLogistics(sale.id, e.target.value, 'entrega')}
-                    >
-                      <option value="">Selecionar</option>
-                      {employees.filter(e => e.role === 'MOTORISTA').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                    </select>
-                  </td>
-                  <td className="px-6 py-4">
-                    <select
-                      className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-emerald-500"
-                      value={sale.assignedAssemblerId || ''}
-                      onChange={(e) => handleAssignLogistics(sale.id, e.target.value, 'montagem')}
-                    >
-                      <option value="">Selecionar</option>
-                      {employees.filter(e => e.role === 'MONTADOR').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                    </select>
-                  </td>
+                  {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && (
+                    <>
+                      <td className="px-6 py-4">
+                        <select
+                          className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-blue-500"
+                          value={sale.assignedDriverId || ''}
+                          onChange={(e) => handleAssignLogistics(sale.id, e.target.value, 'entrega')}
+                        >
+                          <option value="">Selecionar</option>
+                          {employees.filter(e => e.role === 'MOTORISTA').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-emerald-500"
+                          value={sale.assignedAssemblerId || ''}
+                          onChange={(e) => handleAssignLogistics(sale.id, e.target.value, 'montagem')}
+                        >
+                          <option value="">Selecionar</option>
+                          {employees.filter(e => e.role === 'MONTADOR').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                        </select>
+                      </td>
+                    </>
+                  )}
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => setSelectedRomaneioHistory(sale)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Histórico de Logística">
