@@ -1,9 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Employee, Store, OrderStatus, Sale, Product, Customer, SaleItem, Payment, InventoryItem } from '../types.ts';
 import { Search, Plus, Eye, X, ShoppingCart, User, Package, CheckCircle2, ArrowLeft, Trash2, AlertCircle, CreditCard, DollarSign, Box, Filter, Calendar, Printer, Check, CheckSquare, Square, RefreshCw } from 'lucide-react';
 import SaleReceipt from './SaleReceipt.tsx';
 import CustomerModal from '../components/CustomerModal.tsx';
+import RomaneioPDF from '../components/RomaneioPDF.tsx';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 import { supabaseService } from '../services/supabaseService.ts';
 
@@ -657,6 +659,26 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     );
   }
 
+  const handleBulkPrint = () => {
+    setIsBulkPrinting(true);
+  };
+
+  const generatePDF = () => {
+    const element = document.getElementById('bulk-print-content');
+    if (!element) return;
+
+    const opt = {
+      margin: 10,
+      filename: `vendas_agrupadas_${new Date().getTime()}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+
+    html2pdf().from(element).set(opt).save();
+  };
+
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -820,348 +842,335 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       </div>
 
       {/* Modal de Edição de Venda */}
-      {editRequest && (() => {
-        const er = editRequest;
-        const saleTotal = er.editedItems.reduce((acc, i) => acc + (i.price * i.quantity * (1 - (i.discount || 0) / 100)), 0);
-        const filteredProducts = products.filter(p =>
-          p.name.toLowerCase().includes(er.productSearch.toLowerCase()) ||
-          (p.sku && p.sku.toLowerCase().includes(er.productSearch.toLowerCase()))
-        ).slice(0, 10);
+      {
+        editRequest && (() => {
+          const er = editRequest;
+          const saleTotal = er.editedItems.reduce((acc, i) => acc + (i.price * i.quantity * (1 - (i.discount || 0) / 100)), 0);
+          const filteredProducts = products.filter(p =>
+            p.name.toLowerCase().includes(er.productSearch.toLowerCase()) ||
+            (p.sku && p.sku.toLowerCase().includes(er.productSearch.toLowerCase()))
+          ).slice(0, 10);
 
-        const updateItem = (idx: number, field: keyof SaleItem, value: any) => {
-          const items = [...er.editedItems];
-          items[idx] = { ...items[idx], [field]: value };
-          setEditRequest({ ...er, editedItems: items });
-        };
-        const removeItem = (idx: number) => setEditRequest({ ...er, editedItems: er.editedItems.filter((_, i) => i !== idx) });
-        const addProduct = (p: Product) => {
-          const existingIdx = er.editedItems.findIndex(i => i.productId === p.id);
-          if (existingIdx >= 0) {
+          const updateItem = (idx: number, field: keyof SaleItem, value: any) => {
             const items = [...er.editedItems];
-            items[existingIdx] = { ...items[existingIdx], quantity: items[existingIdx].quantity + 1 };
-            setEditRequest({ ...er, editedItems: items, productSearch: '' });
-          } else {
-            const firstStock = inventory.find(inv => inv.productId === p.id && inv.quantity > 0);
-            setEditRequest({
-              ...er,
-              productSearch: '',
-              editedItems: [...er.editedItems, {
-                productId: p.id, quantity: 1, price: p.price, discount: 0,
-                originalPrice: p.price, locationId: firstStock?.locationId || er.sale.storeId || '',
-                assemblyRequired: false
-              }]
-            });
-          }
-        };
+            items[idx] = { ...items[idx], [field]: value };
+            setEditRequest({ ...er, editedItems: items });
+          };
+          const removeItem = (idx: number) => setEditRequest({ ...er, editedItems: er.editedItems.filter((_, i) => i !== idx) });
+          const addProduct = (p: Product) => {
+            const existingIdx = er.editedItems.findIndex(i => i.productId === p.id);
+            if (existingIdx >= 0) {
+              const items = [...er.editedItems];
+              items[existingIdx] = { ...items[existingIdx], quantity: items[existingIdx].quantity + 1 };
+              setEditRequest({ ...er, editedItems: items, productSearch: '' });
+            } else {
+              const firstStock = inventory.find(inv => inv.productId === p.id && inv.quantity > 0);
+              setEditRequest({
+                ...er,
+                productSearch: '',
+                editedItems: [...er.editedItems, {
+                  productId: p.id, quantity: 1, price: p.price, discount: 0,
+                  originalPrice: p.price, locationId: firstStock?.locationId || er.sale.storeId || '',
+                  assemblyRequired: false
+                }]
+              });
+            }
+          };
 
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4 bg-slate-900/80 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
-              {/* Header */}
-              <div className="px-6 py-4 bg-amber-50 border-b border-amber-100 flex justify-between items-center shrink-0">
-                <div>
-                  <h2 className="text-base font-black text-amber-800 uppercase">✏️ Editar Venda Nº {er.sale.id}</h2>
-                  <p className="text-[10px] text-amber-600 font-medium">As alterações serão enviadas para autorização do MASTER/SUPERVISOR</p>
-                </div>
-                <button onClick={() => setEditRequest(null)} className="p-2 hover:bg-amber-100 rounded-full"><X className="w-5 h-5 text-amber-500" /></button>
-              </div>
-
-              <div className="overflow-y-auto flex-1 p-5 space-y-5">
-                {/* Product search */}
-                <div>
-                  <label className="block text-xs font-black text-slate-400 uppercase mb-2">Adicionar Produto</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Buscar produto por nome ou SKU..."
-                      value={er.productSearch}
-                      onChange={e => setEditRequest({ ...er, productSearch: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-amber-400"
-                    />
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4 bg-slate-900/80 backdrop-blur-sm">
+              <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+                {/* Header */}
+                <div className="px-6 py-4 bg-amber-50 border-b border-amber-100 flex justify-between items-center shrink-0">
+                  <div>
+                    <h2 className="text-base font-black text-amber-800 uppercase">✏️ Editar Venda Nº {er.sale.id}</h2>
+                    <p className="text-[10px] text-amber-600 font-medium">As alterações serão enviadas para autorização do MASTER/SUPERVISOR</p>
                   </div>
-                  {er.productSearch && (
-                    <div className="mt-1 border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                      {filteredProducts.length === 0 ? (
-                        <p className="p-3 text-xs text-slate-400 text-center">Nenhum produto encontrado</p>
-                      ) : filteredProducts.map(p => {
-                        const totalStock = inventory.filter(inv => inv.productId === p.id).reduce((a, b) => a + b.quantity, 0);
+                  <button onClick={() => setEditRequest(null)} className="p-2 hover:bg-amber-100 rounded-full"><X className="w-5 h-5 text-amber-500" /></button>
+                </div>
+
+                <div className="overflow-y-auto flex-1 p-5 space-y-5">
+                  {/* Product search */}
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase mb-2">Adicionar Produto</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Buscar produto por nome ou SKU..."
+                        value={er.productSearch}
+                        onChange={e => setEditRequest({ ...er, productSearch: e.target.value })}
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-amber-400"
+                      />
+                    </div>
+                    {er.productSearch && (
+                      <div className="mt-1 border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        {filteredProducts.length === 0 ? (
+                          <p className="p-3 text-xs text-slate-400 text-center">Nenhum produto encontrado</p>
+                        ) : filteredProducts.map(p => {
+                          const totalStock = inventory.filter(inv => inv.productId === p.id).reduce((a, b) => a + b.quantity, 0);
+                          return (
+                            <button key={p.id} onClick={() => addProduct(p)} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-amber-50 border-b border-slate-100 text-left">
+                              <div>
+                                <p className="text-xs font-bold text-slate-800">{p.name}</p>
+                                <p className="text-[10px] text-slate-400">SKU: {p.sku || '—'} · R$ {p.price.toFixed(2)}</p>
+                              </div>
+                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${totalStock > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                                {totalStock > 0 ? `Saldo: ${totalStock}` : 'Sem estoque'}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Edited items list */}
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase mb-2">Itens da Venda</label>
+                    <div className="space-y-2">
+                      {er.editedItems.map((item, idx) => {
+                        const prod = products.find(p => p.id === item.productId);
+                        const locStock = inventory.find(inv => inv.productId === item.productId && inv.locationId === item.locationId)?.quantity || 0;
+                        const isNew = !er.sale.items?.some(i => i.productId === item.productId);
                         return (
-                          <button key={p.id} onClick={() => addProduct(p)} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-amber-50 border-b border-slate-100 text-left">
-                            <div>
-                              <p className="text-xs font-bold text-slate-800">{p.name}</p>
-                              <p className="text-[10px] text-slate-400">SKU: {p.sku || '—'} · R$ {p.price.toFixed(2)}</p>
+                          <div key={idx} className={`flex items-center gap-3 p-3 rounded-xl border ${isNew ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-black text-slate-800 truncate">{prod?.name || item.productId}</p>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {isNew && <span className="text-[9px] bg-emerald-100 text-emerald-700 font-black px-2 py-0.5 rounded-full uppercase">Novo</span>}
+                                <span className="text-[10px] text-slate-500">Saldo CD: {locStock}</span>
+                              </div>
                             </div>
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${totalStock > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
-                              {totalStock > 0 ? `Saldo: ${totalStock}` : 'Sem estoque'}
-                            </span>
-                          </button>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className="flex flex-col items-center">
+                                <span className="text-[9px] text-slate-400 uppercase mb-0.5">Qtd</span>
+                                <input type="number" min={1} value={item.quantity} onChange={e => updateItem(idx, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                                  className="w-14 text-center py-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400" />
+                              </div>
+                              <div className="flex flex-col items-center">
+                                <span className="text-[9px] text-slate-400 uppercase mb-0.5">Preço</span>
+                                <input type="number" step="0.01" min={0} value={item.price} onChange={e => updateItem(idx, 'price', parseFloat(e.target.value) || 0)}
+                                  className="w-24 text-center py-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400" />
+                              </div>
+                              <div className="flex flex-col items-center">
+                                <span className="text-[9px] text-slate-400 uppercase mb-0.5">Desc%</span>
+                                <input type="number" step="1" min={0} max={100} value={item.discount || 0} onChange={e => updateItem(idx, 'discount', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                                  className="w-14 text-center py-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400" />
+                              </div>
+                              <div className="flex flex-col items-center">
+                                <span className="text-[9px] text-slate-400 uppercase mb-0.5">CD</span>
+                                <select value={item.locationId} onChange={e => updateItem(idx, 'locationId', e.target.value)}
+                                  className="py-1 px-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400">
+                                  {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                              </div>
+                              <button onClick={() => removeItem(idx)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"><X className="w-4 h-4" /></button>
+                            </div>
+                          </div>
                         );
                       })}
+                      {er.editedItems.length === 0 && <p className="text-xs text-slate-400 text-center py-4">Nenhum item. Adicione produtos acima.</p>}
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                {/* Edited items list */}
-                <div>
-                  <label className="block text-xs font-black text-slate-400 uppercase mb-2">Itens da Venda</label>
-                  <div className="space-y-2">
-                    {er.editedItems.map((item, idx) => {
-                      const prod = products.find(p => p.id === item.productId);
-                      const locStock = inventory.find(inv => inv.productId === item.productId && inv.locationId === item.locationId)?.quantity || 0;
-                      const isNew = !er.sale.items?.some(i => i.productId === item.productId);
-                      return (
-                        <div key={idx} className={`flex items-center gap-3 p-3 rounded-xl border ${isNew ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-black text-slate-800 truncate">{prod?.name || item.productId}</p>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              {isNew && <span className="text-[9px] bg-emerald-100 text-emerald-700 font-black px-2 py-0.5 rounded-full uppercase">Novo</span>}
-                              <span className="text-[10px] text-slate-500">Saldo CD: {locStock}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <div className="flex flex-col items-center">
-                              <span className="text-[9px] text-slate-400 uppercase mb-0.5">Qtd</span>
-                              <input type="number" min={1} value={item.quantity} onChange={e => updateItem(idx, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
-                                className="w-14 text-center py-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400" />
-                            </div>
-                            <div className="flex flex-col items-center">
-                              <span className="text-[9px] text-slate-400 uppercase mb-0.5">Preço</span>
-                              <input type="number" step="0.01" min={0} value={item.price} onChange={e => updateItem(idx, 'price', parseFloat(e.target.value) || 0)}
-                                className="w-24 text-center py-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400" />
-                            </div>
-                            <div className="flex flex-col items-center">
-                              <span className="text-[9px] text-slate-400 uppercase mb-0.5">Desc%</span>
-                              <input type="number" step="1" min={0} max={100} value={item.discount || 0} onChange={e => updateItem(idx, 'discount', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
-                                className="w-14 text-center py-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400" />
-                            </div>
-                            <div className="flex flex-col items-center">
-                              <span className="text-[9px] text-slate-400 uppercase mb-0.5">CD</span>
-                              <select value={item.locationId} onChange={e => updateItem(idx, 'locationId', e.target.value)}
-                                className="py-1 px-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400">
-                                {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                              </select>
-                            </div>
-                            <button onClick={() => removeItem(idx)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"><X className="w-4 h-4" /></button>
-                          </div>
+                  {/* Payments */}
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase mb-2">Pagamentos</label>
+                    <div className="space-y-2">
+                      {er.editedPayments.map((pay, idx) => (
+                        <div key={idx} className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                          <select value={pay.method} onChange={e => { const p = [...er.editedPayments]; p[idx] = { ...p[idx], method: e.target.value as any }; setEditRequest({ ...er, editedPayments: p }); }}
+                            className="flex-1 py-2 px-3 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400">
+                            {['Dinheiro', 'PIX', 'Cartão de Crédito', 'Cartão de Débito', 'Boleto', 'Crediário', 'Entrega'].map(m => <option key={m}>{m}</option>)}
+                          </select>
+                          <input type="number" step="0.01" min={0} value={pay.amount}
+                            onChange={e => { const p = [...er.editedPayments]; p[idx] = { ...p[idx], amount: parseFloat(e.target.value) || 0 }; setEditRequest({ ...er, editedPayments: p }); }}
+                            className="w-28 py-2 px-3 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400 text-right" />
+                          <button onClick={() => setEditRequest({ ...er, editedPayments: er.editedPayments.filter((_, i) => i !== idx) })} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"><X className="w-4 h-4" /></button>
                         </div>
-                      );
-                    })}
-                    {er.editedItems.length === 0 && <p className="text-xs text-slate-400 text-center py-4">Nenhum item. Adicione produtos acima.</p>}
+                      ))}
+                      <button onClick={() => setEditRequest({ ...er, editedPayments: [...er.editedPayments, { method: 'Dinheiro', amount: 0 }] })}
+                        className="text-xs font-black text-amber-700 border border-dashed border-amber-300 rounded-xl px-4 py-2 hover:bg-amber-50 w-full">
+                        + Adicionar Pagamento
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="flex justify-end">
+                    <span className="text-sm font-black text-slate-700">Total proposto: <span className="text-emerald-600">R$ {saleTotal.toFixed(2)}</span></span>
+                  </div>
+
+                  {/* Justification */}
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase mb-2">Justificativa obrigatória</label>
+                    <textarea rows={3} placeholder="Descreva o motivo da edição..."
+                      value={er.justification}
+                      onChange={e => setEditRequest({ ...er, justification: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-700 resize-none outline-none focus:border-amber-400" />
                   </div>
                 </div>
 
-                {/* Payments */}
-                <div>
-                  <label className="block text-xs font-black text-slate-400 uppercase mb-2">Pagamentos</label>
-                  <div className="space-y-2">
-                    {er.editedPayments.map((pay, idx) => (
-                      <div key={idx} className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                        <select value={pay.method} onChange={e => { const p = [...er.editedPayments]; p[idx] = { ...p[idx], method: e.target.value as any }; setEditRequest({ ...er, editedPayments: p }); }}
-                          className="flex-1 py-2 px-3 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400">
-                          {['Dinheiro', 'PIX', 'Cartão de Crédito', 'Cartão de Débito', 'Boleto', 'Crediário', 'Entrega'].map(m => <option key={m}>{m}</option>)}
-                        </select>
-                        <input type="number" step="0.01" min={0} value={pay.amount}
-                          onChange={e => { const p = [...er.editedPayments]; p[idx] = { ...p[idx], amount: parseFloat(e.target.value) || 0 }; setEditRequest({ ...er, editedPayments: p }); }}
-                          className="w-28 py-2 px-3 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400 text-right" />
-                        <button onClick={() => setEditRequest({ ...er, editedPayments: er.editedPayments.filter((_, i) => i !== idx) })} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"><X className="w-4 h-4" /></button>
-                      </div>
-                    ))}
-                    <button onClick={() => setEditRequest({ ...er, editedPayments: [...er.editedPayments, { method: 'Dinheiro', amount: 0 }] })}
-                      className="text-xs font-black text-amber-700 border border-dashed border-amber-300 rounded-xl px-4 py-2 hover:bg-amber-50 w-full">
-                      + Adicionar Pagamento
-                    </button>
-                  </div>
+                {/* Footer actions */}
+                <div className="px-5 py-4 border-t border-slate-100 flex gap-3 shrink-0">
+                  <button onClick={() => setEditRequest(null)} className="flex-1 py-3 text-slate-500 font-bold uppercase text-xs border border-slate-200 rounded-2xl hover:bg-slate-50">Cancelar</button>
+                  <button
+                    disabled={er.submitting || !er.justification.trim() || er.editedItems.length === 0}
+                    onClick={async () => {
+                      if (!er.justification.trim()) { alert('Informe a justificativa.'); return; }
+                      setEditRequest({ ...er, submitting: true });
+                      try {
+                        const productNames = er.editedItems.map(i => products.find(p => p.id === i.productId)?.name || i.productId).join(', ');
+                        await supabaseService.requestSaleEdit({
+                          saleId: er.sale.id,
+                          requestedBy: user?.name || user?.username || 'Gerente',
+                          storeId: er.sale.storeId,
+                          justification: er.justification,
+                          originalSnapshot: { ...er.sale, requestedBy: user?.name || user?.username, justification: er.justification, prevStatus: er.sale.status },
+                          proposedSnapshot: { ...er.sale, items: er.editedItems, payments: er.editedPayments, total: saleTotal },
+                          productNames,
+                        });
+                        setSales(prev => prev.map(s => s.id === er.sale.id ? { ...s, status: OrderStatus.EDIT_PENDING } : s));
+                        setEditRequest(null);
+                      } catch (e) {
+                        alert('Erro ao enviar solicitação de edição.');
+                        setEditRequest(prev => prev ? { ...prev, submitting: false } : null);
+                      }
+                    }}
+                    className="flex-1 py-3 bg-amber-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-amber-100 hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    {er.submitting ? 'Enviando...' : 'Enviar para Aprovação'}
+                  </button>
                 </div>
-
-                {/* Summary */}
-                <div className="flex justify-end">
-                  <span className="text-sm font-black text-slate-700">Total proposto: <span className="text-emerald-600">R$ {saleTotal.toFixed(2)}</span></span>
-                </div>
-
-                {/* Justification */}
-                <div>
-                  <label className="block text-xs font-black text-slate-400 uppercase mb-2">Justificativa obrigatória</label>
-                  <textarea rows={3} placeholder="Descreva o motivo da edição..."
-                    value={er.justification}
-                    onChange={e => setEditRequest({ ...er, justification: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-700 resize-none outline-none focus:border-amber-400" />
-                </div>
-              </div>
-
-              {/* Footer actions */}
-              <div className="px-5 py-4 border-t border-slate-100 flex gap-3 shrink-0">
-                <button onClick={() => setEditRequest(null)} className="flex-1 py-3 text-slate-500 font-bold uppercase text-xs border border-slate-200 rounded-2xl hover:bg-slate-50">Cancelar</button>
-                <button
-                  disabled={er.submitting || !er.justification.trim() || er.editedItems.length === 0}
-                  onClick={async () => {
-                    if (!er.justification.trim()) { alert('Informe a justificativa.'); return; }
-                    setEditRequest({ ...er, submitting: true });
-                    try {
-                      const productNames = er.editedItems.map(i => products.find(p => p.id === i.productId)?.name || i.productId).join(', ');
-                      await supabaseService.requestSaleEdit({
-                        saleId: er.sale.id,
-                        requestedBy: user?.name || user?.username || 'Gerente',
-                        storeId: er.sale.storeId,
-                        justification: er.justification,
-                        originalSnapshot: { ...er.sale, requestedBy: user?.name || user?.username, justification: er.justification, prevStatus: er.sale.status },
-                        proposedSnapshot: { ...er.sale, items: er.editedItems, payments: er.editedPayments, total: saleTotal },
-                        productNames,
-                      });
-                      setSales(prev => prev.map(s => s.id === er.sale.id ? { ...s, status: OrderStatus.EDIT_PENDING } : s));
-                      setEditRequest(null);
-                    } catch (e) {
-                      alert('Erro ao enviar solicitação de edição.');
-                      setEditRequest(prev => prev ? { ...prev, submitting: false } : null);
-                    }
-                  }}
-                  className="flex-1 py-3 bg-amber-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-amber-100 hover:bg-amber-700 disabled:opacity-50"
-                >
-                  {er.submitting ? 'Enviando...' : 'Enviar para Aprovação'}
-                </button>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()
+      }
 
       {/* Modal de Justificativa de Cancelamento */}
-      {cancelRequest && (
+      {
+        cancelRequest && (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 bg-red-50 border-b border-red-100 flex justify-between items-center">
-              <div>
-                <h2 className="text-base font-black text-red-800 uppercase">Solicitar Cancelamento</h2>
-                <p className="text-[10px] text-red-500 font-medium">Venda Nº {cancelRequest.saleId} · Será enviada para autorização do MASTER/SUPERVISOR</p>
-              </div>
-              <button onClick={() => setCancelRequest(null)} className="p-2 hover:bg-red-100 rounded-full transition-colors">
-                <span className="text-red-400 font-black text-lg leading-none">✕</span>
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase mb-2">Justificativa obrigatória</label>
-                <textarea
-                  rows={4}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-700 resize-none outline-none focus:border-red-300"
-                  placeholder="Descreva o motivo do cancelamento..."
-                  value={cancelRequest.justification}
-                  onChange={e => setCancelRequest({ ...cancelRequest, justification: e.target.value })}
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setCancelRequest(null)}
-                  className="flex-1 py-3 text-slate-500 font-bold uppercase text-xs border border-slate-200 rounded-2xl hover:bg-slate-50"
-                >
-                  Voltar
-                </button>
-                <button
-                  onClick={() => {
-                    if (!cancelRequest.justification.trim()) { alert('Informe a justificativa do cancelamento.'); return; }
-                    handleCancelSale(cancelRequest.saleId, cancelRequest.justification);
-                  }}
-                  className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-red-100 hover:bg-red-700"
-                >
-                  Enviar Solicitação
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="px-6 py-4 bg-red-50 border-b border-red-100 flex justify-between items-center">
+                <div>
+                  <h2 className="text-base font-black text-red-800 uppercase">Solicitar Cancelamento</h2>
+                  <p className="text-[10px] text-red-500 font-medium">Venda Nº {cancelRequest.saleId} · Será enviada para autorização do MASTER/SUPERVISOR</p>
+                </div>
+                <button onClick={() => setCancelRequest(null)} className="p-2 hover:bg-red-100 rounded-full transition-colors">
+                  <span className="text-red-400 font-black text-lg leading-none">✕</span>
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Barra de Ações em Massa */}
-      {selectedSaleIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-8 duration-300 border border-slate-800">
-          <div className="flex items-center gap-3 pr-6 border-r border-slate-700">
-            <span className="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full text-sm font-black">{selectedSaleIds.length}</span>
-            <span className="text-xs font-black uppercase text-slate-300">Selecionados</span>
-          </div>
-          <button
-            onClick={() => setIsBulkPrinting(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-slate-900 rounded-xl text-xs font-black uppercase hover:bg-blue-50 transition-all active:scale-95"
-          >
-            <Printer className="w-4 h-4" /> Imprimir Selecionados
-          </button>
-          <button
-            onClick={() => setSelectedSaleIds([])}
-            className="text-slate-400 hover:text-white text-xs font-bold uppercase"
-          >
-            Cancelar
-          </button>
-        </div>
-      )}
-
-      {isBulkPrinting && (
-        <div className="fixed inset-0 z-[60] bg-white overflow-y-auto no-scrollbar bulk-print-modal print:relative print:inset-auto print:h-auto print:overflow-visible">
-          <style dangerouslySetInnerHTML={{
-            __html: `
-              @media print {
-                /* Force all ancestors to be visible and have auto height */
-                html, body, #root, .flex.h-screen, main, section, .max-w-7xl {
-                  height: auto !important;
-                  min-height: 0 !important;
-                  overflow: visible !important;
-                  position: static !important;
-                  display: block !important;
-                  width: 100% !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                }
-                
-                /* Hide siblings of the print content to avoid artifacts */
-                .no-print, nav, aside, header, .Sidebar {
-                  display: none !important;
-                }
-
-                .bulk-print-modal {
-                  position: relative !important;
-                  display: block !important;
-                  width: 100% !important;
-                  height: auto !important;
-                  overflow: visible !important;
-                }
-              }
-            `
-          }} />
-          <div className="no-print sticky top-0 bg-white/80 backdrop-blur-md p-4 border-b flex justify-between items-center z-10 shadow-sm">
-            <div>
-              <h3 className="font-black text-slate-900 uppercase">Impressão Agrupada</h3>
-              <p className="text-[10px] text-slate-500 font-bold uppercase">{selectedSaleIds.length} Recibos prontos para impressão</p>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => window.print()} className="bg-slate-900 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black uppercase text-xs shadow-lg shadow-slate-200">
-                <Printer className="w-4 h-4" /> Confirmar Impressão
-              </button>
-              <button onClick={() => setIsBulkPrinting(false)} className="bg-slate-100 text-slate-600 px-6 py-2.5 rounded-xl font-black uppercase text-xs">
-                Fechar
-              </button>
-            </div>
-          </div>
-          <div className="p-4 md:p-8 space-y-8 flex flex-col items-center print:block print:p-0 print:space-y-0">
-            {selectedSaleIds.map((id) => {
-              const sale = sales.find(s => s.id === id);
-              if (!sale) return null;
-              return (
-                <div key={id} className="w-full max-w-[800px] bg-white print:max-w-none print:m-0" style={{ breakAfter: 'page', pageBreakAfter: 'always' }}>
-                  <SaleReceipt
-                    sale={sale}
-                    stores={stores}
-                    products={products}
-                    employees={employees}
-                    customers={customers}
-                    onBack={() => setIsBulkPrinting(false)}
-                    hideControls={true}
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-2">Justificativa obrigatória</label>
+                  <textarea
+                    rows={4}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-700 resize-none outline-none focus:border-red-300"
+                    placeholder="Descreva o motivo do cancelamento..."
+                    value={cancelRequest.justification}
+                    onChange={e => setCancelRequest({ ...cancelRequest, justification: e.target.value })}
                   />
                 </div>
-              );
-            })}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setCancelRequest(null)}
+                    className="flex-1 py-3 text-slate-500 font-bold uppercase text-xs border border-slate-200 rounded-2xl hover:bg-slate-50"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!cancelRequest.justification.trim()) { alert('Informe a justificativa do cancelamento.'); return; }
+                      handleCancelSale(cancelRequest.saleId, cancelRequest.justification);
+                    }}
+                    className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-red-100 hover:bg-red-700"
+                  >
+                    Enviar Solicitação
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+
+      {/* Barra de Ações em Massa */}
+      {
+        selectedSaleIds.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-8 duration-300 border border-slate-800">
+            <div className="flex items-center gap-3 pr-6 border-r border-slate-700">
+              <span className="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full text-sm font-black">{selectedSaleIds.length}</span>
+              <span className="text-xs font-black uppercase text-slate-300">Selecionados</span>
+            </div>
+            <button
+              onClick={handleBulkPrint}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-slate-900 rounded-xl text-xs font-black uppercase hover:bg-blue-50 transition-all active:scale-95"
+            >
+              <Printer className="w-4 h-4" /> Imprimir Selecionados
+            </button>
+            <button
+              onClick={() => setSelectedSaleIds([])}
+              className="text-slate-400 hover:text-white text-xs font-bold uppercase"
+            >
+              Cancelar
+            </button>
+          </div>
+        )
+      }
+
+      {
+        isBulkPrinting && (
+          <div className="fixed inset-0 z-[60] bg-white overflow-y-auto no-scrollbar bulk-print-modal">
+            <div className="no-print sticky top-0 bg-white/80 backdrop-blur-md p-4 border-b flex justify-between items-center z-10 shadow-sm">
+              <div>
+                <h3 className="font-black text-slate-900 uppercase">Impressão Agrupada</h3>
+                <p className="text-[10px] text-slate-500 font-bold uppercase">{selectedSaleIds.length} Vendas Selecionadas</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={generatePDF}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                >
+                  <Printer className="w-4 h-4" />
+                  Gerar PDF Agrupado
+                </button>
+                <button
+                  onClick={() => setIsBulkPrinting(false)}
+                  className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  <X className="w-6 h-6 text-slate-400" />
+                </button>
+              </div>
+            </div>
+            <div id="bulk-print-content" className="p-4 md:p-8 flex flex-col items-center bg-slate-50 min-h-screen">
+              {selectedSaleIds.map((id, index) => {
+                const sale = sales.find(s => s.id === id);
+                if (!sale) return null;
+                return (
+                  <React.Fragment key={id}>
+                    <div className="w-full max-w-[800px] bg-white shadow-xl rounded-2xl overflow-hidden mb-12 last:mb-0">
+                      <SaleReceipt
+                        sale={sale}
+                        stores={stores}
+                        products={products}
+                        employees={employees}
+                        customers={customers}
+                        hideControls={true}
+                      />
+                    </div>
+                    {index < selectedSaleIds.length - 1 && <div className="html2pdf__page-break" />}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 };
 
