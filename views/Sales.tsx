@@ -3,7 +3,6 @@ import { Employee, Store, OrderStatus, Sale, Product, Customer, SaleItem, Paymen
 import { Search, Plus, Eye, X, ShoppingCart, User, Package, CheckCircle2, ArrowLeft, Trash2, AlertCircle, CreditCard, DollarSign, Box, Filter, Calendar, Printer, Check, CheckSquare, Square, RefreshCw } from 'lucide-react';
 import SaleReceipt from './SaleReceipt.tsx';
 import CustomerModal from '../components/CustomerModal.tsx';
-import RomaneioPDF from '../components/RomaneioPDF.tsx';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 
@@ -32,6 +31,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
   const [isBulkPrinting, setIsBulkPrinting] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const isShowroomPeriod = new Date() <= new Date('2026-03-10T23:59:59');
 
@@ -663,20 +663,41 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     setIsBulkPrinting(true);
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     const element = document.getElementById('bulk-print-content');
-    if (!element) return;
+    if (!element || isGeneratingPDF) return;
 
-    const opt = {
-      margin: 10,
-      filename: `vendas_agrupadas_${new Date().getTime()}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    };
+    setIsGeneratingPDF(true);
 
-    html2pdf().from(element).set(opt).save();
+    // Pequeno delay para garantir que o estado de "Gerando..." seja renderizado antes do congelamento do html2canvas
+    setTimeout(() => {
+      const opt = {
+        margin: [10, 5, 10, 5] as [number, number, number, number],
+        filename: `vendas_agrupadas_${new Date().getTime()}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.95 },
+        html2canvas: {
+          scale: 1.5, // Reduzido de 2 para 1.5 para economizar memória e evitar travamentos
+          useCORS: true,
+          logging: false,
+          letterRendering: true
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      html2pdf()
+        .from(element)
+        .set(opt)
+        .save()
+        .then(() => {
+          setIsGeneratingPDF(false);
+        })
+        .catch((err: any) => {
+          console.error('Erro ao gerar PDF:', err);
+          setIsGeneratingPDF(false);
+          alert('Houve um erro ao gerar o PDF. Tente com menos vendas selecionadas.');
+        });
+    }, 100);
   };
 
   return (
@@ -1133,10 +1154,23 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
               <div className="flex gap-3">
                 <button
                   onClick={generatePDF}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                  disabled={isGeneratingPDF}
+                  className={`px-6 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg ${isGeneratingPDF
+                    ? 'bg-slate-200 text-slate-500 cursor-wait'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100'
+                    }`}
                 >
-                  <Printer className="w-4 h-4" />
-                  Gerar PDF Agrupado
+                  {isGeneratingPDF ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Gerando PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Printer className="w-4 h-4" />
+                      Gerar PDF Agrupado
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={() => setIsBulkPrinting(false)}
