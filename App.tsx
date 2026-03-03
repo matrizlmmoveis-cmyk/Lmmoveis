@@ -229,6 +229,16 @@ const App: React.FC = () => {
   const renderView = () => {
     if (isLoading) return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
 
+    // Guarda de rota baseado no cargo
+    if (user?.role === 'MOTORISTA' && activeView !== 'logistics' && activeView !== 'delivery') {
+      setActiveView('logistics');
+      return null;
+    }
+    if (user?.role === 'MONTADOR' && activeView !== 'assembly') {
+      setActiveView('assembly');
+      return null;
+    }
+
     switch (activeView) {
       case 'dashboard': return <Dashboard user={user!} sales={sales} stores={stores} refreshData={initData} />;
       case 'catalog': return <ProductCatalog user={user} inventory={inventory} stores={stores} products={products} setProducts={setProducts} suppliers={suppliers} setSuppliers={setSuppliers} refreshData={initData} />;

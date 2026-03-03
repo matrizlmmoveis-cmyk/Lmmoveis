@@ -117,6 +117,89 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
     window.print();
   };
 
+  const handlePrintHtml = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Relatório de Vendas - Móveis LM</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; color: #333; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; font-weight: bold; text-transform: uppercase; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            .footer { margin-top: 30px; text-align: right; font-weight: bold; }
+            .total-row { background-color: #eee; font-weight: bold; }
+            h1 { margin: 0; font-size: 24px; }
+            .subtitle { color: #666; margin-top: 5px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Relatório de Vendas</h1>
+            <div class="subtitle">${storeFilter !== 'all' ? getStoreName(storeFilter) : 'Todas as Lojas'} | ${getDateLabel()}</div>
+            ${sellerFilter !== 'all' ? `<div class="subtitle">Vendedor: ${getSellerName(sellerFilter)}</div>` : ''}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Pedido</th>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Vendedor</th>
+                <th>Produtos</th>
+                <th style="text-align: right">Total</th>
+                <th>Pagamento</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredSales.map(sale => {
+      const itemsList = sale.items.map(item => {
+        const prod = products.find(p => p.id === item.productId);
+        return `${item.quantity}x ${prod?.name || item.productId}`;
+      }).join(', ');
+
+      const paymentsStr = (sale.payments || []).map(p => `${getPaymentLabel(p.method)}: R$ ${p.amount.toFixed(2)}`).join(' / ');
+
+      return `
+                  <tr>
+                    <td>${sale.id}</td>
+                    <td>${new Date(sale.date).toLocaleDateString('pt-BR')}</td>
+                    <td>${sale.customerName}</td>
+                    <td>${getSellerName(sale.sellerId)}</td>
+                    <td>${itemsList}</td>
+                    <td style="text-align: right">R$ ${sale.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td>${paymentsStr}</td>
+                  </tr>
+                `;
+    }).join('')}
+              <tr class="total-row">
+                <td colspan="5" style="text-align: right">TOTAL GERAL</td>
+                <td style="text-align: right">R$ ${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="footer">
+            ${Object.entries(paymentTotals).map(([method, amount]) => `
+              <div>${getPaymentLabel(method)}: R$ ${Number(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            `).join('')}
+          </div>
+          <script>
+            window.onload = function() { window.print(); window.close(); };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   // Print PDF view
   if (showPdf) {
     return (
@@ -273,6 +356,14 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
               <option key={e.id} value={e.id}>{e.name}</option>
             ))}
           </select>
+
+          <button
+            onClick={handlePrintHtml}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-900 transition-all shadow-lg shadow-slate-200"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Imprimir HTML</span>
+          </button>
 
           <button
             onClick={() => setShowPdf(true)}

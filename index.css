@@ -8,8 +8,13 @@ body { font-family: 'Inter', sans-serif; }
 
 @media print {
     .no-print { display: none !important; }
-    body { background: white !important; padding: 0 !important; }
+    body, html, #root { 
+        height: auto !important; 
+        overflow: visible !important;
+        background: white !important; 
+        padding: 0 !important;
+    }
     .print-only { display: block !important; }
-    .shadow-lg { shadow: none !important; }
-    .border-slate-200 { border-color: black !important; }
+    .shadow-lg, .shadow-xl, .shadow-md, .shadow-sm, .shadow { box-shadow: none !important; }
+    .border-slate-200, .border-slate-100 { border-color: #e2e8f0 !important; }
 }

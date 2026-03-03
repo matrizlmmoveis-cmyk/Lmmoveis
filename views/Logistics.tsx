@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Truck, MapPin, CheckCircle2, Navigation, Package, Camera, X, Check, Eraser, Phone, MessageSquare } from 'lucide-react';
+import { Truck, MapPin, CheckCircle2, Navigation, Package, Camera, X, Check, Eraser, Phone, MessageSquare, Printer } from 'lucide-react';
 import { OrderStatus, Sale, Employee, Product, Store } from '../types.ts';
 import { supabaseService } from '../services/supabaseService';
 
@@ -130,19 +130,88 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
     }
   };
 
+  const handlePrintRoute = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Rota de Entrega - Móveis LM</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; color: #333; }
+            .stop { border: 2px solid #333; border-radius: 15px; padding: 20px; margin-bottom: 20px; page-break-inside: avoid; }
+            .stop-header { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+            .stop-number { background: #000; color: #fff; padding: 5px 15px; border-radius: 5px; font-weight: bold; }
+            .customer-name { font-size: 20px; font-weight: bold; text-transform: uppercase; margin: 10px 0; }
+            .address { font-weight: bold; color: #555; margin-bottom: 15px; }
+            .items { background: #f9f9f9; padding: 15px; border-radius: 10px; }
+            .items-title { font-size: 10px; font-weight: bold; color: #999; text-transform: uppercase; margin-bottom: 5px; }
+            .item { font-size: 14px; font-weight: bold; margin-bottom: 3px; }
+            .obs { margin-top: 10px; padding: 10px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 10px; }
+            h1 { text-align: center; text-transform: uppercase; margin-bottom: 30px; }
+          </style>
+        </head>
+        <body>
+          <h1>Rota de Entrega - ${new Date().toLocaleDateString('pt-BR')}</h1>
+          ${myDeliveries.map((delivery, index) => {
+      const itemsHtml = delivery.items.map(item => {
+        const p = products.find(prod => prod.id === item.productId);
+        return `<div class="item">• ${item.quantity}x ${p?.name || item.productId}</div>`;
+      }).join('');
+
+      return `
+              <div class="stop">
+                <div class="stop-header">
+                  <div class="stop-number">PARADA ${index + 1}</div>
+                  <div style="font-weight: bold">PEDIDO #${delivery.id}</div>
+                </div>
+                <div class="customer-name">${delivery.customerName}</div>
+                <div class="address">📍 ${delivery.deliveryAddress}</div>
+                <div class="items">
+                  <div class="items-title">Itens para entrega</div>
+                  ${itemsHtml}
+                </div>
+                ${delivery.deliveryObs ? `
+                  <div class="obs">
+                    <div style="font-size: 10px; font-weight: bold; color: #d97706; text-transform: uppercase;">Observação:</div>
+                    <div style="font-size: 12px; font-weight: bold;">${delivery.deliveryObs}</div>
+                  </div>
+                ` : ''}
+              </div>
+            `;
+    }).join('')}
+          <script>
+            window.onload = function() { window.print(); window.close(); };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return (
     <div className="space-y-6 animate-in slide-in-from-right duration-500">
       <header className="bg-slate-900 p-6 rounded-[2rem] text-white shadow-xl">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-black uppercase tracking-tight">Rota de Entrega</h1>
-            <div className="flex items-center gap-2 mt-1">
+            <div class="flex items-center gap-2 mt-1">
               <p className="text-blue-400 text-xs font-bold uppercase">Status: Em Operação</p>
               <button
                 onClick={() => refreshData(true)}
                 className="bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
               >
                 <Navigation className="w-3 h-3 rotate-90" /> Atualizar
+              </button>
+              <button
+                onClick={handlePrintRoute}
+                className="bg-white text-slate-900 hover:bg-slate-100 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
+              >
+                <Printer className="w-3 h-3" /> Imprimir
               </button>
             </div>
           </div>
