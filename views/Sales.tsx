@@ -371,12 +371,11 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         });
       await Promise.all(inventoryUpdates);
 
-      // Criar alertas para encomendas (Master/Supervisor)
+      // Criar alertas SOMENTE para encomendas (Master/Supervisor)
+      // CD Norte (W-NORTE) e Mostruário (ST-MOSTRUARIO) NÃO geram tarefas automáticas
       const encomendaItems = sale.items.filter(item => item.locationId === 'ST-ENCOMENDA');
-      const hasCdnorte = sale.items.some(item => item.locationId === 'W-NORTE');
-      const hasMostruario = sale.items.some(item => item.locationId === 'ST-MOSTRUARIO');
 
-      if (encomendaItems.length > 0 && !hasCdnorte && !hasMostruario) {
+      if (encomendaItems.length > 0) {
         const prodNames = encomendaItems.map(item => products.find(p => p.id === item.productId)?.name || item.productId).join(', ');
         await supabaseService.createTask({
           title: `Pedido de Encomenda Gerado`,
@@ -385,17 +384,22 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
           priority: 'ALTA',
           status: 'ABERTA',
           created_by: user?.name || 'Sistema',
-          assigned_to: 'MASTER', // Também visível para Supervisor no fluxo de tarefas
+          assigned_to: 'MASTER',
           store_id: sale.storeId,
           sale_id: sale.id,
         });
       }
 
-
       // Criar avisos automáticos para itens vendidos de outra loja
-      const crossStoreItems = sale.items.filter(item => item.locationId && item.locationId !== sale.storeId);
+      // EXCETO: CD Norte (W-NORTE), Mostruário (ST-MOSTRUARIO) e Encomenda (ST-ENCOMENDA)
+      const EXCLUDED_LOCATIONS = ['W-NORTE', 'ST-MOSTRUARIO', 'ST-ENCOMENDA'];
+      const crossStoreItems = sale.items.filter(item =>
+        item.locationId &&
+        item.locationId !== sale.storeId &&
+        !EXCLUDED_LOCATIONS.includes(item.locationId)
+      );
       const saleStoreName = stores.find(s => s.id === sale.storeId)?.name || sale.storeId;
-      if (crossStoreItems.length > 0 && !hasCdnorte) {
+      if (crossStoreItems.length > 0) {
         const notificationPromises = crossStoreItems.map(item => {
           const productName = products.find(p => p.id === item.productId)?.name || item.productId;
           const sourceStoreName = stores.find(s => s.id === item.locationId)?.name || item.locationId;
@@ -407,7 +411,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
             status: 'ABERTA',
             created_by: user?.name || 'Sistema',
             assigned_to: 'GERENTE',
-            store_id: item.locationId, // Loja que é dona do estoque (exibição no gerente dessa loja)
+            store_id: item.locationId,
             source_store_id: item.locationId,
             sale_id: sale.id,
             product_name: productName,
