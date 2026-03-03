@@ -5,6 +5,8 @@ import SaleReceipt from './SaleReceipt.tsx';
 import CustomerModal from '../components/CustomerModal.tsx';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 import { supabaseService } from '../services/supabaseService.ts';
 
@@ -32,7 +34,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
   const [isBulkPrinting, setIsBulkPrinting] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-
+  const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0 });
+  const [currentSaleToPrint, setCurrentSaleToPrint] = useState<Sale | null>(null);
   const isShowroomPeriod = new Date() <= new Date('2026-03-10T23:59:59');
 
   const [newSale, setNewSale] = useState<Partial<Sale>>({
@@ -664,40 +667,57 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   };
 
   const generatePDF = async () => {
-    const element = document.getElementById('bulk-print-content');
-    if (!element || isGeneratingPDF) return;
+    if (selectedSaleIds.length === 0 || isGeneratingPDF) return;
 
     setIsGeneratingPDF(true);
+    setPdfProgress({ current: 0, total: selectedSaleIds.length });
 
-    // Pequeno delay para garantir que o estado de "Gerando..." seja renderizado antes do congelamento do html2canvas
-    setTimeout(() => {
-      const opt = {
-        margin: [10, 5, 10, 5] as [number, number, number, number],
-        filename: `vendas_agrupadas_${new Date().getTime()}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.95 },
-        html2canvas: {
-          scale: 1.5, // Reduzido de 2 para 1.5 para economizar memória e evitar travamentos
-          useCORS: true,
-          logging: false,
-          letterRendering: true
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-      };
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      html2pdf()
-        .from(element)
-        .set(opt)
-        .save()
-        .then(() => {
-          setIsGeneratingPDF(false);
-        })
-        .catch((err: any) => {
-          console.error('Erro ao gerar PDF:', err);
-          setIsGeneratingPDF(false);
-          alert('Houve um erro ao gerar o PDF. Tente com menos vendas selecionadas.');
-        });
-    }, 100);
+      for (let i = 0; i < selectedSaleIds.length; i++) {
+        const id = selectedSaleIds[i];
+        const sale = sales.find(s => s.id === id);
+        if (!sale) continue;
+
+        setPdfProgress({ current: i + 1, total: selectedSaleIds.length });
+        setCurrentSaleToPrint(sale);
+
+        // Aguarda o React renderizar o componente no container oculto
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        const element = document.getElementById('pdf-render-target');
+        if (element) {
+          const canvas = await html2canvas(element, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff'
+          });
+
+          const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+          if (i > 0) pdf.addPage();
+
+          // Calcula dimensões para caber na página A4 mantendo proporção
+          const imgWidth = pdfWidth;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+          pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
+        }
+      }
+
+      pdf.save(`vendas_agrupadas_${new Date().getTime()}.pdf`);
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err);
+      alert('Houve um erro ao gerar o PDF. Verifique o console para mais detalhes.');
+    } finally {
+      setIsGeneratingPDF(false);
+      setCurrentSaleToPrint(null);
+      setPdfProgress({ current: 0, total: 0 });
+    }
   };
 
   return (
@@ -1163,7 +1183,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                   {isGeneratingPDF ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      Gerando PDF...
+                      Gerando {pdfProgress.current}/{pdfProgress.total}...
                     </>
                   ) : (
                     <>
@@ -1174,36 +1194,56 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 </button>
                 <button
                   onClick={() => setIsBulkPrinting(false)}
-                  className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                  disabled={isGeneratingPDF}
+                  className="p-2 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50"
                 >
                   <X className="w-6 h-6 text-slate-400" />
                 </button>
               </div>
             </div>
             <div id="bulk-print-content" className="p-4 md:p-8 flex flex-col items-center bg-slate-50 min-h-screen">
-              {selectedSaleIds.map((id, index) => {
+              {isGeneratingPDF && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl font-black uppercase text-xs animate-bounce flex items-center gap-3">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Processando Venda {pdfProgress.current} de {pdfProgress.total}...
+                </div>
+              )}
+
+              {selectedSaleIds.map((id) => {
                 const sale = sales.find(s => s.id === id);
                 if (!sale) return null;
                 return (
-                  <React.Fragment key={id}>
-                    <div className="w-full max-w-[800px] bg-white shadow-xl rounded-2xl overflow-hidden mb-12 last:mb-0">
-                      <SaleReceipt
-                        sale={sale}
-                        stores={stores}
-                        products={products}
-                        employees={employees}
-                        customers={customers}
-                        hideControls={true}
-                      />
-                    </div>
-                    {index < selectedSaleIds.length - 1 && <div className="html2pdf__page-break" />}
-                  </React.Fragment>
+                  <div key={id} className="w-full max-w-[800px] bg-white shadow-xl rounded-2xl overflow-hidden mb-12 last:mb-0">
+                    <SaleReceipt
+                      sale={sale}
+                      stores={stores}
+                      products={products}
+                      employees={employees}
+                      customers={customers}
+                      hideControls={true}
+                    />
+                  </div>
                 );
               })}
             </div>
+
+            {/* Oculto: Container usado apenas para renderizar e capturar o PDF individualmente */}
+            <div className="fixed top-0 left-[-9999px] pointer-events-none" style={{ width: '780px' }}>
+              {currentSaleToPrint && (
+                <div id="pdf-render-target" className="bg-white p-4">
+                  <SaleReceipt
+                    sale={currentSaleToPrint}
+                    stores={stores}
+                    products={products}
+                    employees={employees}
+                    customers={customers}
+                    hideControls={true}
+                  />
+                </div>
+              )}
+            </div>
           </div>
-        )
-      }
+        )}
     </div >
   );
 };
