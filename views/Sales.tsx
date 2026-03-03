@@ -801,7 +801,16 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                       </button>
                     </td>
                   )}
-                  <td className="px-6 py-4 font-black text-blue-600 text-sm">{sale.id}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="font-black text-blue-600 text-sm">#{sale.id}</span>
+                      {sale.assemblyRequired && (
+                        <span className="text-[9px] font-black text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 uppercase w-fit mt-1">
+                          Montagem
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-6 py-4"><p className="font-medium text-slate-700 text-sm uppercase">{sale.customerName}</p><p className="text-[10px] text-slate-400">{new Date(sale.date).toLocaleDateString()}</p></td>
                   <td className="px-6 py-4"><span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{stores.find(s => s.id === sale.storeId)?.name}</span></td>
                   <td className="px-6 py-4">
