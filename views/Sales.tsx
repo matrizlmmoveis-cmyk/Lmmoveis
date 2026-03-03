@@ -1111,12 +1111,12 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
               </button>
             </div>
           </div>
-          <div className="p-4 md:p-8 space-y-8 flex flex-col items-center">
-            {selectedSaleIds.map((id, index) => {
+          <div className="p-4 md:p-8 space-y-8 flex flex-col items-center print:block print:p-0 print:space-y-0">
+            {selectedSaleIds.map((id) => {
               const sale = sales.find(s => s.id === id);
               if (!sale) return null;
               return (
-                <div key={id} className={`w-full max-w-[800px] bg-white ${index > 0 ? 'print:break-before-page' : ''}`} style={index > 0 ? { pageBreakBefore: 'always' } : {}}>
+                <div key={id} className="w-full max-w-[800px] bg-white print:max-w-none print:m-0" style={{ breakAfter: 'page', pageBreakAfter: 'always' }}>
                   <SaleReceipt
                     sale={sale}
                     stores={stores}
