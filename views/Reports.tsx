@@ -213,7 +213,7 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
           <div className="text-right text-sm space-y-0.5">
             {Object.entries(paymentTotals).map(([method, amount]) => (
               <p key={method} className="text-gray-700 font-medium">
-                {getPaymentLabel(method)}: <span className="font-bold">R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                {getPaymentLabel(method)}: <span className="font-bold">R$ {Number(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </p>
             ))}
           </div>

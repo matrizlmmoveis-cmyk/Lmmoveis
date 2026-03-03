@@ -2,17 +2,13 @@
 import { OrderStatus, Store, Product, InventoryItem, Sale, Seller, Customer, Employee, Supplier } from './types.ts';
 
 export const STORES: Store[] = [
-  { id: 'ST01', name: 'PIABETÁ', location: 'Av. Santos Dumont, 2869 - Bongaba', phones: ['(21) 97682-7927'] },
-  { id: 'ST02', name: 'MAGÉ', location: 'Centro - Magé', phones: ['(21) 99387-6381'] },
-  { id: 'ST03', name: 'LOTE XV', location: 'Belford Roxo', phones: ['(21) 96678-8870'] },
-  { id: 'ST04', name: 'SANTA CRUZ DA SERRA', location: 'Duque de Caxias', phones: ['(21) 90000-0000'] },
-  { id: 'ST05', name: 'ITABORAÍ', location: 'Centro - Itaboraí', phones: ['(21) 90000-0000'] },
+  { id: 'ST01', name: 'PIABETÁ', location: 'Av. Santos Dumont, 2869 - Bongaba', phones: ['(21) 97682-7927'], type: 'STORE_STOCK' },
+  { id: 'ST02', name: 'MAGÉ', location: 'Centro - Magé', phones: ['(21) 99387-6381'], type: 'STORE_STOCK' },
+  { id: 'ST03', name: 'LOTE XV', location: 'Belford Roxo', phones: ['(21) 96678-8870'], type: 'STORE_STOCK' },
+  { id: 'ST04', name: 'SANTA CRUZ DA SERRA', location: 'Duque de Caxias', phones: ['(21) 90000-0000'], type: 'STORE_STOCK' },
+  { id: 'ST05', name: 'ITABORAÍ', location: 'Centro - Itaboraí', phones: ['(21) 90000-0000'], type: 'STORE_STOCK' },
 ];
 
-export const SUPPLIERS: Supplier[] = [
-  { id: 'S1', name: 'FORNECEDOR A', active: true },
-  { id: 'S2', name: 'FORNECEDOR B', active: true },
-];
 
 export const CATEGORIES = ['Quarto', 'Sala', 'Cozinha', 'Banheiro', 'Escritório', 'Outros'];
 

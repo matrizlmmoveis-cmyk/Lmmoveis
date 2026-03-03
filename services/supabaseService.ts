@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer, Romaneio, OrderStatus } from '../types';
+import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer, Romaneio, OrderStatus, Supplier } from '../types';
 
 const base64ToBlob = (base64: string) => {
     const parts = base64.split(';base64,');
@@ -34,6 +34,38 @@ export const supabaseService = {
             active: e.active,
             storeId: e.store_id
         })) as Employee[];
+    },
+
+    // SUPPLIERS
+    async getSuppliers() {
+        const { data, error } = await supabase.from('suppliers').select('*').order('name', { ascending: true });
+        if (error) throw error;
+        return (data || []).map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            active: s.active
+        })) as Supplier[];
+    },
+
+    async createSupplier(supplier: Supplier) {
+        const payload: any = {
+            id: supplier.id,
+            name: supplier.name,
+            active: supplier.active
+        };
+        const { error } = await supabase.from('suppliers').insert(payload);
+        if (error) throw error;
+        return true;
+    },
+
+    async updateSupplier(id: string, updates: Partial<Supplier>) {
+        const payload: any = {};
+        if (updates.name !== undefined) payload.name = updates.name;
+        if (updates.active !== undefined) payload.active = updates.active;
+
+        const { error } = await supabase.from('suppliers').update(payload).eq('id', id);
+        if (error) throw error;
+        return true;
     },
 
     // PRODUCTS

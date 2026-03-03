@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar.tsx';
 import Dashboard from './views/Dashboard.tsx';
-import { SUPPLIERS } from './constants.tsx';
+import { STORES } from './constants.tsx';
 import Sales from './views/Sales.tsx';
 import Inventory from './views/Inventory.tsx';
 import Logistics from './views/Logistics.tsx';
@@ -14,6 +14,7 @@ import Customers from './views/Customers.tsx';
 import EmployeesView from './views/Employees.tsx';
 import Romaneios from './views/Romaneios.tsx';
 import Products from './views/Products.tsx';
+import SuppliersView from './views/Suppliers.tsx';
 import Expedicao from './views/Expedicao.tsx';
 import Tarefas from './views/Tarefas.tsx';
 import ReceiptSettlement from './views/ReceiptSettlement.tsx';
@@ -38,7 +39,7 @@ const App: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>(SUPPLIERS);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobilePlatform, setIsMobilePlatform] = useState(false);
@@ -81,18 +82,20 @@ const App: React.FC = () => {
     // Only fetch everything else if we have a user
     if (user || force) {
       try {
-        const [sItems, iItems, stItems, pItems, cItems] = await Promise.all([
+        const [sItems, iItems, stItems, pItems, cItems, supItems] = await Promise.all([
           supabaseService.getSales(),
           supabaseService.getInventory(),
           supabaseService.getStores(),
           supabaseService.getProducts(),
-          supabaseService.getCustomers()
+          supabaseService.getCustomers(),
+          supabaseService.getSuppliers()
         ]);
         setSales(sItems);
         setInventory(iItems);
         setStores(stItems);
         setProducts(pItems);
         setCustomers(cItems);
+        setSuppliers(supItems);
       } catch (err) {
         console.error("Erro ao carregar dados do Supabase:", err);
       } finally {
@@ -228,13 +231,14 @@ const App: React.FC = () => {
 
     switch (activeView) {
       case 'dashboard': return <Dashboard user={user!} sales={sales} stores={stores} refreshData={initData} />;
-      case 'catalog': return <ProductCatalog user={user} inventory={inventory} stores={stores} products={products} setProducts={setProducts} refreshData={initData} />;
+      case 'catalog': return <ProductCatalog user={user} inventory={inventory} stores={stores} products={products} setProducts={setProducts} suppliers={suppliers} setSuppliers={setSuppliers} refreshData={initData} />;
       case 'customers': return <Customers customers={customers} setCustomers={setCustomers} refreshData={initData} />;
       case 'products': return <Products user={user} products={products} inventory={inventory} stores={stores} employees={employees} suppliers={suppliers} refreshData={initData} />;
       case 'sales': return <Sales user={user} sales={sales} setSales={setSales} inventory={inventory} setInventory={setInventory} stores={stores} products={products} customers={customers} setCustomers={setCustomers} employees={employees} refreshData={initData} />;
       case 'inventory': return <Inventory inventory={inventory} setInventory={setInventory} products={products} stores={stores} refreshData={initData} />;
       case 'stores': return <Stores stores={stores} setStores={setStores} employees={employees} refreshData={initData} />;
       case 'employees': return <EmployeesView user={user} employees={employees} setEmployees={setEmployees} stores={stores} refreshData={initData} />;
+      case 'suppliers': return <SuppliersView suppliers={suppliers} setSuppliers={setSuppliers} refreshData={initData} />;
       case 'romaneios': return <Romaneios user={user} sales={sales} setSales={setSales} employees={employees} products={products} refreshData={initData} />;
       case 'expedicao': return <Expedicao user={user} stores={stores} sales={sales} products={products} employees={employees} customers={customers} refreshData={initData} />;
       case 'tarefas': return <Tarefas user={user} stores={stores} sales={sales} setSales={setSales} products={products} refreshData={initData} />;

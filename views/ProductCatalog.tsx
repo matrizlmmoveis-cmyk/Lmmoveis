@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useCallback } from 'react';
-import { PRODUCTS as INITIAL_PRODUCTS, INITIAL_INVENTORY, STORES, SUPPLIERS, CATEGORIES } from '../constants.tsx';
+import { PRODUCTS as INITIAL_PRODUCTS, INITIAL_INVENTORY, STORES, CATEGORIES } from '../constants.tsx';
 import { Product, ProductImage, Supplier, Employee, InventoryItem, Store, OrderStatus } from '../types.ts';
 import { Search, Plus, X, Truck, Box, ShoppingCart, Trash2, CheckCircle2, Edit2, ImagePlus, Loader2, AlertCircle, Upload, RefreshCw } from 'lucide-react';
 import { useCart } from '../components/CartContext.tsx';
@@ -12,13 +12,14 @@ interface ProductCatalogProps {
   stores: Store[];
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  suppliers: Supplier[];
+  setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
   refreshData: (force?: boolean) => Promise<void>;
 }
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=500&auto=format&fit=crop';
 
-const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores, products, setProducts, refreshData }) => {
-  const [suppliers, setSuppliers] = useState<Supplier[]>(SUPPLIERS);
+const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores, products, setProducts, suppliers, setSuppliers, refreshData }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
@@ -89,7 +90,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
       await supabaseService.createProduct(product);
       setProducts([product, ...products]);
       setIsModalOpen(false);
-      setNewProduct({ name: '', sku: '', category: CATEGORIES[0], price: 0, costPrice: 0, assemblyPrice: 0, imageUrl: '', supplierId: '', description: '' });
+      setNewProduct({ name: '', sku: '', category: CATEGORIES[0], price: 0, costPrice: 0, assemblyPrice: 0, imageUrl: '', imageUrl2: '', supplierId: '', description: '' });
       alert('Produto cadastrado com sucesso!');
     } catch (err) {
       console.error("Erro ao cadastrar produto:", err);
@@ -97,17 +98,23 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
     }
   };
 
-  const handleAddSupplier = (e: React.FormEvent) => {
+  const handleAddSupplier = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSupplierName.trim()) return;
     const supplier: Supplier = {
-      id: `S${suppliers.length + 1}`,
+      id: `S${Date.now().toString().slice(-6)}`,
       name: newSupplierName.toUpperCase(),
       active: true
     };
-    setSuppliers([...suppliers, supplier]);
-    setNewSupplierName('');
-    setIsSupplierModalOpen(false);
+    try {
+      await supabaseService.createSupplier(supplier);
+      setSuppliers([...suppliers, supplier]);
+      setNewSupplierName('');
+      setIsSupplierModalOpen(false);
+      alert('Fornecedor cadastrado!');
+    } catch (err) {
+      alert('Erro ao cadastrar fornecedor.');
+    }
   };
 
   // ========================
@@ -131,6 +138,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
         supplierId: editingProduct.supplierId,
         imageUrl: editingProduct.imageUrl,
         imageUrl2: editingProduct.imageUrl2,
+        description: editingProduct.description,
       });
       setProducts(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
       setEditingProduct(null);
