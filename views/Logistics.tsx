@@ -202,7 +202,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
             <div class="flex items-center gap-2 mt-1">
               <p className="text-blue-400 text-xs font-bold uppercase">Status: Em Operação</p>
               <button
-                onClick={() => refreshData(true)}
+                onClick={() => refreshData('sales')}
                 className="bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
               >
                 <Navigation className="w-3 h-3 rotate-90" /> Atualizar

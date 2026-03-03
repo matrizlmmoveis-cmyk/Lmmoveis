@@ -104,7 +104,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
             <div className="flex items-center gap-2 mt-1">
               <p className="text-emerald-400 text-xs font-bold uppercase">Ganhos Estimados: R$ {myTasks.reduce((a, b) => a + calculateTotalAssembly(b), 0).toFixed(2)}</p>
               <button
-                onClick={() => refreshData(true)}
+                onClick={() => refreshData('sales')}
                 className="bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
               >
                 <Wrench className="w-3 h-3" /> Atualizar

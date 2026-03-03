@@ -69,26 +69,44 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const initData = async (force = false) => {
-    setIsLoading(true);
-    // Always fetch employees for login check
-    try {
-      const eItems = await supabaseService.getEmployees();
-      setEmployees(eItems);
-    } catch (err) {
-      console.error("Erro ao carregar funcionários:", err);
+  // scope: 'all' | 'sales' | 'inventory' | 'static'
+  // force = ignora cache localStorage para dados estáticos
+  const initData = async (scope: boolean | 'all' | 'sales' | 'inventory' | 'static' = 'all') => {
+    // Normaliza: chamadas legadas passavam true/false como primeiro argumento
+    const resolvedScope = scope === true || scope === false ? 'all' : scope;
+    const bypassCache = scope === true; // force=true => bypass cache
+
+    if (resolvedScope === 'all' || resolvedScope === 'static') {
+      setIsLoading(true);
     }
 
-    // Only fetch everything else if we have a user
-    if (user || force) {
-      try {
+    try {
+      if (resolvedScope === 'sales') {
+        // Só recarrega vendas — mais comum nos botões de Atualizar
+        const sItems = await supabaseService.getSales();
+        setSales(sItems);
+        return;
+      }
+
+      if (resolvedScope === 'inventory') {
+        const iItems = await supabaseService.getInventory();
+        setInventory(iItems);
+        return;
+      }
+
+      // Carregamento completo (login ou scope 'all')
+      // Employees: sempre busca (necessário para login)
+      const eItems = await supabaseService.getEmployees(bypassCache);
+      setEmployees(eItems);
+
+      if (user || bypassCache) {
         const [sItems, iItems, stItems, pItems, cItems, supItems] = await Promise.all([
           supabaseService.getSales(),
           supabaseService.getInventory(),
-          supabaseService.getStores(),
-          supabaseService.getProducts(),
+          supabaseService.getStores(bypassCache),
+          supabaseService.getProducts(bypassCache),
           supabaseService.getCustomers(),
-          supabaseService.getSuppliers()
+          supabaseService.getSuppliers(bypassCache)
         ]);
         setSales(sItems);
         setInventory(iItems);
@@ -96,12 +114,10 @@ const App: React.FC = () => {
         setProducts(pItems);
         setCustomers(cItems);
         setSuppliers(supItems);
-      } catch (err) {
-        console.error("Erro ao carregar dados do Supabase:", err);
-      } finally {
-        setIsLoading(false);
       }
-    } else {
+    } catch (err) {
+      console.error("Erro ao carregar dados do Supabase:", err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -263,8 +279,7 @@ const App: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=1920&auto=format&fit=crop")' }}>
-        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)' }}>
         <div className="w-full max-w-md animate-in zoom-in-95 duration-200 relative z-10">
           <div className="bg-white/90 backdrop-blur-xl rounded-[2.5rem] p-10 shadow-2xl border border-white/20">
             <div className="text-center mb-10">

@@ -37,7 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, role, onLo
     { id: 'sales', label: 'Vendas', icon: ShoppingCart, roles: ['ADMIN', 'VENDEDOR', 'GERENTE', 'SUPERVISOR', 'MASTER'] },
     { id: 'inventory', label: 'Estoque', icon: Package, roles: ['ADMIN', 'CONFERENTE'] },
     { id: 'expedicao', label: 'Expedição', icon: PackageCheck, roles: ['ADMIN', 'CONFERENTE'] },
-    { id: 'tarefas', label: 'Tarefas/Avisos', icon: ClipboardCheck, roles: ['ADMIN', 'SUPERVISOR', 'MASTER', 'GERENTE'] },
+    { id: 'tarefas', label: 'Tarefas/Avisos', icon: ClipboardCheck, roles: ['ADMIN', 'SUPERVISOR', 'MASTER', 'GERENTE', 'VENDEDOR'] },
     { id: 'settlement', label: 'Acerto Entregas', icon: DollarSign, roles: ['ADMIN', 'SUPERVISOR', 'MASTER'] },
     { id: 'stores', label: 'Unidades', icon: StoreIcon, roles: ['ADMIN'] },
     { id: 'suppliers', label: 'Fornecedores', icon: Truck, roles: ['ADMIN'] },

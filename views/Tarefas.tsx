@@ -127,6 +127,15 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSal
                 });
             }
 
+            if (user?.role === 'VENDEDOR') {
+                // Vendedor vê: tarefas manuais da sua loja ou atribuídas diretamente a ele
+                filteredData = filteredData.filter((t: Task) => {
+                    const isAssignedToMe = t.assigned_to_user_id === user.id;
+                    const isManualTaskForMyStore = t.type === 'TAREFA_MANUAL' && t.store_id === user.storeId;
+                    return isAssignedToMe || isManualTaskForMyStore;
+                });
+            }
+
             setTasks(filteredData);
 
             // Stats totais (para a loja do gerente, se for gerente)

@@ -1,6 +1,45 @@
 import { supabase } from './supabase';
 import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer, Romaneio, OrderStatus, Supplier } from '../types';
 
+// ─── Cache localStorage com TTL ───────────────────────────────────────────────
+const CACHE_TTL: Record<string, number> = {
+    products: 30 * 60 * 1000,   // 30 minutos
+    stores: 30 * 60 * 1000,     // 30 minutos
+    suppliers: 30 * 60 * 1000,  // 30 minutos
+    employees: 10 * 60 * 1000,  // 10 minutos
+};
+
+function cacheGet<T>(key: string): T | null {
+    try {
+        const raw = localStorage.getItem(`lm_cache_${key}`);
+        if (!raw) return null;
+        const { data, ts } = JSON.parse(raw);
+        const ttl = CACHE_TTL[key] ?? 10 * 60 * 1000;
+        if (Date.now() - ts > ttl) {
+            localStorage.removeItem(`lm_cache_${key}`);
+            return null;
+        }
+        return data as T;
+    } catch { return null; }
+}
+
+function cacheSet(key: string, data: unknown): void {
+    try {
+        localStorage.setItem(`lm_cache_${key}`, JSON.stringify({ data, ts: Date.now() }));
+    } catch { /* quota exceeded — ignore */ }
+}
+
+export function cacheInvalidate(key: string): void {
+    localStorage.removeItem(`lm_cache_${key}`);
+}
+
+export function cacheInvalidateAll(): void {
+    ['products', 'stores', 'suppliers', 'employees'].forEach(k =>
+        localStorage.removeItem(`lm_cache_${k}`)
+    );
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
 const base64ToBlob = (base64: string) => {
     const parts = base64.split(';base64,');
     const contentType = parts[0].split(':')[1];
@@ -15,17 +54,27 @@ const base64ToBlob = (base64: string) => {
 
 export const supabaseService = {
     // STORES
-    async getStores() {
+    async getStores(bypassCache = false) {
+        if (!bypassCache) {
+            const cached = cacheGet<Store[]>('stores');
+            if (cached) return cached;
+        }
         const { data, error } = await supabase.from('stores').select('*');
         if (error) throw error;
-        return data as Store[];
+        const result = data as Store[];
+        cacheSet('stores', result);
+        return result;
     },
 
     // EMPLOYEES
-    async getEmployees() {
+    async getEmployees(bypassCache = false) {
+        if (!bypassCache) {
+            const cached = cacheGet<Employee[]>('employees');
+            if (cached) return cached;
+        }
         const { data, error } = await supabase.from('employees').select('*');
         if (error) throw error;
-        return (data || []).map((e: any) => ({
+        const result = (data || []).map((e: any) => ({
             id: e.id,
             name: e.name,
             role: e.role,
@@ -34,17 +83,25 @@ export const supabaseService = {
             active: e.active,
             storeId: e.store_id
         })) as Employee[];
+        cacheSet('employees', result);
+        return result;
     },
 
     // SUPPLIERS
-    async getSuppliers() {
+    async getSuppliers(bypassCache = false) {
+        if (!bypassCache) {
+            const cached = cacheGet<Supplier[]>('suppliers');
+            if (cached) return cached;
+        }
         const { data, error } = await supabase.from('suppliers').select('*').order('name', { ascending: true });
         if (error) throw error;
-        return (data || []).map((s: any) => ({
+        const result = (data || []).map((s: any) => ({
             id: s.id,
             name: s.name,
             active: s.active
         })) as Supplier[];
+        cacheSet('suppliers', result);
+        return result;
     },
 
     async createSupplier(supplier: Supplier) {
@@ -55,6 +112,7 @@ export const supabaseService = {
         };
         const { error } = await supabase.from('suppliers').insert(payload);
         if (error) throw error;
+        cacheInvalidate('suppliers');
         return true;
     },
 
@@ -65,11 +123,16 @@ export const supabaseService = {
 
         const { error } = await supabase.from('suppliers').update(payload).eq('id', id);
         if (error) throw error;
+        cacheInvalidate('suppliers');
         return true;
     },
 
     // PRODUCTS
-    async getProducts() {
+    async getProducts(bypassCache = false) {
+        if (!bypassCache) {
+            const cached = cacheGet<Product[]>('products');
+            if (cached) return cached;
+        }
         let allItems: Product[] = [];
         let hasMore = true;
         let page = 0;
@@ -100,6 +163,7 @@ export const supabaseService = {
                 hasMore = false;
             }
         }
+        cacheSet('products', allItems);
         return allItems;
     },
 
@@ -117,6 +181,7 @@ export const supabaseService = {
         if (updates.description !== undefined) payload.description = updates.description;
         const { error } = await supabase.from('products').update(payload).eq('id', id);
         if (error) throw error;
+        cacheInvalidate('products');
         return true;
     },
 
@@ -136,6 +201,7 @@ export const supabaseService = {
         };
         const { error } = await supabase.from('products').insert(payload);
         if (error) throw error;
+        cacheInvalidate('products');
         return true;
     },
 
@@ -447,6 +513,7 @@ export const supabaseService = {
         };
         const { error } = await supabase.from('employees').insert(payload);
         if (error) throw error;
+        cacheInvalidate('employees');
         return true;
     },
 
@@ -461,6 +528,7 @@ export const supabaseService = {
 
         const { error } = await supabase.from('employees').update(payload).eq('id', id);
         if (error) throw error;
+        cacheInvalidate('employees');
         return true;
     },
 
@@ -474,6 +542,7 @@ export const supabaseService = {
         };
         const { error } = await supabase.from('stores').insert(payload);
         if (error) throw error;
+        cacheInvalidate('stores');
         return true;
     },
 
@@ -486,6 +555,7 @@ export const supabaseService = {
 
         const { error } = await supabase.from('stores').update(payload).eq('id', id);
         if (error) throw error;
+        cacheInvalidate('stores');
         return true;
     },
 

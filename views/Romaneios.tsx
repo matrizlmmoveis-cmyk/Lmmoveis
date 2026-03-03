@@ -129,7 +129,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
     try {
       await supabaseService.deleteRomaneio(romaneio.id, romaneio.saleIds, romaneio.type);
       setRomaneios(prev => prev.filter(r => r.id !== romaneio.id));
-      await refreshData(true);
+      await refreshData('sales');
       alert("Romaneio excluído com sucesso!");
     } catch (err) {
       console.error("Erro ao excluir romaneio:", err);
@@ -290,7 +290,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
               Histórico de Cargas Lançadas
             </h3>
             <button
-              onClick={() => { loadRomaneios(); refreshData(true); }}
+              onClick={() => { loadRomaneios(); refreshData('sales'); }}
               className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all"
             >
               <RefreshCw className="w-3 h-3" /> Atualizar Tudo

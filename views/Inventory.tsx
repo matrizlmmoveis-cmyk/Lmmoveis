@@ -90,7 +90,7 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => refreshData(true)}
+            onClick={() => refreshData('inventory')}
             className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all shadow-sm"
           >
             <RefreshCw className="w-4 h-4" />
