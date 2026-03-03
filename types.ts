@@ -72,6 +72,7 @@ export interface Product {
   assemblyPrice: number;
   sku: string;
   imageUrl?: string;
+  imageUrl2?: string;
   supplierId?: string;
   images?: ProductImage[];
 }

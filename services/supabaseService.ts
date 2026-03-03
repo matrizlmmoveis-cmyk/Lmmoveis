@@ -57,6 +57,7 @@ export const supabaseService = {
                     assemblyPrice: p.assembly_price,
                     sku: p.sku,
                     imageUrl: p.image_url,
+                    imageUrl2: p.image_url_2,
                     supplierId: p.supplier_id
                 }));
                 allItems = allItems.concat(mapped as Product[]);
@@ -79,6 +80,7 @@ export const supabaseService = {
         if (updates.assemblyPrice !== undefined) payload.assembly_price = updates.assemblyPrice;
         if (updates.supplierId !== undefined) payload.supplier_id = updates.supplierId;
         if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
+        if (updates.imageUrl2 !== undefined) payload.image_url_2 = updates.imageUrl2;
         const { error } = await supabase.from('products').update(payload).eq('id', id);
         if (error) throw error;
         return true;

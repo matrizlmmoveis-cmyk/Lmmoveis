@@ -5,7 +5,6 @@ import { Product, ProductImage, Supplier, Employee, InventoryItem, Store, OrderS
 import { Search, Plus, X, Truck, Box, ShoppingCart, Trash2, CheckCircle2, Edit2, ImagePlus, Loader2, AlertCircle, Upload, RefreshCw } from 'lucide-react';
 import { useCart } from '../components/CartContext.tsx';
 import { supabaseService } from '../services/supabaseService';
-import { compressImage, formatFileSize } from '../services/imageCompressor';
 
 interface ProductCatalogProps {
   user: Employee | { id: 'admin', name: 'Lucas', role: 'ADMIN', storeId?: string } | null;
@@ -27,11 +26,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
 
   // EDIÇÃO
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [editImages, setEditImages] = useState<ProductImage[]>([]);
-  const [editLoadingImages, setEditLoadingImages] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
-  const [uploadQueue, setUploadQueue] = useState<{ file: File; preview: string; compressing: boolean; uploading: boolean; done: boolean; error?: string }[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -41,6 +36,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
     costPrice: 0,
     assemblyPrice: 0,
     imageUrl: '',
+    imageUrl2: '',
     supplierId: ''
   });
 
@@ -50,7 +46,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [orderConfirmed, setOrderConfirmed] = useState(false);
 
-  const isAdmin = user?.role === 'ADMIN' || user?.name === 'Lucas' || (user as any)?.username === 'Master';
+  const isAdmin = user?.role === 'ADMIN' || user?.name === 'Lucas' || (user as any)?.username === 'Master' || user?.role === 'SUPERVISOR';
 
   const filteredProducts = (products || []).filter(p =>
     p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -82,6 +78,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
       price: newProduct.price,
       costPrice: newProduct.costPrice,
       assemblyPrice: newProduct.assemblyPrice,
+      imageUrl: newProduct.imageUrl,
+      imageUrl2: newProduct.imageUrl2,
       supplierId: newProduct.supplierId || undefined
     };
     setProducts([product, ...products]);
@@ -107,16 +105,6 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
   // ========================
   const openEdit = async (product: Product) => {
     setEditingProduct({ ...product });
-    setUploadQueue([]);
-    setEditLoadingImages(true);
-    try {
-      const imgs = await supabaseService.getProductImages(product.id);
-      setEditImages(imgs);
-    } catch (e) {
-      setEditImages([]);
-    } finally {
-      setEditLoadingImages(false);
-    }
   };
 
   const handleEditSave = async () => {
@@ -131,11 +119,11 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
         costPrice: editingProduct.costPrice,
         assemblyPrice: editingProduct.assemblyPrice,
         supplierId: editingProduct.supplierId,
+        imageUrl: editingProduct.imageUrl,
+        imageUrl2: editingProduct.imageUrl2,
       });
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...editingProduct, images: editImages } : p));
+      setProducts(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
       setEditingProduct(null);
-      setEditImages([]);
-      setUploadQueue([]);
     } catch (err) {
       alert('Erro ao salvar produto.');
     } finally {
@@ -143,51 +131,11 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
     }
   };
 
-  const handleDeleteImage = async (img: ProductImage) => {
-    try {
-      await supabaseService.deleteProductImage(img.id, img.storagePath);
-      setEditImages(prev => prev.filter(i => i.id !== img.id));
-    } catch (e) {
-      alert('Erro ao remover imagem.');
-    }
-  };
 
-  const handleFilesSelected = useCallback(async (files: FileList | null) => {
-    if (!files || !editingProduct) return;
-    const arr = Array.from(files);
-    const newQueue = arr.map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
-      compressing: true,
-      uploading: false,
-      done: false,
-    }));
-    setUploadQueue(prev => [...prev, ...newQueue]);
-
-    for (let i = 0; i < arr.length; i++) {
-      const originalFile = arr[i];
-      const queueIndex = uploadQueue.length + i;
-
-      try {
-        // Compress
-        const compressed = await compressImage(originalFile, { maxWidthOrHeight: 1200, quality: 0.75 });
-        setUploadQueue(prev => prev.map((q, idx) => idx === queueIndex ? { ...q, compressing: false, uploading: true, file: compressed } : q));
-
-        // Upload
-        const uploaded = await supabaseService.uploadProductImage(compressed, editingProduct.id);
-        setEditImages(prev => [...prev, uploaded]);
-        setUploadQueue(prev => prev.map((q, idx) => idx === queueIndex ? { ...q, uploading: false, done: true } : q));
-      } catch (err: any) {
-        setUploadQueue(prev => prev.map((q, idx) => idx === queueIndex ? { ...q, compressing: false, uploading: false, error: 'Falha no upload' } : q));
-      }
-    }
-  }, [editingProduct, uploadQueue.length]);
 
   // Função para obter a imagem principal do produto
   const getProductImage = (product: Product): string => {
-    if (product.images && product.images.length > 0) return product.images[0].url;
-    if (product.imageUrl) return product.imageUrl;
-    return FALLBACK_IMG;
+    return product.imageUrl || product.imageUrl2 || product.images?.[0]?.url || FALLBACK_IMG;
   };
 
   return (
@@ -220,7 +168,11 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
         {filteredProducts.map((product) => {
           const imgSrc = getProductImage(product);
           return (
-            <div key={product.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all overflow-hidden group">
+            <div
+              key={product.id}
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all overflow-hidden group cursor-pointer"
+              onClick={() => openEdit(product)}
+            >
               <div className="relative h-48 bg-slate-100">
                 <img
                   src={imgSrc}
@@ -300,101 +252,59 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                 <h2 className="text-lg font-black text-slate-900 uppercase">Editar Produto</h2>
                 <p className="text-xs text-slate-400 font-medium">SKU: {editingProduct.sku}</p>
               </div>
-              <button onClick={() => { setEditingProduct(null); setUploadQueue([]); }} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+              <button onClick={() => { setEditingProduct(null); }} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
                 <X className="w-5 h-5 text-slate-500" />
               </button>
             </div>
 
             <div className="overflow-y-auto flex-1">
-              {/* GALERIA DE IMAGENS */}
-              <div className="p-6 border-b border-slate-100">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Fotos do Produto</h3>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all"
-                  >
-                    <ImagePlus className="w-4 h-4" />
-                    Adicionar Fotos
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={e => handleFilesSelected(e.target.files)}
-                  />
+              {/* LINKS DE IMAGENS */}
+              <div className="p-6 border-b border-slate-100 space-y-4">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <ImagePlus className="w-4 h-4" /> Links das Imagens (Externas)
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">URL Imagem 1</label>
+                      <input
+                        type="text"
+                        placeholder="https://..."
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-xs focus:border-blue-500"
+                        value={editingProduct.imageUrl || ''}
+                        onChange={e => setEditingProduct({ ...editingProduct, imageUrl: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">URL Imagem 2</label>
+                      <input
+                        type="text"
+                        placeholder="https://..."
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-xs focus:border-blue-500"
+                        value={editingProduct.imageUrl2 || ''}
+                        onChange={e => setEditingProduct({ ...editingProduct, imageUrl2: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 h-full">
+                    <div className="flex-1 aspect-square bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
+                      <img
+                        src={editingProduct.imageUrl || FALLBACK_IMG}
+                        className="w-full h-full object-cover"
+                        alt=""
+                        onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
+                      />
+                    </div>
+                    <div className="flex-1 aspect-square bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
+                      <img
+                        src={editingProduct.imageUrl2 || FALLBACK_IMG}
+                        className="w-full h-full object-cover"
+                        alt=""
+                        onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
+                      />
+                    </div>
+                  </div>
                 </div>
-
-                {editLoadingImages ? (
-                  <div className="flex items-center justify-center h-24 text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                    {/* Imagens já salvas */}
-                    {editImages.map((img) => (
-                      <div key={img.id} className="relative group/img aspect-square rounded-2xl overflow-hidden border-2 border-slate-100">
-                        <img src={img.url} alt="" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                          <button
-                            onClick={() => handleDeleteImage(img)}
-                            className="bg-red-600 text-white p-2 rounded-xl hover:bg-red-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Fila de upload */}
-                    {uploadQueue.map((item, idx) => (
-                      <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border-2 border-blue-200 bg-slate-50">
-                        <img src={item.preview} alt="" className="w-full h-full object-cover opacity-50" />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-                          {item.compressing && (
-                            <>
-                              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                              <span className="text-[9px] font-black text-blue-600 uppercase">Comprimindo</span>
-                            </>
-                          )}
-                          {item.uploading && (
-                            <>
-                              <Upload className="w-5 h-5 text-emerald-600 animate-bounce" />
-                              <span className="text-[9px] font-black text-emerald-600 uppercase">Enviando</span>
-                            </>
-                          )}
-                          {item.done && (
-                            <>
-                              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                              <span className="text-[9px] font-black text-emerald-600 uppercase">Salvo!</span>
-                            </>
-                          )}
-                          {item.error && (
-                            <>
-                              <AlertCircle className="w-5 h-5 text-red-500" />
-                              <span className="text-[9px] font-black text-red-500 uppercase">Erro</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Botão de adicionar inline */}
-                    {editImages.length === 0 && uploadQueue.length === 0 && (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-400 flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-blue-500 transition-all"
-                      >
-                        <ImagePlus className="w-8 h-8" />
-                        <span className="text-[9px] font-black uppercase">Adicionar</span>
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* CAMPOS DE EDIÇÃO */}
@@ -465,13 +375,31 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
+
+                {/* Estoque Detalhado no Modal */}
+                <div className="col-span-2 mt-4 space-y-3">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Box className="w-3 h-3" /> Distribuição de Estoque
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {stores.map(store => {
+                      const stock = inventory.find(i => i.productId === editingProduct.id && i.locationId === store.id)?.quantity || 0;
+                      return (
+                        <div key={store.id} className="px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl">
+                          <p className="text-[8px] font-black text-slate-400 uppercase truncate">{store.name}</p>
+                          <p className="text-xs font-black text-slate-900">{stock} UN</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* FOOTER */}
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex gap-3 justify-end shrink-0">
               <button
-                onClick={() => { setEditingProduct(null); setUploadQueue([]); }}
+                onClick={() => { setEditingProduct(null); }}
                 className="px-6 py-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold rounded-xl transition-all"
               >
                 Cancelar
@@ -665,6 +593,13 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                 <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Venda (R$)</label><input required type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold" value={formatCurrencyBRL(newProduct.price)} onChange={e => handleCurrencyChange(e, (num) => setNewProduct({ ...newProduct, price: num }))} /></div>
                 <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Custo (R$)</label><input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-red-600" value={formatCurrencyBRL(newProduct.costPrice)} onChange={e => handleCurrencyChange(e, (num) => setNewProduct({ ...newProduct, costPrice: num }))} /></div>
                 <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Montagem (R$)</label><input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-emerald-600" value={formatCurrencyBRL(newProduct.assemblyPrice)} onChange={e => handleCurrencyChange(e, (num) => setNewProduct({ ...newProduct, assemblyPrice: num }))} /></div>
+                <div className="col-span-2 space-y-3">
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-1">Links das Imagens (Externas)</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input type="text" placeholder="URL Imagem 1" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-xs focus:border-blue-500" value={newProduct.imageUrl} onChange={e => setNewProduct({ ...newProduct, imageUrl: e.target.value })} />
+                    <input type="text" placeholder="URL Imagem 2" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-xs focus:border-blue-500" value={newProduct.imageUrl2} onChange={e => setNewProduct({ ...newProduct, imageUrl2: e.target.value })} />
+                  </div>
+                </div>
               </div>
               <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black shadow-xl transition-all">SALVAR PRODUTO</button>
             </form>

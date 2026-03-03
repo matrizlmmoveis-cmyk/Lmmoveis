@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Product, Store, InventoryItem, Employee } from '../types.ts';
-import { Search, Box, Filter, ChevronDown } from 'lucide-react';
+import { Product, Store, InventoryItem, Employee, ProductImage } from '../types.ts';
+import { Search, Box, Filter, ChevronDown, X, Edit2, Loader2, Save, MapPin, Package, DollarSign } from 'lucide-react';
+import { supabaseService } from '../services/supabaseService.ts';
+import { CATEGORIES } from '../constants.tsx';
 
 interface ProductsProps {
     user: Employee | any;
@@ -8,15 +10,24 @@ interface ProductsProps {
     inventory: InventoryItem[];
     stores: Store[];
     employees: Employee[];
+    refreshData: (force?: boolean) => Promise<void>;
 }
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=500&auto=format&fit=crop';
 const INITIAL_PAGE_SIZE = 50;
 
-const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, employees }) => {
+const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, employees, refreshData }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [displayCount, setDisplayCount] = useState(INITIAL_PAGE_SIZE);
+
+    // Modal State
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [editForm, setEditForm] = useState<Partial<Product>>({});
+
+    const canEdit = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.name === 'Lucas' || user?.username === 'Master';
 
     // Otimização: Indexar inventário por ProdutoID e StoreID para busca O(1)
     const stockMap = useMemo(() => {
@@ -55,6 +66,42 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
     };
 
     const visibleProducts = filteredProducts.slice(0, displayCount);
+
+    const openProductModal = (product: Product) => {
+        setSelectedProduct(product);
+        setEditForm({ ...product });
+        setIsEditMode(false);
+    };
+
+    const handleSave = async () => {
+        if (!selectedProduct) return;
+        setIsSaving(true);
+        try {
+            await supabaseService.updateProduct(selectedProduct.id, editForm);
+            await refreshData(true);
+            setSelectedProduct({ ...selectedProduct, ...editForm });
+            setIsEditMode(false);
+            alert('Produto atualizado com sucesso!');
+        } catch (err) {
+            console.error('Erro ao salvar produto:', err);
+            alert('Erro ao salvar produto.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const formatCurrencyBRL = (value: number) => {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+        }).format(value);
+    };
+
+    const handleCurrencyChange = (e: React.ChangeEvent<HTMLInputElement>, callback: (num: number) => void) => {
+        const value = e.target.value.replace(/\D/g, '');
+        const numberValue = value ? parseInt(value) / 100 : 0;
+        callback(numberValue);
+    };
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
@@ -113,7 +160,11 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {visibleProducts.map((product) => (
-                                <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
+                                <tr
+                                    key={product.id}
+                                    className="hover:bg-blue-50/50 transition-colors group cursor-pointer"
+                                    onClick={() => openProductModal(product)}
+                                >
                                     <td className="px-6 py-3">
                                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
                                             <img
@@ -173,6 +224,236 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                     <div className="px-6 py-12 text-center text-slate-400 font-bold uppercase text-sm">Nenhum produto encontrado</div>
                 )}
             </div>
+
+            {/* PRODUCT DETAIL / EDIT MODAL */}
+            {selectedProduct && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100">
+                                    <Package className="w-6 h-6 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900 uppercase italic tracking-tight leading-none">
+                                        {isEditMode ? 'Editar Produto' : 'Detalhes do Produto'}
+                                    </h2>
+                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">SKU: {selectedProduct.sku}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setSelectedProduct(null)}
+                                className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+                            >
+                                <X className="w-6 h-6 text-slate-400" />
+                            </button>
+                        </div>
+
+                        <div className="overflow-y-auto p-8 space-y-8 flex-1">
+                            {/* Main Info Section */}
+                            <div className="flex flex-col md:flex-row gap-8">
+                                <div className="w-full md:w-48 space-y-2 shrink-0">
+                                    <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 shadow-inner">
+                                        <img
+                                            src={selectedProduct.imageUrl || selectedProduct.images?.[0]?.url || FALLBACK_IMG}
+                                            className="w-full h-full object-cover"
+                                            alt=""
+                                            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
+                                        />
+                                    </div>
+                                    {(selectedProduct.imageUrl2 || (selectedProduct.images?.length ?? 0) > 1) && (
+                                        <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 shadow-inner">
+                                            <img
+                                                src={selectedProduct.imageUrl2 || selectedProduct.images?.[1]?.url || FALLBACK_IMG}
+                                                className="w-full h-full object-cover"
+                                                alt=""
+                                                onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1 space-y-4">
+                                    {isEditMode ? (
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Nome do Produto</label>
+                                                <input
+                                                    type="text"
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase text-sm focus:border-blue-500 outline-none transition-all"
+                                                    value={editForm.name}
+                                                    onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">SKU</label>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm focus:border-blue-500 outline-none transition-all"
+                                                        value={editForm.sku}
+                                                        onChange={e => setEditForm({ ...editForm, sku: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Categoria</label>
+                                                    <select
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-black uppercase text-sm focus:border-blue-500 outline-none transition-all"
+                                                        value={editForm.category}
+                                                        onChange={e => setEditForm({ ...editForm, category: e.target.value })}
+                                                    >
+                                                        {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Link Imagem 1</label>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:border-blue-500 outline-none transition-all"
+                                                        value={editForm.imageUrl || ''}
+                                                        onChange={e => setEditForm({ ...editForm, imageUrl: e.target.value })}
+                                                        placeholder="URL da Imagem..."
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Link Imagem 2</label>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:border-blue-500 outline-none transition-all"
+                                                        value={editForm.imageUrl2 || ''}
+                                                        onChange={e => setEditForm({ ...editForm, imageUrl2: e.target.value })}
+                                                        placeholder="URL da Imagem..."
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <h3 className="text-2xl font-black text-slate-900 uppercase leading-tight italic">{selectedProduct.name}</h3>
+                                            <div className="inline-flex px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100">
+                                                {selectedProduct.category}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Prices Section */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-[2rem] space-y-1">
+                                    <div className="flex items-center gap-2 text-[10px] font-black text-blue-400 uppercase tracking-widest">
+                                        <DollarSign className="w-3 h-3" /> Preço Venda
+                                    </div>
+                                    {isEditMode ? (
+                                        <input
+                                            type="text"
+                                            className="w-full bg-transparent text-xl font-black text-blue-700 outline-none"
+                                            value={formatCurrencyBRL(editForm.price || 0)}
+                                            onChange={e => handleCurrencyChange(e, (num) => setEditForm({ ...editForm, price: num }))}
+                                        />
+                                    ) : (
+                                        <p className="text-2xl font-black text-blue-700 italic">{formatCurrencyBRL(selectedProduct.price || 0)}</p>
+                                    )}
+                                </div>
+                                <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-[2rem] space-y-1">
+                                    <div className="flex items-center gap-2 text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                                        <Edit2 className="w-3 h-3" /> Montagem
+                                    </div>
+                                    {isEditMode ? (
+                                        <input
+                                            type="text"
+                                            className="w-full bg-transparent text-xl font-black text-emerald-700 outline-none"
+                                            value={formatCurrencyBRL(editForm.assemblyPrice || 0)}
+                                            onChange={e => handleCurrencyChange(e, (num) => setEditForm({ ...editForm, assemblyPrice: num }))}
+                                        />
+                                    ) : (
+                                        <p className="text-2xl font-black text-emerald-700 italic">{formatCurrencyBRL(selectedProduct.assemblyPrice || 0)}</p>
+                                    )}
+                                </div>
+                                <div className="p-5 bg-red-50/50 border border-red-100 rounded-[2rem] space-y-1">
+                                    <div className="flex items-center gap-2 text-[10px] font-black text-red-400 uppercase tracking-widest">
+                                        <DollarSign className="w-3 h-3" /> Custo
+                                    </div>
+                                    {isEditMode ? (
+                                        <input
+                                            type="text"
+                                            className="w-full bg-transparent text-xl font-black text-red-700 outline-none"
+                                            value={formatCurrencyBRL(editForm.costPrice || 0)}
+                                            onChange={e => handleCurrencyChange(e, (num) => setEditForm({ ...editForm, costPrice: num }))}
+                                        />
+                                    ) : (
+                                        <p className="text-2xl font-black text-red-700 italic">
+                                            {(user?.role === 'ADMIN' || user?.username === 'Master') ? formatCurrencyBRL(selectedProduct.costPrice || 0) : '*****'}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Stock Detail */}
+                            <div className="space-y-4">
+                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-1">
+                                    <MapPin className="w-4 h-4" /> Distribuição de Estoque
+                                </h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {stores.map(store => {
+                                        const stock = getStockForStore(selectedProduct.id, store.id);
+                                        return (
+                                            <div key={store.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center text-center">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase truncate w-full">{store.name}</span>
+                                                <span className={`text-lg font-black mt-1 ${stock > 0 ? 'text-slate-900' : 'text-slate-300'}`}>{stock} UN</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex gap-3 justify-end shrink-0">
+                            {canEdit && (
+                                <>
+                                    {isEditMode ? (
+                                        <>
+                                            <button
+                                                onClick={() => setIsEditMode(false)}
+                                                className="px-6 py-3 border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold rounded-2xl transition-all uppercase text-xs tracking-widest"
+                                            >
+                                                Cancelar
+                                            </button>
+                                            <button
+                                                onClick={handleSave}
+                                                disabled={isSaving}
+                                                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 transition-all flex items-center gap-2 uppercase text-xs tracking-widest"
+                                            >
+                                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                                Salvar Alterações
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            onClick={() => setIsEditMode(true)}
+                                            className="px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl shadow-xl transition-all flex items-center gap-2 uppercase text-xs tracking-widest"
+                                        >
+                                            <Edit2 className="w-4 h-4" />
+                                            Editar Produto
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                            {!isEditMode && (
+                                <button
+                                    onClick={() => setSelectedProduct(null)}
+                                    className="px-8 py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-2xl transition-all uppercase text-xs tracking-widest"
+                                >
+                                    Fechar
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
