@@ -804,7 +804,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="font-black text-blue-600 text-sm">#{sale.id}</span>
-                      {sale.assemblyRequired && (
+                      {(sale.assemblyRequired || sale.items?.some(i => i.assemblyRequired)) && (
                         <span className="text-[9px] font-black text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 uppercase w-fit mt-1">
                           Montagem
                         </span>
