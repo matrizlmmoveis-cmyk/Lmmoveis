@@ -332,10 +332,9 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
 
   const completeSale = async () => {
     if (!selectedCustomer || !newSale.items?.length) return;
-    // ID sequencial a partir de 101
-    const existingNums = (sales || []).map(s => parseInt(s.id)).filter(n => !isNaN(n));
-    const lastIdNum = existingNums.length > 0 ? Math.max(...existingNums) : 100;
-    const nextId = (lastIdNum + 1).toString();
+
+    // Obter o próximo ID diretamente do banco para evitar duplicatas por filtros locais
+    const nextId = await supabaseService.getNextSaleId();
 
     const sale: Sale = {
       id: nextId,
@@ -349,7 +348,10 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       // Use null-safe sellerId to avoid FK violation when empty
       sellerId: newSale.sellerId || user?.id || '',
       items: newSale.items as SaleItem[],
-      payments: newSale.payments as Payment[],
+      payments: (newSale.payments || []).map(p => ({
+        ...p,
+        status: p.method === 'Entrega' ? 'PENDENTE_ENTREGA' : p.status
+      })) as Payment[],
       total: calculateTotal(),
       status: OrderStatus.PENDING,
       deliveryAddress: selectedCustomer.address + (selectedCustomer.number ? ', ' + selectedCustomer.number : '') + (selectedCustomer.neighborhood ? ' - ' + selectedCustomer.neighborhood : ''),
@@ -641,6 +643,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                         <option value="Cartão Débito">Débito</option>
                         <option value="Cartão Crédito">Crédito</option>
                         <option value="PIX">PIX</option>
+                        <option value="Entrega">Receber na Entrega</option>
                       </select>
                       <input type="text" className="w-24 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-blue-400" value={formatCurrencyBRL(p.amount)} onChange={e => handleCurrencyChange(e, (num) => handlePaymentChange(idx, 'amount', num))} />
                       <button onClick={() => handleRemovePayment(idx)} className="p-1.5 text-red-400 hover:text-red-600 transition-colors">

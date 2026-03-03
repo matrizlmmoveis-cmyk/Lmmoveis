@@ -210,6 +210,14 @@ export const supabaseService = {
         })) as Sale[];
     },
 
+    async getNextSaleId() {
+        const { data, error } = await supabase.from('sales').select('id');
+        if (error) throw error;
+        const ids = (data || []).map(s => parseInt(s.id)).filter(n => !isNaN(n));
+        const lastIdNum = ids.length > 0 ? Math.max(...ids) : 100;
+        return (lastIdNum + 1).toString();
+    },
+
     async createSale(sale: Sale) {
         // 1. Inserir cabeçalho da venda
         const { error: saleError } = await supabase.from('sales').insert({
