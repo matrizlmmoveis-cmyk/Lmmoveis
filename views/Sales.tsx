@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Employee, Store, OrderStatus, Sale, Product, Customer, SaleItem, Payment, InventoryItem } from '../types.ts';
+import { Employee, Store, OrderStatus, Sale, Product, Customer, SaleItem, Payment, InventoryItem, Romaneio } from '../types.ts';
 import { Search, Plus, Eye, X, ShoppingCart, User, Package, CheckCircle2, ArrowLeft, Trash2, AlertCircle, CreditCard, DollarSign, Box, Filter, Calendar, Printer, Check, CheckSquare, Square, RefreshCw } from 'lucide-react';
 import SaleReceipt from './SaleReceipt.tsx';
 import CustomerModal from '../components/CustomerModal.tsx';
@@ -37,6 +37,21 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0 });
   const [currentSaleToPrint, setCurrentSaleToPrint] = useState<Sale | null>(null);
   const isShowroomPeriod = new Date() <= new Date('2026-03-10T23:59:59');
+  const [romaneios, setRomaneios] = useState<Romaneio[]>([]);
+  const [selectedRomaneioHistory, setSelectedRomaneioHistory] = useState<Sale | null>(null);
+
+  useEffect(() => {
+    loadRomaneios();
+  }, []);
+
+  const loadRomaneios = async () => {
+    try {
+      const data = await supabaseService.getRomaneios();
+      setRomaneios(data || []);
+    } catch (err) {
+      console.error("Erro ao carregar romaneios:", err);
+    }
+  };
 
   const [newSale, setNewSale] = useState<Partial<Sale>>({
     customerName: '',
@@ -276,6 +291,42 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     } catch (e) {
       console.error('Erro ao confirmar recebimento:', e);
       alert('Erro ao confirmar recebimento.');
+    }
+  };
+
+  const handleAssignLogistics = async (saleId: string, employeeId: string, type: 'entrega' | 'montagem') => {
+    if (!employeeId) return;
+    const emp = employees.find(e => e.id === employeeId);
+    if (!emp) return;
+
+    if (!window.confirm(`Deseja atribuir esta venda para ${emp.name}?`)) return;
+
+    try {
+      if (type === 'entrega') {
+        await supabaseService.updateSale(saleId, { assignedDriverId: employeeId, status: OrderStatus.SHIPPED });
+      } else {
+        await supabaseService.updateSale(saleId, { assignedAssemblerId: employeeId });
+      }
+
+      await supabaseService.createRomaneio({
+        type,
+        employeeId,
+        saleIds: [saleId],
+        status: 'ATIVO'
+      });
+
+      setSales(prev => prev.map(s => {
+        if (s.id === saleId) {
+          if (type === 'entrega') return { ...s, assignedDriverId: employeeId, status: OrderStatus.SHIPPED };
+          return { ...s, assignedAssemblerId: employeeId };
+        }
+        return s;
+      }));
+      await loadRomaneios();
+      alert('Atribuição realizada com sucesso!');
+    } catch (err) {
+      console.error("Erro ao atribuir:", err);
+      alert("Erro ao realizar atribuição.");
     }
   };
 
@@ -785,6 +836,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Cliente</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Unidade</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Motorista</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Montador</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Ações</th>
               </tr>
             </thead>
@@ -825,8 +878,31 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                       </div>
                     )}
                   </td>
+                  <td className="px-6 py-4">
+                    <select
+                      className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-blue-500"
+                      value={sale.assignedDriverId || ''}
+                      onChange={(e) => handleAssignLogistics(sale.id, e.target.value, 'entrega')}
+                    >
+                      <option value="">Selecionar</option>
+                      {employees.filter(e => e.role === 'MOTORISTA').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-6 py-4">
+                    <select
+                      className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-emerald-500"
+                      value={sale.assignedAssemblerId || ''}
+                      onChange={(e) => handleAssignLogistics(sale.id, e.target.value, 'montagem')}
+                    >
+                      <option value="">Selecionar</option>
+                      {employees.filter(e => e.role === 'MONTADOR').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                    </select>
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => setSelectedRomaneioHistory(sale)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Histórico de Logística">
+                        <Calendar className="w-4 h-4" />
+                      </button>
                       <button onClick={() => setSelectedSale(sale)} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-black uppercase"><Eye className="w-4 h-4" /> Ver</button>
                       {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (
                         <button onClick={() => { const p = sale.payments.find(p => p.status === 'AGUARDANDO_ACERTO'); if (p) handleConfirmPayment(sale.id, p.amount); }} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black uppercase shadow-sm"><DollarSign className="w-4 h-4" /> Receber</button>
@@ -1253,6 +1329,56 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
             </div>
           </div>
         )}
+
+      {/* Modal de Histórico de Romaneios */}
+      {selectedRomaneioHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-blue-500" />
+                  Histórico de Logística — Venda #{selectedRomaneioHistory.id}
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Todas as vezes que esta nota foi para a rua</p>
+              </div>
+              <button onClick={() => setSelectedRomaneioHistory(null)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+              {romaneios.filter(r => r.saleIds.includes(selectedRomaneioHistory.id)).length === 0 ? (
+                <div className="text-center py-10 opacity-30">
+                  <Package className="w-12 h-12 mx-auto mb-2" />
+                  <p className="text-[10px] font-black uppercase">Nenhum romaneio vinculado.</p>
+                </div>
+              ) : (
+                romaneios.filter(r => r.saleIds.includes(selectedRomaneioHistory.id)).map((r, idx) => {
+                  const emp = employees.find(e => e.id === r.employeeId);
+                  return (
+                    <div key={r.id} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${r.type === 'entrega' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                            {r.type}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-bold">
+                            {new Date(r.createdAt || '').toLocaleDateString('pt-BR')} {new Date(r.createdAt || '').toLocaleTimeString('pt-BR')}
+                          </span>
+                        </div>
+                        <p className="text-xs font-black text-slate-700 uppercase">{emp?.name || 'Não identificado'}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-black text-slate-400 uppercase">#{r.id}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 };
