@@ -83,9 +83,10 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
             setSelectedProduct({ ...selectedProduct, ...editForm });
             setIsEditMode(false);
             alert('Produto atualizado com sucesso!');
-        } catch (err) {
+        } catch (err: any) {
             console.error('Erro ao salvar produto:', err);
-            alert('Erro ao salvar produto.');
+            const msg = err.message || err.details || 'Erro desconhecido';
+            alert(`Erro ao salvar produto: ${msg}`);
         } finally {
             setIsSaving(false);
         }
