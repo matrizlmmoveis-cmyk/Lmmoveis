@@ -1094,9 +1094,38 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         </div>
       )}
 
-      {/* Modal de Impressão em Massa */}
       {isBulkPrinting && (
-        <div className="fixed inset-0 z-[60] bg-white overflow-y-auto no-scrollbar bulk-print-modal">
+        <div className="fixed inset-0 z-[60] bg-white overflow-y-auto no-scrollbar bulk-print-modal print:relative print:inset-auto print:h-auto print:overflow-visible">
+          <style dangerouslySetInnerHTML={{
+            __html: `
+              @media print {
+                /* Force all ancestors to be visible and have auto height */
+                html, body, #root, .flex.h-screen, main, section, .max-w-7xl {
+                  height: auto !important;
+                  min-height: 0 !important;
+                  overflow: visible !important;
+                  position: static !important;
+                  display: block !important;
+                  width: 100% !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
+                
+                /* Hide siblings of the print content to avoid artifacts */
+                .no-print, nav, aside, header, .Sidebar {
+                  display: none !important;
+                }
+
+                .bulk-print-modal {
+                  position: relative !important;
+                  display: block !important;
+                  width: 100% !important;
+                  height: auto !important;
+                  overflow: visible !important;
+                }
+              }
+            `
+          }} />
           <div className="no-print sticky top-0 bg-white/80 backdrop-blur-md p-4 border-b flex justify-between items-center z-10 shadow-sm">
             <div>
               <h3 className="font-black text-slate-900 uppercase">Impressão Agrupada</h3>
