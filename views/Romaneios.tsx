@@ -4,6 +4,7 @@ import { OrderStatus, Sale, Employee, Romaneio, Product } from '../types.ts';
 import { supabaseService } from '../services/supabaseService.ts';
 
 interface RomaneiosProps {
+  user: Employee | null;
   sales: Sale[];
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   employees: Employee[];
@@ -11,7 +12,7 @@ interface RomaneiosProps {
   refreshData: (force?: boolean) => Promise<void>;
 }
 
-const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEmployees, products, refreshData }) => {
+const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees: allEmployees, products, refreshData }) => {
   const [view, setView] = useState<'create' | 'history'>('create');
   const [romaneios, setRomaneios] = useState<Romaneio[]>([]);
   const [type, setType] = useState<'entrega' | 'montagem'>('entrega');
@@ -119,6 +120,20 @@ const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEm
     } catch (err) {
       console.error("Erro ao salvar romaneio:", err);
       setError("Erro ao salvar atribuições no banco de dados.");
+    }
+  };
+
+  const handleDeleteRomaneio = async (romaneio: Romaneio) => {
+    if (!window.confirm("Deseja realmente excluir este romaneio? As vendas associadas voltarão ao status pendente.")) return;
+
+    try {
+      await supabaseService.deleteRomaneio(romaneio.id, romaneio.saleIds, romaneio.type);
+      setRomaneios(prev => prev.filter(r => r.id !== romaneio.id));
+      await refreshData(true);
+      alert("Romaneio excluído com sucesso!");
+    } catch (err) {
+      console.error("Erro ao excluir romaneio:", err);
+      alert("Erro ao excluir romaneio.");
     }
   };
 
@@ -337,19 +352,29 @@ const Romaneios: React.FC<RomaneiosProps> = ({ sales, setSales, employees: allEm
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button
-                            onClick={() => {
-                              // Re-habilitar impressão para um item do histórico
-                              const romaneioSales = sales.filter(s => r.saleIds.includes(s.id));
-                              setType(r.type);
-                              setSelectedEmployeeId(r.employeeId);
-                              setBatchSales(romaneioSales);
-                              setShowPrint(true);
-                            }}
-                            className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-800 transition-all flex items-center gap-2"
-                          >
-                            <Printer className="w-3 h-3" /> Re-imprimir
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                // Re-habilitar impressão para um item do histórico
+                                const romaneioSales = sales.filter(s => r.saleIds.includes(s.id));
+                                setType(r.type);
+                                setSelectedEmployeeId(r.employeeId);
+                                setBatchSales(romaneioSales);
+                                setShowPrint(true);
+                              }}
+                              className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-200 transition-all flex items-center gap-2"
+                            >
+                              <Printer className="w-3 h-3" /> Re-imprimir
+                            </button>
+                            {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || user?.role === 'ADMIN') && (
+                              <button
+                                onClick={() => handleDeleteRomaneio(r)}
+                                className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all flex items-center gap-2"
+                              >
+                                <Trash2 className="w-3 h-3" /> Excluir
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

@@ -593,6 +593,28 @@ export const supabaseService = {
         return data.id.toString();
     },
 
+    async deleteRomaneio(romaneioId: string, saleIds: string[], type: 'entrega' | 'montagem') {
+        // 1. Reverter as vendas associadas
+        const promises = saleIds.map(async id => {
+            if (type === 'entrega') {
+                return supabase.from('sales').update({
+                    assigned_driver_id: null,
+                    status: OrderStatus.PENDING
+                }).eq('id', id);
+            } else {
+                return supabase.from('sales').update({
+                    assigned_assembler_id: null
+                }).eq('id', id);
+            }
+        });
+        await Promise.all(promises);
+
+        // 2. Deletar o romaneio do histórico
+        const { error } = await supabase.from('romaneios').delete().eq('id', parseInt(romaneioId));
+        if (error) throw error;
+        return true;
+    },
+
     async cancelSale(saleId: string) {
         // 1. Buscar itens da venda para estornar estoque
         const { data: items, error: FetchError } = await supabase
