@@ -10,6 +10,7 @@ interface CustomerModalProps {
 
 const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onSuccess }) => {
     const [isLoadingApi, setIsLoadingApi] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState<Partial<Customer>>({
         type: 'PF',
         name: '',
@@ -89,6 +90,9 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onSuccess }) => 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSaving) return;
+
+        setIsSaving(true);
         try {
             const newCustomer = {
                 ...formData,
@@ -97,9 +101,12 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onSuccess }) => 
 
             await supabaseService.createCustomer(newCustomer);
             onSuccess(newCustomer);
-        } catch (err) {
+        } catch (err: any) {
             console.error("Erro ao criar cliente:", err);
-            alert("Erro ao salvar cliente no banco de dados.");
+            const msg = err?.message || "Erro desconhecido";
+            alert(`Erro ao salvar cliente no banco de dados.\n${msg}`);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -263,10 +270,11 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ onClose, onSuccess }) => 
                     <div className="pt-4">
                         <button
                             type="submit"
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold shadow-xl shadow-blue-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            disabled={isSaving}
+                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-4 rounded-2xl font-bold shadow-xl shadow-blue-100 transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
-                            <CheckCircle2 className="w-5 h-5" />
-                            Salvar Cliente
+                            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+                            {isSaving ? 'Salvando...' : 'Salvar Cliente'}
                         </button>
                     </div>
                 </form>

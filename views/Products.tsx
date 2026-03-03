@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Product, Store, InventoryItem, Employee, ProductImage } from '../types.ts';
+import { Product, Store, InventoryItem, Employee, ProductImage, Supplier } from '../types.ts';
 import { Search, Box, Filter, ChevronDown, X, Edit2, Loader2, Save, MapPin, Package, DollarSign } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService.ts';
 import { CATEGORIES } from '../constants.tsx';
@@ -10,13 +10,14 @@ interface ProductsProps {
     inventory: InventoryItem[];
     stores: Store[];
     employees: Employee[];
+    suppliers: Supplier[];
     refreshData: (force?: boolean) => Promise<void>;
 }
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=500&auto=format&fit=crop';
 const INITIAL_PAGE_SIZE = 50;
 
-const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, employees, refreshData }) => {
+const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, employees, suppliers, refreshData }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [displayCount, setDisplayCount] = useState(INITIAL_PAGE_SIZE);
@@ -101,6 +102,12 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
         const value = e.target.value.replace(/\D/g, '');
         const numberValue = value ? parseInt(value) / 100 : 0;
         callback(numberValue);
+    };
+
+    const getSupplierName = (id?: string) => {
+        if (!id) return 'Não Definido';
+        const s = suppliers.find(sup => sup.id === id);
+        return s ? s.name : 'Não Definido';
     };
 
     return (
@@ -328,13 +335,51 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                                                     />
                                                 </div>
                                             </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Fornecedor</label>
+                                                <select
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm focus:border-blue-500 outline-none transition-all"
+                                                    value={editForm.supplierId || ''}
+                                                    onChange={e => setEditForm({ ...editForm, supplierId: e.target.value })}
+                                                >
+                                                    <option value="">Selecione um fornecedor...</option>
+                                                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="pt-2">
+                                                <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Descrição</label>
+                                                <textarea
+                                                    rows={3}
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:border-blue-500 outline-none transition-all uppercase"
+                                                    value={editForm.description || ''}
+                                                    onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                                                    placeholder="Descrição do produto..."
+                                                />
+                                            </div>
                                         </div>
                                     ) : (
-                                        <div className="space-y-2">
-                                            <h3 className="text-2xl font-black text-slate-900 uppercase leading-tight italic">{selectedProduct.name}</h3>
-                                            <div className="inline-flex px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100">
-                                                {selectedProduct.category}
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <h3 className="text-2xl font-black text-slate-900 uppercase leading-tight italic">{selectedProduct.name}</h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <div className="inline-flex px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100">
+                                                        {selectedProduct.category}
+                                                    </div>
+                                                    <div className="inline-flex px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-200">
+                                                        Fornecedor: {getSupplierName(selectedProduct.supplierId)}
+                                                    </div>
+                                                </div>
                                             </div>
+                                            {selectedProduct.description && (
+                                                <div className="pt-2">
+                                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                                        <Filter className="w-3 h-3" /> Descrição do Produto
+                                                    </h3>
+                                                    <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-600 text-sm font-medium leading-relaxed uppercase">
+                                                        {selectedProduct.description}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

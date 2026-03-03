@@ -58,7 +58,8 @@ export const supabaseService = {
                     sku: p.sku,
                     imageUrl: p.image_url,
                     imageUrl2: p.image_url_2,
-                    supplierId: p.supplier_id
+                    supplierId: p.supplier_id,
+                    description: p.description
                 }));
                 allItems = allItems.concat(mapped as Product[]);
                 page++;
@@ -81,7 +82,27 @@ export const supabaseService = {
         if (updates.supplierId !== undefined) payload.supplier_id = updates.supplierId;
         if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
         if (updates.imageUrl2 !== undefined) payload.image_url_2 = updates.imageUrl2;
+        if (updates.description !== undefined) payload.description = updates.description;
         const { error } = await supabase.from('products').update(payload).eq('id', id);
+        if (error) throw error;
+        return true;
+    },
+
+    async createProduct(product: Product) {
+        const payload: any = {
+            id: product.id,
+            name: product.name,
+            sku: product.sku,
+            category: product.category,
+            price: product.price,
+            cost_price: product.costPrice,
+            assembly_price: product.assemblyPrice,
+            supplier_id: product.supplierId || null,
+            image_url: product.imageUrl || null,
+            image_url_2: product.imageUrl2 || null,
+            description: product.description || null
+        };
+        const { error } = await supabase.from('products').insert(payload);
         if (error) throw error;
         return true;
     },
@@ -213,10 +234,19 @@ export const supabaseService = {
     },
 
     async getNextSaleId() {
-        const { data, error } = await supabase.from('sales').select('id');
+        // Busca os IDs mais recentes para evitar limites de paginação e encontrar o maior número atual
+        const { data, error } = await supabase
+            .from('sales')
+            .select('id')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
         if (error) throw error;
+
         const ids = (data || []).map(s => parseInt(s.id)).filter(n => !isNaN(n));
         const lastIdNum = ids.length > 0 ? Math.max(...ids) : 100;
+
+        // Garante que o novo ID seja único tentando o próximo número disponível
         return (lastIdNum + 1).toString();
     },
 

@@ -37,7 +37,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
     assemblyPrice: 0,
     imageUrl: '',
     imageUrl2: '',
-    supplierId: ''
+    supplierId: '',
+    description: ''
   });
 
   const { cart, addToCart, removeFromCart, clearCart, totalItems, totalPrice } = useCart();
@@ -68,10 +69,10 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
   // ========================
   // NOVO PRODUTO
   // ========================
-  const handleAddProduct = (e: React.FormEvent) => {
+  const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     const product: Product = {
-      id: `P${products.length + 1}`,
+      id: `P${Date.now()}`, // Usando Date.now() para ID mais único no cliente antes do sync
       name: newProduct.name,
       sku: newProduct.sku,
       category: newProduct.category,
@@ -80,11 +81,20 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
       assemblyPrice: newProduct.assemblyPrice,
       imageUrl: newProduct.imageUrl,
       imageUrl2: newProduct.imageUrl2,
-      supplierId: newProduct.supplierId || undefined
+      supplierId: newProduct.supplierId || undefined,
+      description: newProduct.description
     };
-    setProducts([product, ...products]);
-    setIsModalOpen(false);
-    setNewProduct({ name: '', sku: '', category: CATEGORIES[0], price: 0, costPrice: 0, assemblyPrice: 0, imageUrl: '', supplierId: '' });
+
+    try {
+      await supabaseService.createProduct(product);
+      setProducts([product, ...products]);
+      setIsModalOpen(false);
+      setNewProduct({ name: '', sku: '', category: CATEGORIES[0], price: 0, costPrice: 0, assemblyPrice: 0, imageUrl: '', supplierId: '', description: '' });
+      alert('Produto cadastrado com sucesso!');
+    } catch (err) {
+      console.error("Erro ao cadastrar produto:", err);
+      alert('Erro ao cadastrar produto no banco de dados.');
+    }
   };
 
   const handleAddSupplier = (e: React.FormEvent) => {
@@ -376,6 +386,17 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                   </select>
                 </div>
 
+                <div className="col-span-2">
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-1">Descrição</label>
+                  <textarea
+                    rows={3}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-sm focus:border-blue-500 uppercase"
+                    value={editingProduct.description || ''}
+                    onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                    placeholder="Descrição detalhada do produto..."
+                  />
+                </div>
+
                 {/* Estoque Detalhado no Modal */}
                 <div className="col-span-2 mt-4 space-y-3">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -593,6 +614,16 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                 <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Venda (R$)</label><input required type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold" value={formatCurrencyBRL(newProduct.price)} onChange={e => handleCurrencyChange(e, (num) => setNewProduct({ ...newProduct, price: num }))} /></div>
                 <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Custo (R$)</label><input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-red-600" value={formatCurrencyBRL(newProduct.costPrice)} onChange={e => handleCurrencyChange(e, (num) => setNewProduct({ ...newProduct, costPrice: num }))} /></div>
                 <div><label className="block text-xs font-black text-slate-400 uppercase mb-1">Montagem (R$)</label><input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-emerald-600" value={formatCurrencyBRL(newProduct.assemblyPrice)} onChange={e => handleCurrencyChange(e, (num) => setNewProduct({ ...newProduct, assemblyPrice: num }))} /></div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-1">Descrição</label>
+                  <textarea
+                    rows={3}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-sm uppercase"
+                    value={newProduct.description}
+                    onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
+                    placeholder="Descrição detalhada..."
+                  />
+                </div>
                 <div className="col-span-2 space-y-3">
                   <label className="block text-xs font-black text-slate-400 uppercase mb-1">Links das Imagens (Externas)</label>
                   <div className="grid grid-cols-2 gap-3">

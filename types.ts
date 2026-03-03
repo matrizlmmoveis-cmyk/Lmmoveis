@@ -74,6 +74,7 @@ export interface Product {
   imageUrl?: string;
   imageUrl2?: string;
   supplierId?: string;
+  description?: string;
   images?: ProductImage[];
 }
 

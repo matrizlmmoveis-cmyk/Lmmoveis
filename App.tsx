@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar.tsx';
 import Dashboard from './views/Dashboard.tsx';
+import { SUPPLIERS } from './constants.tsx';
 import Sales from './views/Sales.tsx';
 import Inventory from './views/Inventory.tsx';
 import Logistics from './views/Logistics.tsx';
@@ -17,7 +18,7 @@ import Expedicao from './views/Expedicao.tsx';
 import Tarefas from './views/Tarefas.tsx';
 import ReceiptSettlement from './views/ReceiptSettlement.tsx';
 import { Bell, Search, User, Lock, Store as StoreIcon, AlertCircle, X, Menu, Loader2, LogOut } from 'lucide-react';
-import { Employee, UserRole, Sale, InventoryItem, Store, Product, Customer } from './types.ts';
+import { Employee, UserRole, Sale, InventoryItem, Store, Product, Customer, Supplier } from './types.ts';
 import { CartProvider } from './components/CartContext.tsx';
 import { supabaseService } from './services/supabaseService.ts';
 import { supabase } from './services/supabase.ts';
@@ -37,6 +38,7 @@ const App: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>(SUPPLIERS);
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobilePlatform, setIsMobilePlatform] = useState(false);
@@ -228,7 +230,7 @@ const App: React.FC = () => {
       case 'dashboard': return <Dashboard user={user!} sales={sales} stores={stores} refreshData={initData} />;
       case 'catalog': return <ProductCatalog user={user} inventory={inventory} stores={stores} products={products} setProducts={setProducts} refreshData={initData} />;
       case 'customers': return <Customers customers={customers} setCustomers={setCustomers} refreshData={initData} />;
-      case 'products': return <Products user={user} products={products} inventory={inventory} stores={stores} employees={employees} refreshData={initData} />;
+      case 'products': return <Products user={user} products={products} inventory={inventory} stores={stores} employees={employees} suppliers={suppliers} refreshData={initData} />;
       case 'sales': return <Sales user={user} sales={sales} setSales={setSales} inventory={inventory} setInventory={setInventory} stores={stores} products={products} customers={customers} setCustomers={setCustomers} employees={employees} refreshData={initData} />;
       case 'inventory': return <Inventory inventory={inventory} setInventory={setInventory} products={products} stores={stores} refreshData={initData} />;
       case 'stores': return <Stores stores={stores} setStores={setStores} employees={employees} refreshData={initData} />;
