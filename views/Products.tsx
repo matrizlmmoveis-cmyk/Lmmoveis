@@ -14,7 +14,7 @@ interface ProductsProps {
     refreshData: (force?: boolean) => Promise<void>;
 }
 
-const FALLBACK_IMG = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=500&auto=format&fit=crop';
+const FALLBACK_IMG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='60' fill='%23cbd5e1'%3E📦%3C/text%3E%3C/svg%3E";
 const INITIAL_PAGE_SIZE = 50;
 
 const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, employees, suppliers, refreshData }) => {
@@ -177,6 +177,7 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
                                             <img
                                                 src={product.images?.[0]?.url || product.imageUrl || FALLBACK_IMG}
+                                                loading="lazy"
                                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                                 alt=""
                                                 onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}

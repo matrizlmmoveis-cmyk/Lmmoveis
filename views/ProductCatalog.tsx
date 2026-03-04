@@ -17,7 +17,7 @@ interface ProductCatalogProps {
   refreshData: (force?: boolean) => Promise<void>;
 }
 
-const FALLBACK_IMG = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=500&auto=format&fit=crop';
+const FALLBACK_IMG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='60' fill='%23cbd5e1'%3E📦%3C/text%3E%3C/svg%3E";
 
 const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores, products, setProducts, suppliers, setSuppliers, refreshData }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -195,6 +195,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                 <img
                   src={imgSrc}
                   alt={product.name}
+                  loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
                 />
@@ -467,7 +468,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
               ) : (
                 cart.map(item => (
                   <div key={item.id} className="flex gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                    <img src={getProductImage(item)} className="w-16 h-16 rounded-xl object-cover shrink-0" alt="" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
+                    <img src={getProductImage(item)} loading="lazy" className="w-16 h-16 rounded-xl object-cover shrink-0" alt="" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-[10px] font-black text-slate-900 uppercase truncate">{item.name}</h4>
                       <p className="text-blue-600 font-bold text-xs">R$ {item.price.toFixed(2)}</p>
