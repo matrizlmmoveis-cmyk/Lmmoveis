@@ -310,7 +310,8 @@ export const supabaseService = {
         }
 
         if (endDate) {
-            query = query.lte('date', endDate);
+            // Garante que o filtro inclua todo o dia selecionado (até o último segundo)
+            query = query.lte('date', `${endDate}T23:59:59.999Z`);
         }
 
         const { data, error } = await query;
