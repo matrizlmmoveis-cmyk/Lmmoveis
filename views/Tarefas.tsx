@@ -499,7 +499,7 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSal
                                             )}
                                             {canManageTask(task) && !isConcluida && task.type === 'CANCELAMENTO_PENDENTE' && task.sale_id && (
                                                 <button
-                                                    onClick={() => setStockReturnModal({ task, selectedLocationId: stores[0]?.id || '' })}
+                                                    onClick={() => setStockReturnModal({ task, selectedLocationId: '__ORIGINAL__' })}
                                                     disabled={isProcessing}
                                                     className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-black transition-all disabled:opacity-50 shadow-md shadow-red-500/20"
                                                 >
@@ -679,76 +679,99 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSal
             })()}
 
             {/* Modal de Devolução de Saldo (CANCELAMENTO_PENDENTE) */}
-            {stockReturnModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="px-6 py-4 bg-red-50 border-b border-red-100 flex justify-between items-center">
-                            <div>
-                                <h2 className="text-base font-black text-red-800 uppercase">Autorizar Cancelamento</h2>
-                                <p className="text-[10px] text-red-500 font-medium">Venda Nº {stockReturnModal.task.sale_id} · Escolha o CD para devolver o saldo dos itens</p>
-                            </div>
-                            <button onClick={() => setStockReturnModal(null)} className="p-2 hover:bg-red-100 rounded-full">
-                                <X className="w-4 h-4 text-red-400" />
-                            </button>
-                        </div>
-                        <div className="p-6 space-y-5">
-                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                                <p className="text-xs font-black text-amber-700 uppercase mb-1">Atenção</p>
-                                <p className="text-xs text-amber-700">Ao confirmar, a venda será <strong>cancelada</strong> e cada item da venda terá o saldo <strong>devolvido ao CD selecionado</strong>.</p>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-400 uppercase mb-2">Devolver saldo para o CD / Loja</label>
-                                <select
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm text-slate-700"
-                                    value={stockReturnModal.selectedLocationId}
-                                    onChange={e => setStockReturnModal({ ...stockReturnModal, selectedLocationId: e.target.value })}
-                                >
-                                    <option value="">Selecione o CD destino</option>
-                                    {stores.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name} ({s.type})</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    onClick={() => setStockReturnModal(null)}
-                                    className="flex-1 py-3 text-slate-500 font-bold uppercase text-xs border border-slate-200 rounded-2xl hover:bg-slate-50"
-                                >
-                                    Cancelar
+            {stockReturnModal && (() => {
+                const useOriginal = !stockReturnModal.selectedLocationId || stockReturnModal.selectedLocationId === '__ORIGINAL__';
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+                        <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                            <div className="px-6 py-4 bg-red-50 border-b border-red-100 flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-base font-black text-red-800 uppercase">Autorizar Cancelamento</h2>
+                                    <p className="text-[10px] text-red-500 font-medium">Venda Nº {stockReturnModal.task.sale_id}</p>
+                                </div>
+                                <button onClick={() => setStockReturnModal(null)} className="p-2 hover:bg-red-100 rounded-full">
+                                    <X className="w-4 h-4 text-red-400" />
                                 </button>
-                                <button
-                                    disabled={!stockReturnModal.selectedLocationId || returningStock}
-                                    onClick={async () => {
-                                        if (!stockReturnModal.selectedLocationId) return;
-                                        setReturningStock(true);
-                                        try {
-                                            await supabaseService.restoreInventoryToLocation(stockReturnModal.task.sale_id!, stockReturnModal.selectedLocationId);
-                                            await supabase.from('tasks').update({ status: 'CONCLUIDA', resolved_at: new Date().toISOString(), notes: `Saldo devolvido ao CD: ${stores.find(s => s.id === stockReturnModal.selectedLocationId)?.name}` }).eq('id', stockReturnModal.task.id);
-                                            setTasks(prev => prev.map(t => t.id === stockReturnModal.task.id ? { ...t, status: 'CONCLUIDA', resolved_at: new Date().toISOString() } : t));
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                                    <p className="text-xs font-black text-amber-700 uppercase mb-1">Atenção</p>
+                                    <p className="text-xs text-amber-700">Ao confirmar, a venda será <strong>cancelada</strong> e o estoque de cada item será devolvido conforme a opção escolhida.</p>
+                                </div>
 
-                                            // Sincronizar estado global de vendas para Cancelada
-                                            if (setSales && stockReturnModal.task.sale_id) {
-                                                setSales(prev => prev.map(s => s.id === stockReturnModal.task.sale_id ? { ...s, status: OrderStatus.CANCELED } : s));
+                                {/* Opção 1: Estoque original */}
+                                <button
+                                    onClick={() => setStockReturnModal({ ...stockReturnModal, selectedLocationId: '__ORIGINAL__' })}
+                                    className={`w-full text-left px-4 py-3 rounded-2xl border-2 transition-all ${useOriginal ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                >
+                                    <p className={`text-sm font-black ${useOriginal ? 'text-emerald-700' : 'text-slate-700'}`}>✅ Devolver ao estoque original</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Cada item volta para o CD/loja de onde saiu originalmente</p>
+                                </button>
+
+                                {/* Opção 2: CD específico */}
+                                <div>
+                                    <button
+                                        onClick={() => setStockReturnModal({ ...stockReturnModal, selectedLocationId: stores[0]?.id || '' })}
+                                        className={`w-full text-left px-4 py-3 rounded-2xl border-2 transition-all ${!useOriginal ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                    >
+                                        <p className={`text-sm font-black ${!useOriginal ? 'text-blue-700' : 'text-slate-700'}`}>📦 Devolver a um CD específico</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">Todos os itens vão para um único destino</p>
+                                    </button>
+                                    {!useOriginal && (
+                                        <select
+                                            className="w-full mt-2 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm text-slate-700"
+                                            value={stockReturnModal.selectedLocationId}
+                                            onChange={e => setStockReturnModal({ ...stockReturnModal, selectedLocationId: e.target.value })}
+                                        >
+                                            <option value="">Selecione o CD destino</option>
+                                            {stores.map(s => (
+                                                <option key={s.id} value={s.id}>{s.name} ({s.type})</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                    <button onClick={() => setStockReturnModal(null)} className="flex-1 py-3 text-slate-500 font-bold uppercase text-xs border border-slate-200 rounded-2xl hover:bg-slate-50">
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        disabled={(!useOriginal && !stockReturnModal.selectedLocationId) || returningStock}
+                                        onClick={async () => {
+                                            setReturningStock(true);
+                                            try {
+                                                if (useOriginal) {
+                                                    await supabaseService.restoreInventoryToOriginalLocation(stockReturnModal.task.sale_id!);
+                                                } else {
+                                                    if (!stockReturnModal.selectedLocationId) return;
+                                                    await supabaseService.restoreInventoryToLocation(stockReturnModal.task.sale_id!, stockReturnModal.selectedLocationId);
+                                                }
+                                                const cdName = useOriginal ? 'estoque original' : stores.find(s => s.id === stockReturnModal.selectedLocationId)?.name;
+                                                await supabase.from('tasks').update({ status: 'CONCLUIDA', resolved_at: new Date().toISOString(), notes: `Saldo devolvido ao ${cdName}` }).eq('id', stockReturnModal.task.id);
+                                                setTasks(prev => prev.map(t => t.id === stockReturnModal.task.id ? { ...t, status: 'CONCLUIDA', resolved_at: new Date().toISOString() } : t));
+                                                if (setSales && stockReturnModal.task.sale_id) {
+                                                    setSales(prev => prev.map(s => s.id === stockReturnModal.task.sale_id ? { ...s, status: OrderStatus.CANCELED } : s));
+                                                }
+                                                setStockReturnModal(null);
+                                                showToast('✅ Cancelamento autorizado e saldo devolvido!');
+                                                loadTasks();
+                                            } catch (err) {
+                                                showToast('Erro ao devolver saldo.', 'error');
+                                            } finally {
+                                                setReturningStock(false);
                                             }
-
-                                            setStockReturnModal(null);
-                                            showToast('✅ Cancelamento autorizado e saldo devolvido!');
-                                            loadTasks();
-                                        } catch (err) {
-                                            showToast('Erro ao devolver saldo.', 'error');
-                                        } finally {
-                                            setReturningStock(false);
-                                        }
-                                    }}
-                                    className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-red-100 hover:bg-red-700 disabled:opacity-50"
-                                >
-                                    {returningStock ? 'Processando...' : 'Confirmar Cancelamento'}
-                                </button>
+                                        }}
+                                        className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-red-100 hover:bg-red-700 disabled:opacity-50"
+                                    >
+                                        {returningStock ? 'Processando...' : 'Confirmar Cancelamento'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
+
 
             {/* Modal de Nova Tarefa */}
             {isNewTaskModalOpen && (

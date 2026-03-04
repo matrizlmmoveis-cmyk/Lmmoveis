@@ -895,41 +895,67 @@ export const supabaseService = {
         const origItems: any[] = orig.items || [];
         const propItems: any[] = proposed.items || [];
 
-        // Find removed / reduced items → mark as DEVOLVER in expedition
+        // Find removed / reduced items → delete if PENDENTE (not yet separated), DEVOLVER if already SEPARADO
         for (const origItem of origItems) {
             const propItem = propItems.find((i: any) => i.productId === origItem.productId && i.locationId === origItem.locationId);
             if (!propItem) {
-                // Item completely removed → find sale_item id and mark DEVOLVER
+                // Item completely removed
                 const { data: siData } = await supabase.from('sale_items')
-                    .select('id').eq('sale_id', params.saleId).eq('product_id', origItem.productId).single();
+                    .select('id, dispatch_status').eq('sale_id', params.saleId).eq('product_id', origItem.productId)
+                    .not('dispatch_status', 'in', '("DEVOLVER","DEVOLVIDO")').maybeSingle();
                 if (siData?.id) {
-                    await supabase.from('sale_items').update({ dispatch_status: 'DEVOLVER', quantity: origItem.quantity }).eq('id', siData.id);
+                    if (siData.dispatch_status === 'PENDENTE') {
+                        // Ainda não separado → deletar da expedição e devolver estoque
+                        await supabase.from('sale_items').delete().eq('id', siData.id);
+                        const isVirtual = origItem.locationId === 'ST-ENCOMENDA' || origItem.locationId === 'ST-MOSTRUARIO';
+                        if (!isVirtual && origItem.locationId) {
+                            const { data: invData } = await supabase.from('inventory').select('quantity').eq('product_id', origItem.productId).eq('location_id', origItem.locationId).single();
+                            const newQty = (invData?.quantity || 0) + origItem.quantity;
+                            await supabase.from('inventory').upsert({ product_id: origItem.productId, location_id: origItem.locationId, quantity: newQty }, { onConflict: 'product_id,location_id' });
+                        }
+                    } else {
+                        // Já separado/indisponível → marcar para devolução física no CD
+                        await supabase.from('sale_items').update({ dispatch_status: 'DEVOLVER', quantity: origItem.quantity }).eq('id', siData.id);
+                    }
                 }
                 changes.push({ field: 'item_removed', product_id: origItem.productId, old_value: origItem.quantity, new_value: 0 });
             } else if (propItem.quantity < origItem.quantity) {
-                // Quantity reduced → update and mark DEVOLVER the difference via a separate approach
+                // Quantity reduced
                 const { data: siData } = await supabase.from('sale_items')
-                    .select('id').eq('sale_id', params.saleId).eq('product_id', origItem.productId).single();
+                    .select('id, dispatch_status').eq('sale_id', params.saleId).eq('product_id', origItem.productId)
+                    .not('dispatch_status', 'in', '("DEVOLVER","DEVOLVIDO")').maybeSingle();
                 if (siData?.id) {
-                    // Insert a DEVOLVER entry for the difference
-                    await supabase.from('sale_items').insert({
-                        sale_id: params.saleId,
-                        product_id: origItem.productId,
-                        quantity: origItem.quantity - propItem.quantity,
-                        price: origItem.price,
-                        discount: origItem.discount || 0,
-                        location_id: origItem.locationId,
-                        assembly_required: origItem.assemblyRequired || false,
-                        dispatch_status: 'DEVOLVER',
-                    });
-                    // Update original item quantity
-                    await supabase.from('sale_items').update({ quantity: propItem.quantity, price: propItem.price, discount: propItem.discount || 0 }).eq('id', siData.id);
+                    const diff = origItem.quantity - propItem.quantity;
+                    if (siData.dispatch_status === 'PENDENTE') {
+                        // Ainda não separado → só atualizar a quantidade e devolver diff ao estoque original
+                        await supabase.from('sale_items').update({ quantity: propItem.quantity, price: propItem.price, discount: propItem.discount || 0 }).eq('id', siData.id);
+                        const isVirtual = origItem.locationId === 'ST-ENCOMENDA' || origItem.locationId === 'ST-MOSTRUARIO';
+                        if (!isVirtual && origItem.locationId) {
+                            const { data: invData } = await supabase.from('inventory').select('quantity').eq('product_id', origItem.productId).eq('location_id', origItem.locationId).single();
+                            const newQty = (invData?.quantity || 0) + diff;
+                            await supabase.from('inventory').upsert({ product_id: origItem.productId, location_id: origItem.locationId, quantity: newQty }, { onConflict: 'product_id,location_id' });
+                        }
+                    } else {
+                        // Já separado → criar entrada DEVOLVER p/ devolução física da diferença
+                        await supabase.from('sale_items').insert({
+                            sale_id: params.saleId,
+                            product_id: origItem.productId,
+                            quantity: diff,
+                            price: origItem.price,
+                            discount: origItem.discount || 0,
+                            location_id: origItem.locationId,
+                            assembly_required: origItem.assemblyRequired || false,
+                            dispatch_status: 'DEVOLVER',
+                        });
+                        await supabase.from('sale_items').update({ quantity: propItem.quantity, price: propItem.price, discount: propItem.discount || 0 }).eq('id', siData.id);
+                    }
                 }
                 changes.push({ field: 'item_qty_reduced', product_id: origItem.productId, old_value: origItem.quantity, new_value: propItem.quantity });
             } else if (propItem.price !== origItem.price || propItem.discount !== origItem.discount) {
                 // Only price/discount changed
                 const { data: siData } = await supabase.from('sale_items')
-                    .select('id').eq('sale_id', params.saleId).eq('product_id', origItem.productId).single();
+                    .select('id').eq('sale_id', params.saleId).eq('product_id', origItem.productId)
+                    .not('dispatch_status', 'in', '("DEVOLVER","DEVOLVIDO")').maybeSingle();
                 if (siData?.id) {
                     await supabase.from('sale_items').update({ price: propItem.price, discount: propItem.discount || 0 }).eq('id', siData.id);
                 }
@@ -937,27 +963,38 @@ export const supabaseService = {
             }
         }
 
-        // Find added items → insert as PENDENTE in expedition
+        // Find added items → insert as PENDENTE only if no active row exists (prevents duplicates)
         for (const propItem of propItems) {
             const origItem = origItems.find((i: any) => i.productId === propItem.productId && i.locationId === propItem.locationId);
             if (!origItem) {
-                await supabase.from('sale_items').insert({
-                    sale_id: params.saleId,
-                    product_id: propItem.productId,
-                    quantity: propItem.quantity,
-                    price: propItem.price,
-                    discount: propItem.discount || 0,
-                    location_id: propItem.locationId,
-                    assembly_required: propItem.assemblyRequired || false,
-                    dispatch_status: 'PENDENTE',
-                });
-                // Deduct inventory for new item
-                const { data: invData } = await supabase.from('inventory').select('quantity').eq('product_id', propItem.productId).eq('location_id', propItem.locationId).single();
-                const newQty = Math.max(0, (invData?.quantity || 0) - propItem.quantity);
-                await supabase.from('inventory').upsert({ product_id: propItem.productId, location_id: propItem.locationId, quantity: newQty }, { onConflict: 'product_id,location_id' });
-                changes.push({ field: 'item_added', product_id: propItem.productId, new_value: propItem.quantity });
+                // Check if an active row already exists to prevent duplicate entries in expedition
+                const { data: existingRows } = await supabase.from('sale_items')
+                    .select('id').eq('sale_id', params.saleId).eq('product_id', propItem.productId)
+                    .not('dispatch_status', 'in', '("DEVOLVER","DEVOLVIDO")');
+
+                if (!existingRows || existingRows.length === 0) {
+                    await supabase.from('sale_items').insert({
+                        sale_id: params.saleId,
+                        product_id: propItem.productId,
+                        quantity: propItem.quantity,
+                        price: propItem.price,
+                        discount: propItem.discount || 0,
+                        location_id: propItem.locationId,
+                        assembly_required: propItem.assemblyRequired || false,
+                        dispatch_status: 'PENDENTE',
+                    });
+                    // Deduct inventory for new item (skip virtual locations)
+                    const isVirtual = propItem.locationId === 'ST-ENCOMENDA' || propItem.locationId === 'ST-MOSTRUARIO';
+                    if (!isVirtual && propItem.locationId) {
+                        const { data: invData } = await supabase.from('inventory').select('quantity').eq('product_id', propItem.productId).eq('location_id', propItem.locationId).single();
+                        const newQty = Math.max(0, (invData?.quantity || 0) - propItem.quantity);
+                        await supabase.from('inventory').upsert({ product_id: propItem.productId, location_id: propItem.locationId, quantity: newQty }, { onConflict: 'product_id,location_id' });
+                    }
+                    changes.push({ field: 'item_added', product_id: propItem.productId, new_value: propItem.quantity });
+                }
             }
         }
+
 
         // --- Update payments ---
         const origPayments: any[] = orig.payments || [];
@@ -1036,6 +1073,52 @@ export const supabaseService = {
         await supabase.from('sale_items').update({ dispatch_status: 'DEVOLVIDO' }).eq('id', saleItemId);
         return true;
     },
+
+    // Devolve cada item da venda ao seu location_id ORIGINAL (não um CD único) e cancela a venda
+    async restoreInventoryToOriginalLocation(saleId: string) {
+        // 1. Buscar itens da venda com seus locationIds originais
+        const { data: items, error: fetchErr } = await supabase
+            .from('sale_items')
+            .select('product_id, quantity, location_id')
+            .eq('sale_id', saleId);
+        if (fetchErr) throw fetchErr;
+
+        // 2. Devolver cada item ao seu estoque original (ignorar locais virtuais)
+        for (const item of (items || [])) {
+            const isVirtual = item.location_id === 'ST-ENCOMENDA' || item.location_id === 'ST-MOSTRUARIO';
+            if (isVirtual || !item.location_id) continue;
+
+            const { data: invData } = await supabase
+                .from('inventory')
+                .select('quantity, type')
+                .eq('product_id', item.product_id)
+                .eq('location_id', item.location_id)
+                .single();
+
+            const currentQty = invData?.quantity || 0;
+            const newQty = currentQty + item.quantity;
+
+            await supabase
+                .from('inventory')
+                .upsert({
+                    product_id: item.product_id,
+                    location_id: item.location_id,
+                    quantity: newQty,
+                    ...(invData?.type ? { type: invData.type } : {})
+                }, { onConflict: 'product_id,location_id' });
+        }
+
+        // 3. Marcar venda como Cancelada
+        const { error: saleErr } = await supabase
+            .from('sales')
+            .update({ status: 'Cancelada' })
+            .eq('id', saleId);
+        if (saleErr) throw saleErr;
+        return true;
+    },
 };
+
+
+
 
 
