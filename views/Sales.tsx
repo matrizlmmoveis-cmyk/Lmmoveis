@@ -40,6 +40,16 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [romaneios, setRomaneios] = useState<Romaneio[]>([]);
   const [selectedRomaneioHistory, setSelectedRomaneioHistory] = useState<Sale | null>(null);
 
+  // Lógica de acesso por unidade para colunas de logística
+  const isAdminOrSupervisor = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master';
+  const userStoreName = stores.find(s => s.id === user?.storeId)?.name?.toLowerCase() || '';
+  const isForteUnit = userStoreName.includes('forte');
+  const isSantaCruzUnit = userStoreName.includes('santa cruz') || userStoreName.includes('santa');
+  const isLoteXvUnit = userStoreName.includes('lote xv') || userStoreName.includes('lote');
+  // Forte: vê Motorista + Montador | Santa Cruz + Lote XV: vê só Montador
+  const canSeeMotorista = isAdminOrSupervisor || (user?.role === 'GERENTE' && isForteUnit);
+  const canSeeMontador = isAdminOrSupervisor || (user?.role === 'GERENTE' && (isForteUnit || isSantaCruzUnit || isLoteXvUnit));
+
   useEffect(() => {
     loadRomaneios();
   }, []);
@@ -799,7 +809,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
-                {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && (
+                {isAdminOrSupervisor && (
                   <th className="px-6 py-4 w-10">
                     <button
                       onClick={() => {
@@ -816,54 +826,63 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Cliente</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Unidade</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
-                {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && (
-                  <>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Motorista</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Montador</th>
-                  </>
-                )}
+                {canSeeMotorista && <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Motorista</th>}
+                {canSeeMontador && <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Montador</th>}
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredSales.map(sale => (
-                <tr key={sale.id} className={`hover:bg-slate-50/50 transition-colors ${selectedSaleIds.includes(sale.id) ? 'bg-blue-50/30' : ''}`}>
-                  {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && (
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => setSelectedSaleIds(prev => prev.includes(sale.id) ? prev.filter(id => id !== sale.id) : [...prev, sale.id])}
-                        className={`${selectedSaleIds.includes(sale.id) ? 'text-blue-600' : 'text-slate-300'} transition-colors`}
-                      >
-                        {selectedSaleIds.includes(sale.id) ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
-                      </button>
-                    </td>
-                  )}
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="font-black text-blue-600 text-sm">#{sale.id}</span>
-                      {(sale.assemblyRequired || sale.items?.some(i => i.assemblyRequired)) && (
-                        <span className="text-[9px] font-black text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 uppercase w-fit mt-1">
-                          Montagem
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4"><p className="font-medium text-slate-700 text-sm uppercase">{sale.customerName}</p><p className="text-[10px] text-slate-400">{new Date(sale.date).toLocaleDateString()}</p></td>
-                  <td className="px-6 py-4"><span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{stores.find(s => s.id === sale.storeId)?.name}</span></td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black border uppercase ${sale.status === OrderStatus.CANCELED ? 'bg-red-50 text-red-600 border-red-100' : sale.status === OrderStatus.COMPLETED ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                      {sale.status}
-                    </span>
-                    {sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (
-                      <div className="mt-1">
-                        <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase animate-pulse">
-                          PEDIDO ENTREGUE - AGUARDANDO CONFERÊNCIA
-                        </span>
-                      </div>
+              {filteredSales.map(sale => {
+                const hasAssembly = sale.assemblyRequired || sale.items?.some(i => i.assemblyRequired);
+                const isDelivered = sale.status === OrderStatus.COMPLETED || sale.status === OrderStatus.DELIVERED;
+                const showAguardandoMontagem = isDelivered && hasAssembly;
+                return (
+                  <tr key={sale.id} className={`hover:bg-slate-50/50 transition-colors ${selectedSaleIds.includes(sale.id) ? 'bg-blue-50/30' : ''}`}>
+                    {isAdminOrSupervisor && (
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => setSelectedSaleIds(prev => prev.includes(sale.id) ? prev.filter(id => id !== sale.id) : [...prev, sale.id])}
+                          className={`${selectedSaleIds.includes(sale.id) ? 'text-blue-600' : 'text-slate-300'} transition-colors`}
+                        >
+                          {selectedSaleIds.includes(sale.id) ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                        </button>
+                      </td>
                     )}
-                  </td>
-                  {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && (
-                    <>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="font-black text-blue-600 text-sm">#{sale.id}</span>
+                        {hasAssembly && (
+                          <span className="text-[9px] font-black text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 uppercase w-fit mt-1">
+                            Montagem
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4"><p className="font-medium text-slate-700 text-sm uppercase">{sale.customerName}</p><p className="text-[10px] text-slate-400">{new Date(sale.date).toLocaleDateString()}</p></td>
+                    <td className="px-6 py-4"><span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{stores.find(s => s.id === sale.storeId)?.name}</span></td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        {/* Tag principal de status */}
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black border uppercase w-fit ${sale.status === OrderStatus.CANCELED ? 'bg-red-50 text-red-600 border-red-100' :
+                          (sale.status === OrderStatus.COMPLETED || sale.status === OrderStatus.DELIVERED) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                            'bg-blue-50 text-blue-600 border-blue-100'
+                          }`}>
+                          {sale.status}
+                        </span>
+                        {/* Segunda tag: Aguardando Montagem */}
+                        {showAguardandoMontagem && (
+                          <span className="px-2 py-1 rounded-lg text-[10px] font-black border uppercase w-fit bg-amber-50 text-amber-700 border-amber-200">
+                            Aguardando Montagem
+                          </span>
+                        )}
+                        {sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (
+                          <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase animate-pulse">
+                            AGUARDANDO CONFERÊNCIA
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    {canSeeMotorista && (
                       <td className="px-6 py-4">
                         <select
                           className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-blue-500"
@@ -874,6 +893,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           {employees.filter(e => e.role === 'MOTORISTA').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                         </select>
                       </td>
+                    )}
+                    {canSeeMontador && (
                       <td className="px-6 py-4">
                         <select
                           className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-emerald-500"
@@ -884,72 +905,88 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           {employees.filter(e => e.role === 'MONTADOR').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                         </select>
                       </td>
-                    </>
-                  )}
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => setSelectedRomaneioHistory(sale)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Histórico de Logística">
-                        <Calendar className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => setSelectedSale(sale)} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-black uppercase"><Eye className="w-4 h-4" /> Ver</button>
-                      {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (
-                        <button onClick={() => { const p = sale.payments.find(p => p.status === 'AGUARDANDO_ACERTO'); if (p) handleConfirmPayment(sale.id, p.amount); }} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black uppercase shadow-sm"><DollarSign className="w-4 h-4" /> Receber</button>
-                      )}
-                      {/* Botão Pago na Loja para gerentes — pagamento de entrega recebido no balcão */}
-                      {sale.payments?.some(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO')) &&
-                        (user?.role === 'GERENTE' || user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master') && (
-                          <button
-                            onClick={async () => {
-                              const p = sale.payments.find(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));
-                              if (!p) return;
-                              if (!window.confirm(`Confirmar que o cliente pagou R$ ${p.amount.toFixed(2)} na loja? O motorista NÃO deve cobrar na entrega.`)) return;
-                              try {
-                                await supabaseService.markPaymentPaidAtStore(sale.id, p.amount);
-                                setSales(prev => prev.map(s => s.id === sale.id ? { ...s, payments: s.payments.map(pay => pay.method === 'Entrega' && pay.amount === p.amount ? { ...pay, status: 'PAGO_EM_LOJA' as any } : pay) } : s));
-                              } catch { alert('Erro ao registrar pagamento na loja.'); }
-                            }}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-xs font-black uppercase border border-violet-200"
-                          >
-                            <DollarSign className="w-4 h-4" /> Pago na Loja
-                          </button>
+                    )}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => setSelectedRomaneioHistory(sale)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Histórico de Logística">
+                          <Calendar className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setSelectedSale(sale)} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-black uppercase"><Eye className="w-4 h-4" /> Ver</button>
+                        {/* Botão Retirada — cliente retira na loja sem precisar de entrega */}
+                        {(user?.role === 'GERENTE' || isAdminOrSupervisor) &&
+                          sale.status === OrderStatus.PENDING && (
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm(`Confirmar RETIRADA da venda #${sale.id}? O cliente está retirando o produto na loja.`)) return;
+                                try {
+                                  await supabaseService.updateSale(sale.id, { status: OrderStatus.COMPLETED });
+                                  setSales(prev => prev.map(s => s.id === sale.id ? { ...s, status: OrderStatus.COMPLETED } : s));
+                                } catch { alert('Erro ao registrar retirada.'); }
+                              }}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg text-xs font-black uppercase border border-teal-200"
+                            >
+                              <CheckCircle2 className="w-4 h-4" /> Retirada
+                            </button>
+                          )}
+                        {isAdminOrSupervisor && sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (
+                          <button onClick={() => { const p = sale.payments.find(p => p.status === 'AGUARDANDO_ACERTO'); if (p) handleConfirmPayment(sale.id, p.amount); }} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black uppercase shadow-sm"><DollarSign className="w-4 h-4" /> Receber</button>
                         )}
-                      {sale.payments?.some(p => p.method === 'Entrega' && p.status === 'PAGO_EM_LOJA') && (
-                        <span className="text-[9px] font-black text-violet-700 bg-violet-50 px-2 py-1 rounded border border-violet-200 uppercase">Pago na Loja</span>
-                      )}
-                      {/* Botão Editar Venda */}
-                      {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || (user?.role === 'GERENTE' && sale.storeId === user?.storeId)) &&
-                        sale.status !== OrderStatus.CANCELED &&
-                        sale.status !== OrderStatus.CANCEL_PENDING &&
-                        sale.status !== OrderStatus.COMPLETED &&
-                        sale.status !== OrderStatus.EDIT_PENDING && (
-                          <button
-                            onClick={() => setEditRequest({
-                              sale,
-                              editedItems: sale.items ? [...sale.items] : [],
-                              editedPayments: sale.payments ? [...sale.payments] : [],
-                              justification: '',
-                              productSearch: '',
-                              submitting: false
-                            })}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-black uppercase border border-amber-200"
-                          >
-                            ✏️ Editar
-                          </button>
+                        {/* Botão Pago na Loja para gerentes — pagamento de entrega recebido no balcão */}
+                        {sale.payments?.some(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO')) &&
+                          (user?.role === 'GERENTE' || isAdminOrSupervisor) && (
+                            <button
+                              onClick={async () => {
+                                const p = sale.payments.find(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));
+                                if (!p) return;
+                                if (!window.confirm(`Confirmar que o cliente pagou R$ ${p.amount.toFixed(2)} na loja? O motorista NÃO deve cobrar na entrega.`)) return;
+                                try {
+                                  await supabaseService.markPaymentPaidAtStore(sale.id, p.amount);
+                                  setSales(prev => prev.map(s => s.id === sale.id ? { ...s, payments: s.payments.map(pay => pay.method === 'Entrega' && pay.amount === p.amount ? { ...pay, status: 'PAGO_EM_LOJA' as any } : pay) } : s));
+                                } catch { alert('Erro ao registrar pagamento na loja.'); }
+                              }}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-xs font-black uppercase border border-violet-200"
+                            >
+                              <DollarSign className="w-4 h-4" /> Pago na Loja
+                            </button>
+                          )}
+                        {sale.payments?.some(p => p.method === 'Entrega' && p.status === 'PAGO_EM_LOJA') && (
+                          <span className="text-[9px] font-black text-violet-700 bg-violet-50 px-2 py-1 rounded border border-violet-200 uppercase">Pago na Loja</span>
                         )}
-                      {sale.status === OrderStatus.EDIT_PENDING && (
-                        <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200 uppercase">Edição Pendente</span>
-                      )}
-                      {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || (user?.role === 'GERENTE' && sale.storeId === user?.storeId)) &&
-                        sale.status !== OrderStatus.CANCELED && sale.status !== OrderStatus.CANCEL_PENDING && (
-                          <button onClick={() => setCancelRequest({ saleId: sale.id, justification: '' })} className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-black uppercase"><Trash2 className="w-4 h-4" /> Cancelar</button>
+                        {/* Botão Editar Venda */}
+                        {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || (user?.role === 'GERENTE' && sale.storeId === user?.storeId)) &&
+                          sale.status !== OrderStatus.CANCELED &&
+                          sale.status !== OrderStatus.CANCEL_PENDING &&
+                          sale.status !== OrderStatus.COMPLETED &&
+                          sale.status !== OrderStatus.EDIT_PENDING && (
+                            <button
+                              onClick={() => setEditRequest({
+                                sale,
+                                editedItems: sale.items ? [...sale.items] : [],
+                                editedPayments: sale.payments ? [...sale.payments] : [],
+                                justification: '',
+                                productSearch: '',
+                                submitting: false
+                              })}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-black uppercase border border-amber-200"
+                            >
+                              ✏️ Editar
+                            </button>
+                          )}
+                        {sale.status === OrderStatus.EDIT_PENDING && (
+                          <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200 uppercase">Edição Pendente</span>
                         )}
-                      {sale.status === OrderStatus.CANCEL_PENDING && (
-                        <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-100 uppercase">Aguard. Autorização</span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || (user?.role === 'GERENTE' && sale.storeId === user?.storeId)) &&
+                          sale.status !== OrderStatus.CANCELED && sale.status !== OrderStatus.CANCEL_PENDING && (
+                            <button onClick={() => setCancelRequest({ saleId: sale.id, justification: '' })} className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-black uppercase"><Trash2 className="w-4 h-4" /> Cancelar</button>
+                          )}
+                        {sale.status === OrderStatus.CANCEL_PENDING && (
+                          <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-100 uppercase">Aguard. Autorização</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
