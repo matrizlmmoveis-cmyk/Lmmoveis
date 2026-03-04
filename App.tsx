@@ -162,6 +162,16 @@ const App: React.FC = () => {
     else setActiveView('dashboard');
   };
 
+  // Redirecionar usuários de campo/vendas que caem no dashboard por padrão (ex: ao atualizar F5)
+  useEffect(() => {
+    if (user && activeView === 'dashboard') {
+      const fieldRoles = ['MOTORISTA', 'MONTADOR', 'CONFERENTE', 'VENDEDOR'];
+      if (fieldRoles.includes(user.role)) {
+        redirectByRole(user as Employee);
+      }
+    }
+  }, [user, activeView]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
