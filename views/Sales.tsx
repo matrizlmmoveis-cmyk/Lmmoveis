@@ -390,35 +390,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         });
       }
 
-      // Criar avisos automáticos para itens vendidos de outra loja
-      // EXCETO: CD Norte (W-NORTE), Mostruário (ST-MOSTRUARIO) e Encomenda (ST-ENCOMENDA)
-      const EXCLUDED_LOCATIONS = ['W-NORTE', 'ST-MOSTRUARIO', 'ST-ENCOMENDA'];
-      const crossStoreItems = sale.items.filter(item =>
-        item.locationId &&
-        item.locationId !== sale.storeId &&
-        !EXCLUDED_LOCATIONS.includes(item.locationId)
-      );
-      const saleStoreName = stores.find(s => s.id === sale.storeId)?.name || sale.storeId;
-      if (crossStoreItems.length > 0) {
-        const notificationPromises = crossStoreItems.map(item => {
-          const productName = products.find(p => p.id === item.productId)?.name || item.productId;
-          const sourceStoreName = stores.find(s => s.id === item.locationId)?.name || item.locationId;
-          return supabaseService.createTask({
-            title: `Produto vendido de ${sourceStoreName}`,
-            description: `A loja "${saleStoreName}" vendeu ${item.quantity}x "${productName}" do estoque de "${sourceStoreName}".\nCliente: ${sale.customerName}\nVenda Nº ${sale.id}`,
-            type: 'AVISO_SAIDA_ESTOQUE',
-            priority: 'ALTA',
-            status: 'ABERTA',
-            created_by: user?.name || 'Sistema',
-            assigned_to: 'GERENTE',
-            store_id: item.locationId,
-            source_store_id: item.locationId,
-            sale_id: sale.id,
-            product_name: productName,
-          });
-        });
-        await Promise.all(notificationPromises);
-      }
+      // Avisos automáticos de cross-store removidos:
+      // Tarefas são criadas SOMENTE para itens de Encomenda Avulsa (ST-ENCOMENDA)
 
       setSales([sale, ...sales]);
       setInventory(prev => {
