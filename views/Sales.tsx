@@ -121,10 +121,9 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     setNewSale(prev => {
       const updatedItems = prev.items?.map(item => {
         if (item.productId === productId) {
-          const product = products.find(p => p.id === productId);
-          if (!product) return item;
-          const discount = ((product.price - newPrice) / product.price) * 100;
-          return { ...item, price: newPrice, discount: Math.max(0, discount) };
+          // Quando o vendedor digita um preço, esse valor vira a nova base (originalPrice)
+          // e o desconto é zerado (o preço informado já é o preço final)
+          return { ...item, price: newPrice, originalPrice: newPrice, discount: 0 };
         }
         return item;
       });
@@ -136,9 +135,9 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     setNewSale(prev => {
       const updatedItems = prev.items?.map(item => {
         if (item.productId === productId) {
-          const product = products.find(p => p.id === productId);
-          if (!product) return item;
-          const newPrice = product.price * (1 - newDiscount / 100);
+          // Desconto calculado sobre o valor informado (originalPrice), não o preço do cadastro
+          const basePrice = item.originalPrice || item.price;
+          const newPrice = basePrice * (1 - newDiscount / 100);
           return { ...item, discount: newDiscount, price: newPrice };
         }
         return item;
