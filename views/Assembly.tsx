@@ -21,12 +21,16 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
     (user?.id === 'admin' || s.assignedAssemblerId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
   );
 
-  // Histórico: montagens concluídas
+  // Histórico: montagens concluídas (ordenado pela data de conclusão da montagem)
   const myHistory = sales.filter(s =>
     s.assemblyRequired &&
     s.status === OrderStatus.COMPLETED &&
     (user?.id === 'admin' || s.assignedAssemblerId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
-  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  ).sort((a, b) => {
+    const dateA = a.assemblyCompletedAt || a.date;
+    const dateB = b.assemblyCompletedAt || b.date;
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
+  });
 
   const calculateTotalAssembly = (sale: Sale) => {
     return sale.items.reduce((acc, item) => {
@@ -257,7 +261,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
             <p className="text-slate-500 text-sm mt-1 uppercase font-bold">Nenhuma ordem liberada para montagem no momento.</p>
           </div>
         ) : (
-          myTasks.map((task) => <TaskCard key={task.id} task={task} />)
+          myTasks.map((task) => <div key={task.id}><TaskCard task={task} /></div>)
         )}
       </div>
 
@@ -271,7 +275,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
           {myHistory.length === 0 ? (
             <p className="text-xs text-slate-400 font-bold text-center py-6">Nenhuma montagem concluída ainda.</p>
           ) : (
-            myHistory.map((task) => <TaskCard key={task.id} task={task} />)
+            myHistory.map((task) => <div key={task.id}><TaskCard task={task} /></div>)
           )}
         </div>
       )}

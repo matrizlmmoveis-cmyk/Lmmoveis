@@ -314,6 +314,8 @@ export const supabaseService = {
             assemblyRequired: s.assembly_required,
             assignedDriverId: s.assigned_driver_id,
             assignedAssemblerId: s.assigned_assembler_id,
+            assemblyCompletedAt: s.assembly_completed_at || null,
+            deliveryDate: s.delivery_date || null,
             items: (s.items || []).map((i: any) => ({
                 productId: i.product_id,
                 quantity: i.quantity,
@@ -416,6 +418,9 @@ export const supabaseService = {
 
         if (status === 'Entregue' || status === 'Entregue - Aguardando Montagem') {
             payload.delivery_date = new Date().toISOString().split('T')[0];
+        }
+        if (status === OrderStatus.COMPLETED) {
+            payload.assembly_completed_at = new Date().toISOString();
         }
 
         // --- EXCESSO DE USO FIX: Mudar Base64 para Storage ---

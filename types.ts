@@ -145,4 +145,5 @@ export interface Sale {
   pixCode?: string;
   deliverySignature?: string; // Assinatura em Base64
   deliveryPhoto?: string;     // Foto em Base64 (baixa resolução)
+  assemblyCompletedAt?: string; // Data/hora de conclusão da montagem
 }
