@@ -8,7 +8,7 @@ interface AssemblyProps {
   sales: Sale[];
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   products: Product[];
-  refreshData: (force?: boolean) => Promise<void>;
+  refreshData: (scope?: any, start?: string, end?: string) => Promise<void>;
 }
 
 const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, refreshData }) => {
@@ -49,7 +49,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
     try {
       await supabaseService.updateSaleStatus(id, OrderStatus.COMPLETED);
       setSales(prev => prev.map(s =>
-        s.id === id ? { ...s, status: OrderStatus.COMPLETED } : s
+        s.id === id ? { ...s, status: OrderStatus.COMPLETED, assemblyCompletedAt: new Date().toISOString() } : s
       ));
     } catch (err) {
       console.error("Erro ao concluir montagem:", err);
@@ -221,61 +221,71 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
   };
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-left duration-500">
+    <div className="space-y-6 animate-in slide-in-from-left duration-500 pb-20">
       <header className="bg-emerald-900 p-6 rounded-[2rem] text-white shadow-xl">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-black uppercase tracking-tight">Agenda de Montagem</h1>
+            <h1 className="text-2xl font-black uppercase tracking-tight">Rota de Montagem</h1>
             <div className="flex items-center gap-2 mt-1">
-              <p className="text-emerald-400 text-xs font-bold uppercase">Ganhos Estimados: R$ {myTasks.reduce((a, b) => a + calculateTotalAssembly(b), 0).toFixed(2)}</p>
+              <p className="text-emerald-400 text-xs font-bold uppercase">Status: Em Operação</p>
               <button
                 onClick={() => refreshData('sales')}
                 className="bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
               >
-                <Wrench className="w-3 h-3" /> Atualizar
+                <Clock className="w-3 h-3" /> Atualizar
               </button>
               <button
                 onClick={handlePrintAgenda}
                 className="bg-white text-emerald-900 hover:bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
               >
-                <Printer className="w-3 h-3" /> Imprimir Agenda
+                <Printer className="w-3 h-3" /> Imprimir
               </button>
               <button
-                onClick={() => setShowHistory(v => !v)}
-                className="bg-emerald-700 hover:bg-emerald-600 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
+                onClick={() => setShowHistory(!showHistory)}
+                className={`px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1 ${showHistory ? 'bg-emerald-500 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
               >
-                <History className="w-3 h-3" /> Histórico ({myHistory.length})
+                <History className="w-3 h-3" /> {showHistory ? 'Ver Rota' : 'Histórico'}
               </button>
             </div>
           </div>
           <Wrench className="w-10 h-10 text-white/20" />
         </div>
+        <div className="grid grid-cols-2 gap-4 mt-6">
+          <div className="bg-white/10 p-4 rounded-2xl">
+            <p className="text-[10px] font-black text-white/40 uppercase">Pendentes</p>
+            <p className="text-2xl font-black">{myTasks.length}</p>
+          </div>
+          <div className="bg-white/10 p-4 rounded-2xl">
+            <p className="text-[10px] font-black text-white/40 uppercase">Concluídas</p>
+            <p className="text-2xl font-black">{myHistory.length}</p>
+          </div>
+        </div>
       </header>
 
-      {/* Lista de tarefas pendentes */}
-      <div className="space-y-4">
-        {myTasks.length === 0 ? (
-          <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-100 shadow-sm">
-            <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-            <p className="text-slate-900 font-black text-xl uppercase">Tudo Montado!</p>
-            <p className="text-slate-500 text-sm mt-1 uppercase font-bold">Nenhuma ordem liberada para montagem no momento.</p>
-          </div>
-        ) : (
-          myTasks.map((task) => <div key={task.id}><TaskCard task={task} /></div>)
-        )}
-      </div>
-
-      {/* Histórico de montagens concluídas */}
-      {showHistory && (
+      {showHistory ? (
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 px-2">
             <History className="w-5 h-5 text-slate-400" />
-            <h2 className="text-sm font-black text-slate-500 uppercase tracking-widest">Histórico de Montagens Concluídas</h2>
+            <h2 className="text-sm font-black text-slate-500 uppercase tracking-widest">Histórico de Montagens</h2>
           </div>
           {myHistory.length === 0 ? (
-            <p className="text-xs text-slate-400 font-bold text-center py-6">Nenhuma montagem concluída ainda.</p>
+            <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-100 shadow-sm">
+              <p className="text-slate-400 font-bold uppercase text-xs">Nenhuma montagem no histórico.</p>
+            </div>
           ) : (
-            myHistory.map((task) => <div key={task.id}><TaskCard task={task} /></div>)
+            myHistory.map(task => <div key={task.id}><TaskCard task={task} /></div>)
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {myTasks.length === 0 ? (
+            <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-100 shadow-sm">
+              <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+              <p className="text-slate-900 font-black text-xl uppercase">Tudo Montado!</p>
+              <p className="text-slate-500 text-sm mt-1 uppercase font-bold">Nenhuma ordem liberada para montagem.</p>
+            </div>
+          ) : (
+            myTasks.map(task => <div key={task.id}><TaskCard task={task} /></div>)
           )}
         </div>
       )}

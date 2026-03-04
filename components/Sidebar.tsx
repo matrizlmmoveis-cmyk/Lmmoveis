@@ -31,7 +31,6 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, role, onLogout }) => {
   const allItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'SUPERVISOR', 'MASTER', 'GERENTE'] },
-    { id: 'catalog', label: 'Catálogo', icon: Grid, roles: ['ADMIN', 'VENDEDOR', 'SUPERVISOR', 'MASTER', 'GERENTE'] },
     { id: 'customers', label: 'Clientes', icon: Users, roles: ['ADMIN', 'VENDEDOR', 'GERENTE', 'SUPERVISOR', 'MASTER'] },
     { id: 'products', label: 'Produtos', icon: Box, roles: ['ADMIN', 'VENDEDOR', 'GERENTE', 'SUPERVISOR', 'MASTER'] },
     { id: 'sales', label: 'Vendas', icon: ShoppingCart, roles: ['ADMIN', 'VENDEDOR', 'GERENTE', 'SUPERVISOR', 'MASTER'] },

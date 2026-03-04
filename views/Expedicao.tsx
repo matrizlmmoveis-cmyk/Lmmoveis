@@ -239,7 +239,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                     <p className="text-slate-500 text-sm mt-0.5">Separação de itens para entrega — CD Norte</p>
                 </div>
                 <button
-                    onClick={() => { loadItems(); loadDevolutions(); refreshData(true); }}
+                    onClick={() => { loadItems(); loadDevolutions(); refreshData('sales'); }}
                     disabled={loading}
                     className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
                 >

@@ -8,7 +8,6 @@ import Inventory from './views/Inventory.tsx';
 import Logistics from './views/Logistics.tsx';
 import Assembly from './views/Assembly.tsx';
 import Reports from './views/Reports.tsx';
-import ProductCatalog from './views/ProductCatalog.tsx';
 import Stores from './views/Stores.tsx';
 import Customers from './views/Customers.tsx';
 import EmployeesView from './views/Employees.tsx';
@@ -69,9 +68,9 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // scope: 'all' | 'sales' | 'inventory' | 'static'
+  // scope: 'all' | 'sales' | 'inventory' | 'static' | 'customers'
   // force = ignora cache localStorage para dados estáticos
-  const initData = async (scope: boolean | 'all' | 'sales' | 'inventory' | 'static' = 'all') => {
+  const initData = async (scope: boolean | 'all' | 'sales' | 'inventory' | 'static' | 'customers' = 'all', startDate?: string, endDate?: string) => {
     // Normaliza: chamadas legadas passavam true/false como primeiro argumento
     const resolvedScope = scope === true || scope === false ? 'all' : scope;
     const bypassCache = scope === true; // force=true => bypass cache
@@ -82,8 +81,7 @@ const App: React.FC = () => {
 
     try {
       if (resolvedScope === 'sales') {
-        // Só recarrega vendas — mais comum nos botões de Atualizar
-        const sItems = await supabaseService.getSales();
+        const sItems = await supabaseService.getSales(startDate, endDate);
         setSales(sItems);
         return;
       }
@@ -94,26 +92,33 @@ const App: React.FC = () => {
         return;
       }
 
-      // Carregamento completo (login ou scope 'all')
-      // Employees: sempre busca (necessário para login)
-      const eItems = await supabaseService.getEmployees(bypassCache);
-      setEmployees(eItems);
-
-      if (user || bypassCache) {
-        const [sItems, iItems, stItems, pItems, cItems, supItems] = await Promise.all([
-          supabaseService.getSales(),
-          supabaseService.getInventory(),
-          supabaseService.getStores(bypassCache),
-          supabaseService.getProducts(bypassCache),
-          supabaseService.getCustomers(),
-          supabaseService.getSuppliers(bypassCache)
-        ]);
-        setSales(sItems);
-        setInventory(iItems);
-        setStores(stItems);
-        setProducts(pItems);
+      if (resolvedScope === 'customers') {
+        const cItems = await supabaseService.getCustomers();
         setCustomers(cItems);
-        setSuppliers(supItems);
+        return;
+      }
+
+      // Carregamento completo (login ou scope 'all')
+      if (resolvedScope === 'all' || resolvedScope === 'static') {
+        const eItems = await supabaseService.getEmployees(bypassCache);
+        setEmployees(eItems);
+
+        if (user || bypassCache) {
+          const [sItems, iItems, stItems, pItems, cItems, supItems] = await Promise.all([
+            supabaseService.getSales(startDate, endDate),
+            supabaseService.getInventory(),
+            supabaseService.getStores(bypassCache),
+            supabaseService.getProducts(bypassCache),
+            supabaseService.getCustomers(),
+            supabaseService.getSuppliers(bypassCache)
+          ]);
+          setSales(sItems);
+          setInventory(iItems);
+          setStores(stItems);
+          setProducts(pItems);
+          setCustomers(cItems);
+          setSuppliers(supItems);
+        }
       }
     } catch (err) {
       console.error("Erro ao carregar dados do Supabase:", err);
@@ -267,7 +272,6 @@ const App: React.FC = () => {
 
     switch (activeView) {
       case 'dashboard': return <Dashboard user={user!} sales={sales} stores={stores} refreshData={initData} />;
-      case 'catalog': return <ProductCatalog user={user} inventory={inventory} stores={stores} products={products} setProducts={setProducts} suppliers={suppliers} setSuppliers={setSuppliers} refreshData={initData} />;
       case 'customers': return <Customers customers={customers} setCustomers={setCustomers} refreshData={initData} />;
       case 'products': return <Products user={user} products={products} inventory={inventory} stores={stores} employees={employees} suppliers={suppliers} refreshData={initData} />;
       case 'sales': return <Sales user={user} sales={sales} setSales={setSales} inventory={inventory} setInventory={setInventory} stores={stores} products={products} customers={customers} setCustomers={setCustomers} employees={employees} refreshData={initData} />;

@@ -29,7 +29,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [startDate, setStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
   const [isBulkPrinting, setIsBulkPrinting] = useState(false);
@@ -164,7 +164,9 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
 
   useEffect(() => {
     setSelectedSaleIds([]);
-  }, [startDate, endDate, statusFilter, searchTerm]);
+    // Ao mudar o filtro de data em Vendas, buscamos os dados específicos no banco
+    refreshData('sales', startDate, endDate);
+  }, [startDate, endDate]);
 
   const handleAddItem = (product: Product, isMostruario: boolean = false, isEncomenda: boolean = false) => {
     const locId = isMostruario ? 'ST-MOSTRUARIO' : (isEncomenda ? 'ST-ENCOMENDA' : (inventory.find(i => i.productId === product.id && i.locationId === newSale.storeId && i.quantity > 0)?.locationId || inventory.find(i => i.productId === product.id && i.quantity > 0)?.locationId || newSale.storeId || stores[0]?.id || ''));
@@ -402,7 +404,10 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       // Avisos automáticos de cross-store removidos:
       // Tarefas são criadas SOMENTE para itens de Encomenda Avulsa (ST-ENCOMENDA)
 
-      setSales([sale, ...sales]);
+      // Otimização: Em vez de setSales(local), vamos forçar um refresh dos últimos 7 dias
+      // para garantir que o estado local esteja 100% sincronizado com os IDs e timestamps do banco
+      await refreshData('sales', startDate, endDate);
+      await refreshData('inventory');
       setInventory(prev => {
         const updated = [...prev];
         sale.items.forEach(item => {
@@ -769,11 +774,19 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => refreshData(true)}
+            onClick={() => refreshData('sales', startDate, endDate)}
             className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all shadow-sm"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Atualizar</span>
+            <span>Atualizar Vendas</span>
+          </button>
+          <button
+            onClick={() => refreshData('static', true)}
+            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all shadow-sm"
+            title="Recarregar Produtos, Lojas e Fornecedores"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Sincronizar Cadastros</span>
           </button>
           <button onClick={() => setIsCreating(true)} className="bg-slate-900 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-lg shadow-slate-200 transition-all active:scale-95"><Plus className="w-5 h-5" /> Nova Venda</button>
         </div>

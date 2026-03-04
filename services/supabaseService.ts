@@ -3,10 +3,10 @@ import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer, 
 
 // ─── Cache localStorage com TTL ───────────────────────────────────────────────
 const CACHE_TTL: Record<string, number> = {
-    products: 30 * 60 * 1000,   // 30 minutos
-    stores: 30 * 60 * 1000,     // 30 minutos
-    suppliers: 30 * 60 * 1000,  // 30 minutos
-    employees: 10 * 60 * 1000,  // 10 minutos
+    products: 12 * 60 * 60 * 1000,   // 12 horas
+    stores: 12 * 60 * 60 * 1000,     // 12 horas
+    suppliers: 12 * 60 * 60 * 1000,  // 12 horas
+    employees: 60 * 60 * 1000,       // 1 hora (employees mudam mais que produtos)
 };
 
 function cacheGet<T>(key: string): T | null {
@@ -290,11 +290,30 @@ export const supabaseService = {
     },
 
     // SALES
-    async getSales() {
-        const { data, error } = await supabase
+    async getSales(startDate?: string, endDate?: string) {
+        let query = supabase
             .from('sales')
             .select('*, items:sale_items(*), payments:sale_payments(*)')
             .order('created_at', { ascending: false });
+
+        if (startDate) {
+            query = query.gte('date', startDate);
+        } else {
+            // Padrão: Últimos 7 dias OU status não finalizado
+            const defaultDate = new Date();
+            defaultDate.setDate(defaultDate.getDate() - 7);
+            const dateStr = defaultDate.toISOString().split('T')[0];
+
+            // Queremos: (date >= defaultDate) OR (status NOT IN (COMPLETED, CANCELED))
+            // No Supabase JS, filtros complexos OR são feitos com .or()
+            query = query.or(`date.gte.${dateStr},status.not.in.("${OrderStatus.COMPLETED}","${OrderStatus.CANCELED}")`);
+        }
+
+        if (endDate) {
+            query = query.lte('date', endDate);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         return (data || []).map((s: any) => ({
