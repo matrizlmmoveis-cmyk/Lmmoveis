@@ -108,17 +108,24 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
   const handleFinalizeDelivery = async () => {
     if (!activeDeliveryId) return;
 
+    const sale = sales.find(s => s.id === activeDeliveryId);
+    if (!sale) return;
+
+    // Verificar se algum item da venda requer montagem
+    const hasAssembly = sale.items.some(item => item.assemblyRequired);
+    const nextStatus = hasAssembly ? OrderStatus.DELIVERED : OrderStatus.COMPLETED;
+
     const signatureData = canvasRef.current?.toDataURL();
 
     try {
-      await supabaseService.updateSaleStatus(activeDeliveryId, OrderStatus.DELIVERED, {
+      await supabaseService.updateSaleStatus(activeDeliveryId, nextStatus, {
         deliverySignature: signatureData,
         deliveryPhoto: photo || undefined
       });
 
       setSales(prev => prev.map(s =>
         s.id === activeDeliveryId
-          ? { ...s, status: OrderStatus.DELIVERED, deliverySignature: signatureData, deliveryPhoto: photo || undefined }
+          ? { ...s, status: nextStatus, deliverySignature: signatureData, deliveryPhoto: photo || undefined }
           : s
       ));
 
