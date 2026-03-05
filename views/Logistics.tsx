@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Truck, MapPin, CheckCircle2, Navigation, Package, Camera, X, Check, Eraser, Phone, MessageSquare, Printer } from 'lucide-react';
+import { Truck, MapPin, CheckCircle2, Navigation, Package, Camera, X, Check, Eraser, Phone, MessageSquare, Printer, History } from 'lucide-react';
 import { OrderStatus, Sale, Employee, Product, Store } from '../types.ts';
 import { supabaseService } from '../services/supabaseService';
 
@@ -13,7 +13,7 @@ interface LogisticsProps {
   refreshData: (force?: boolean) => Promise<void>;
 }
 
-const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, stores, employees, refreshData }) => {
+const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, products = [], stores = [], employees = [], refreshData }) => {
   const [activeDeliveryId, setActiveDeliveryId] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -26,16 +26,16 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
   const [isDrawing, setIsDrawing] = useState(false);
 
   // Entregas ativas (PENDING ou SHIPPED)
-  const myDeliveries = sales.filter(s =>
+  const myDeliveries = (sales || []).filter(s =>
     (s.status === OrderStatus.PENDING || s.status === OrderStatus.SHIPPED) &&
-    (user?.id === 'admin' || s.assignedDriverId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
+    (user?.id === 'admin' || s.assignedDriverId === user?.id || (user && 'role' in user && user.role === 'GERENTE' && s.storeId === user.storeId))
   );
 
   // Histórico de entregas (DELIVERED, ASSEMBLY_PENDING, COMPLETED)
-  const myHistory = sales.filter(s =>
+  const myHistory = (sales || []).filter(s =>
     (s.status === OrderStatus.DELIVERED || s.status === OrderStatus.COMPLETED || s.status === OrderStatus.ASSEMBLY_PENDING) &&
-    (user?.id === 'admin' || s.assignedDriverId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
-  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    (user?.id === 'admin' || s.assignedDriverId === user?.id || (user && 'role' in user && user.role === 'GERENTE' && s.storeId === user.storeId))
+  ).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
   // Lógica da Câmera
   useEffect(() => {
@@ -57,7 +57,6 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
     if (videoRef.current && photoCanvasRef.current) {
       const video = videoRef.current;
       const canvas = photoCanvasRef.current;
-      // Resolução bem baixa como solicitado (ex: 320x240)
       const width = 320;
       const height = 240;
       canvas.width = width;
@@ -65,7 +64,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.5); // 0.5 qualidade
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
         setPhoto(dataUrl);
         setShowCamera(false);
       }
@@ -73,6 +72,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
   };
 
   const calculateAmountToReceive = (sale: Sale) => {
+    if (!sale.payments) return 0;
     return sale.payments
       .filter(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'))
       .reduce((acc, p) => acc + p.amount, 0);
@@ -126,8 +126,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
     const sale = sales.find(s => s.id === activeDeliveryId);
     if (!sale) return;
 
-    // Verificar se algum item da venda requer montagem
-    const hasAssembly = sale.items.some(item => item.assemblyRequired);
+    const hasAssembly = (sale.items || []).some(item => item.assemblyRequired);
     const nextStatus = hasAssembly ? OrderStatus.DELIVERED : OrderStatus.COMPLETED;
 
     const signatureData = canvasRef.current?.toDataURL();
@@ -180,11 +179,11 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
         <body>
           <h1>Rota de Entrega - ${new Date().toLocaleDateString('pt-BR')}</h1>
           ${myDeliveries.map((delivery, index) => {
-      const store = stores.find(s => s.id === delivery.storeId);
-      const seller = employees.find(e => e.id === delivery.sellerId);
+      const store = (stores || []).find(s => s.id === delivery.storeId);
+      const seller = (employees || []).find(e => e.id === delivery.sellerId);
       const toReceive = calculateAmountToReceive(delivery);
 
-      const itemsHtml = delivery.items.map(item => {
+      const itemsHtml = (delivery.items || []).map(item => {
         const p = products.find(prod => prod.id === item.productId);
         return `<div class="item">• ${item.quantity}x ${p?.name || item.productId}</div>`;
       }).join('');
@@ -201,7 +200,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
                 <div class="info-bar">
                   <span>UNIDADE: ${store?.name || 'N/A'}</span>
                   <span>VENDEDOR: ${seller?.name || 'N/A'}</span>
-                  <span>DATA VENDA: ${new Date(delivery.date).toLocaleDateString('pt-BR')}</span>
+                  <span>DATA VENDA: ${delivery.date ? new Date(delivery.date).toLocaleDateString('pt-BR') : 'N/A'}</span>
                 </div>
 
                 ${toReceive > 0 ? `
@@ -236,14 +235,14 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
   };
 
   // Agrupar entregas por Loja
-  const groupedTasks = stores.map(store => ({
+  const groupedTasks = (stores || []).map(store => ({
     store,
     tasks: myDeliveries.filter(t => t.storeId === store.id)
   })).filter(g => g.tasks.length > 0);
 
   const DeliveryCard = ({ task, isHistory = false }: { task: Sale, isHistory?: boolean, key?: any }) => {
-    const store = stores.find(s => s.id === task.storeId);
-    const seller = employees.find(e => e.id === task.sellerId);
+    const store = (stores || []).find(s => s.id === task.storeId);
+    const seller = (employees || []).find(e => e.id === task.sellerId);
     const toReceive = calculateAmountToReceive(task);
 
     return (
@@ -281,7 +280,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
               </div>
               <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
                 <p className="text-[8px] font-black text-slate-400 uppercase">Venda</p>
-                <p className="text-[10px] font-bold text-slate-700 lowercase">{new Date(task.date).toLocaleDateString('pt-BR')}</p>
+                <p className="text-[10px] font-bold text-slate-700 lowercase">{task.date ? new Date(task.date).toLocaleDateString('pt-BR') : 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -325,7 +324,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
             <Package className="w-3 h-3" /> Conferência
           </p>
           <div className="space-y-1">
-            {task.items.map((item, i) => {
+            {(task.items || []).map((item, i) => {
               const p = products.find(prod => prod.id === item.productId);
               return (
                 <div key={i} className="flex justify-between items-center text-xs font-bold text-slate-700 uppercase">
@@ -363,7 +362,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales, setSales, products, 
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-black uppercase tracking-tight">Minha Rota</h1>
-            <div class="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1">
               <p className="text-blue-400 text-xs font-bold uppercase">Setor: Entrega</p>
               <button
                 onClick={() => refreshData(true)}
