@@ -147,3 +147,15 @@ export interface Sale {
   deliveryPhoto?: string;     // Foto em Base64 (baixa resolução)
   assemblyCompletedAt?: string; // Data/hora de conclusão da montagem
 }
+
+export interface InventoryMovement {
+  id: string;
+  productId: string;
+  locationId: string;
+  quantity: number;
+  type: 'ENTRADA' | 'SAIDA';
+  referenceId?: string;
+  reason: 'VENDA' | 'DEVOLUCAO' | 'AJUSTE' | 'COMPRA' | 'CANCELAMENTO';
+  createdAt: string;
+  createdBy: string;
+}

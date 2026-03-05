@@ -210,6 +210,13 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
                   </div>
                 ` : ''}
 
+                ${delivery.customerReference ? `
+                  <div style="margin-bottom: 15px; padding: 10px; background: #f1f5f9; border-radius: 10px;">
+                    <div style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase;">Ponto de Referência:</div>
+                    <div style="font-size: 13px; font-weight: bold; color: #334155;">📍 ${delivery.customerReference}</div>
+                  </div>
+                ` : ''}
+
                 <div class="items">
                   <div class="items-title">Itens para entrega</div>
                   ${itemsHtml}
@@ -263,61 +270,67 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
         <div>
           <h3 className="text-lg font-black text-slate-900 uppercase leading-tight">{task.customerName}</h3>
 
-          <div className="space-y-2 mt-3">
+          <div className="flex flex-col gap-1 mt-3">
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-              <span className="font-bold uppercase">{task.deliveryAddress}</span>
+              <span className="font-bold uppercase line-clamp-2">{task.deliveryAddress}</span>
             </div>
-
-            <div className="flex items-center gap-4">
-              <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                <p className="text-[8px] font-black text-slate-400 uppercase">Unidade</p>
-                <p className="text-[10px] font-bold text-slate-700 uppercase">{store?.name || 'N/A'}</p>
+            {task.customerReference && (
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-50 p-2 rounded-xl border border-slate-100 italic">
+                <span className="font-bold shrink-0">REF:</span>
+                <span className="font-medium uppercase">{task.customerReference}</span>
               </div>
-              <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                <p className="text-[8px] font-black text-slate-400 uppercase">Vendedor</p>
-                <p className="text-[10px] font-bold text-slate-700 uppercase">{seller?.name || 'N/A'}</p>
-              </div>
-              <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                <p className="text-[8px] font-black text-slate-400 uppercase">Venda</p>
-                <p className="text-[10px] font-bold text-slate-700 lowercase">{task.date ? new Date(task.date).toLocaleDateString('pt-BR') : 'N/A'}</p>
-              </div>
-            </div>
+            )}
           </div>
 
-          {!isHistory && toReceive > 0 && (
-            <div className="mt-4 bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-amber-600 uppercase">VALOR A RECEBER</p>
-                <p className="text-2xl font-black text-amber-900">R$ {toReceive.toFixed(2)}</p>
-              </div>
-              <div className="bg-amber-200 text-amber-700 p-2 rounded-xl">
-                <span className="text-xs font-black uppercase">DINHEIRO/PIX/POS</span>
-              </div>
+          <div className="flex items-center gap-4 mt-3">
+            <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+              <p className="text-[8px] font-black text-slate-400 uppercase">Unidade</p>
+              <p className="text-[10px] font-bold text-slate-700 uppercase">{store?.name || 'N/A'}</p>
             </div>
-          )}
-
-          {!isHistory && task.customerPhone && (
-            <div className="flex items-center gap-3 mt-4 flex-wrap">
-              <a
-                href={`tel:${task.customerPhone}`}
-                className="flex items-center gap-1.5 text-xs font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 hover:bg-blue-100 transition-colors"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                {task.customerPhone}
-              </a>
-              <a
-                href={`https://wa.me/${task.customerPhone.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 hover:bg-emerald-100 transition-colors"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                WhatsApp
-              </a>
+            <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+              <p className="text-[8px] font-black text-slate-400 uppercase">Vendedor</p>
+              <p className="text-[10px] font-bold text-slate-700 uppercase">{seller?.name || 'N/A'}</p>
             </div>
-          )}
+            <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+              <p className="text-[8px] font-black text-slate-400 uppercase">Venda</p>
+              <p className="text-[10px] font-bold text-slate-700 lowercase">{task.date ? new Date(task.date).toLocaleDateString('pt-BR') : 'N/A'}</p>
+            </div>
+          </div>
         </div>
+
+        {!isHistory && toReceive > 0 && (
+          <div className="mt-4 bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-amber-600 uppercase">VALOR A RECEBER</p>
+              <p className="text-2xl font-black text-amber-900">R$ {toReceive.toFixed(2)}</p>
+            </div>
+            <div className="bg-amber-200 text-amber-700 p-2 rounded-xl">
+              <span className="text-xs font-black uppercase">DINHEIRO/PIX/POS</span>
+            </div>
+          </div>
+        )}
+
+        {!isHistory && task.customerPhone && (
+          <div className="flex items-center gap-3 mt-4 flex-wrap">
+            <a
+              href={`tel:${task.customerPhone}`}
+              className="flex items-center gap-1.5 text-xs font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 hover:bg-blue-100 transition-colors"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              {task.customerPhone}
+            </a>
+            <a
+              href={`https://wa.me/${task.customerPhone.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 hover:bg-emerald-100 transition-colors"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              WhatsApp
+            </a>
+          </div>
+        )}
 
         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
           <p className="text-[10px] font-black text-slate-400 uppercase mb-2 flex items-center gap-1">

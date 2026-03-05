@@ -13,6 +13,8 @@ const Customers: React.FC<CustomersProps> = ({ customers, setCustomers }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoadingApi, setIsLoadingApi] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<Partial<Customer>>({
     type: 'PF',
@@ -100,17 +102,23 @@ const Customers: React.FC<CustomersProps> = ({ customers, setCustomers }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const newCustomer = {
-        ...formData,
-        id: `C${Date.now()}`
-      } as Customer;
+      if (isEditing && selectedCustomerId) {
+        await supabaseService.updateCustomer(selectedCustomerId, formData);
+        setCustomers(customers.map(c => c.id === selectedCustomerId ? { ...c, ...formData } as Customer : c));
+      } else {
+        const newId = `C${Date.now()}`;
+        const newCustomer = {
+          ...formData,
+          id: newId
+        } as Customer;
 
-      await supabaseService.createCustomer(newCustomer);
-      setCustomers([newCustomer, ...customers]);
+        await supabaseService.createCustomer(newCustomer);
+        setCustomers([newCustomer, ...customers]);
+      }
       setIsModalOpen(false);
       resetForm();
     } catch (err) {
-      console.error("Erro ao criar cliente:", err);
+      console.error("Erro ao salvar cliente:", err);
       alert("Erro ao salvar cliente no banco de dados.");
     }
   };
@@ -131,6 +139,15 @@ const Customers: React.FC<CustomersProps> = ({ customers, setCustomers }) => {
       state: '',
       reference: ''
     });
+    setIsEditing(false);
+    setSelectedCustomerId(null);
+  };
+
+  const handleEdit = (customer: Customer) => {
+    setFormData({ ...customer });
+    setSelectedCustomerId(customer.id);
+    setIsEditing(true);
+    setIsModalOpen(true);
   };
 
   return (
@@ -152,7 +169,10 @@ const Customers: React.FC<CustomersProps> = ({ customers, setCustomers }) => {
             />
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              resetForm();
+              setIsModalOpen(true);
+            }}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-lg shadow-blue-100 transition-all"
           >
             <Plus className="w-5 h-5" />
@@ -205,7 +225,12 @@ const Customers: React.FC<CustomersProps> = ({ customers, setCustomers }) => {
                     <p>{customer.neighborhood}</p>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="text-blue-600 font-bold text-xs hover:underline">Detalhes</button>
+                    <button
+                      onClick={() => handleEdit(customer)}
+                      className="text-blue-600 font-bold text-xs hover:underline"
+                    >
+                      Detalhes
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -219,10 +244,12 @@ const Customers: React.FC<CustomersProps> = ({ customers, setCustomers }) => {
           <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl my-auto animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <h2 className="text-lg font-black text-slate-900 uppercase">Novo Cadastro</h2>
+                <h2 className="text-lg font-black text-slate-900 uppercase">
+                  {isEditing ? 'Editar Cadastro' : 'Novo Cadastro'}
+                </h2>
                 {isLoadingApi && <Loader2 className="w-5 h-5 animate-spin text-blue-600" />}
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+              <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
                 <X className="w-5 h-5 text-slate-500" />
               </button>
             </div>

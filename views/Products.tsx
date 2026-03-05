@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Product, Store, InventoryItem, Employee, ProductImage, Supplier } from '../types.ts';
-import { Search, Box, Filter, ChevronDown, X, Edit2, Loader2, Save, MapPin, Package, DollarSign } from 'lucide-react';
+import { Search, Box, Filter, ChevronDown, X, Edit2, Loader2, Save, MapPin, Package, DollarSign, RefreshCw } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService.ts';
 import { CATEGORIES } from '../constants.tsx';
 
@@ -27,6 +27,9 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
     const [isEditMode, setIsEditMode] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editForm, setEditForm] = useState<Partial<Product>>({});
+    const [movements, setMovements] = useState<any[]>([]);
+    const [isLoadingMovements, setIsLoadingMovements] = useState(false);
+    const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
 
     const canEdit = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.name === 'Lucas' || user?.username === 'Master';
 
@@ -72,6 +75,20 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
         setSelectedProduct(product);
         setEditForm({ ...product });
         setIsEditMode(false);
+        setActiveTab('details');
+        loadMovements(product.id);
+    };
+
+    const loadMovements = async (productId: string) => {
+        setIsLoadingMovements(true);
+        try {
+            const data = await supabaseService.getProductMovements(productId);
+            setMovements(data);
+        } catch (err) {
+            console.error('Erro ao carregar movimentos:', err);
+        } finally {
+            setIsLoadingMovements(false);
+        }
     };
 
     const handleSave = async () => {
@@ -438,23 +455,91 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                                 </div>
                             </div>
 
-                            {/* Stock Detail */}
-                            <div className="space-y-4">
-                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-1">
-                                    <MapPin className="w-4 h-4" /> Distribuição de Estoque
-                                </h3>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    {stores.map(store => {
-                                        const stock = getStockForStore(selectedProduct.id, store.id);
-                                        return (
-                                            <div key={store.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center text-center">
-                                                <span className="text-[10px] font-black text-slate-400 uppercase truncate w-full">{store.name}</span>
-                                                <span className={`text-lg font-black mt-1 ${stock > 0 ? 'text-slate-900' : 'text-slate-300'}`}>{stock} UN</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                            {/* Tabs */}
+                            <div className="flex border-b border-slate-100">
+                                <button
+                                    onClick={() => setActiveTab('details')}
+                                    className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'details' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                                >
+                                    Informações
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('history')}
+                                    className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'history' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                                >
+                                    Histórico de Movimentação
+                                </button>
                             </div>
+
+                            {activeTab === 'details' ? (
+                                <>
+                                    {/* Stock Detail */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-1">
+                                            <MapPin className="w-4 h-4" /> Distribuição de Estoque
+                                        </h3>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                            {stores.map(store => {
+                                                const stock = getStockForStore(selectedProduct.id, store.id);
+                                                return (
+                                                    <div key={store.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center text-center">
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase truncate w-full">{store.name}</span>
+                                                        <span className={`text-lg font-black mt-1 ${stock > 0 ? 'text-slate-900' : 'text-slate-300'}`}>{stock} UN</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="space-y-4">
+                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-1">
+                                        <RefreshCw className="w-4 h-4" /> Histórico Recente
+                                    </h3>
+
+                                    {isLoadingMovements ? (
+                                        <div className="flex justify-center p-10"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+                                    ) : movements.length === 0 ? (
+                                        <div className="p-10 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-slate-400 font-bold uppercase text-xs">
+                                            Nenhuma movimentação registrada
+                                        </div>
+                                    ) : (
+                                        <div className="overflow-hidden border border-slate-100 rounded-2xl">
+                                            <table className="w-full text-left border-collapse">
+                                                <thead>
+                                                    <tr className="bg-slate-50">
+                                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Data</th>
+                                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Tipo</th>
+                                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Qtd</th>
+                                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Local</th>
+                                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Motivo/Ref</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 bg-white">
+                                                    {movements.map((mov) => (
+                                                        <tr key={mov.id} className="text-xs">
+                                                            <td className="px-4 py-3 text-slate-500 font-medium">
+                                                                {new Date(mov.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                            </td>
+                                                            <td className="px-4 py-3">
+                                                                <span className={`font-black px-2 py-0.5 rounded-full text-[9px] uppercase ${mov.type === 'ENTRADA' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                                                    {mov.type}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-3 font-black text-slate-900">{mov.quantity}</td>
+                                                            <td className="px-4 py-3 text-slate-600 font-bold">{stores.find(s => s.id === mov.locationId)?.name || mov.locationId}</td>
+                                                            <td className="px-4 py-3">
+                                                                <p className="font-black text-slate-700 uppercase">{mov.reason}</p>
+                                                                {mov.referenceId && <p className="text-[9px] text-slate-400 font-bold">Ref: {mov.referenceId}</p>}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Footer */}

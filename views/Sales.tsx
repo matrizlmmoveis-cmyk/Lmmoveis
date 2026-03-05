@@ -39,6 +39,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const isShowroomPeriod = new Date() <= new Date('2026-03-10T23:59:59');
   const [romaneios, setRomaneios] = useState<Romaneio[]>([]);
   const [selectedRomaneioHistory, setSelectedRomaneioHistory] = useState<Sale | null>(null);
+  const [storeFilter, setStoreFilter] = useState('all');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Lógica de acesso por unidade para colunas de logística
   const isAdminOrSupervisor = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master';
@@ -154,12 +156,13 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     const matchesSearch = (s.customerName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (s.id?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
+    const matchesStore = storeFilter === 'all' || s.storeId === storeFilter;
 
     let matchesRole = true;
     if (user?.role === 'GERENTE') matchesRole = s.storeId === user.storeId;
     if (user?.role === 'VENDEDOR') matchesRole = s.sellerId === user.id;
 
-    return matchesSearch && matchesStatus && matchesRole;
+    return matchesSearch && matchesStatus && matchesStore && matchesRole;
   });
 
   useEffect(() => {
@@ -342,7 +345,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   };
 
   const completeSale = async () => {
-    if (!selectedCustomer || !newSale.items?.length) return;
+    if (!selectedCustomer || !newSale.items?.length || isSubmitting) return;
+    setIsSubmitting(true);
 
     // Obter o próximo ID diretamente do banco para evitar duplicatas por filtros locais
     const nextId = await supabaseService.getNextSaleId();
@@ -374,11 +378,23 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       await supabaseService.createSale(sale);
       const inventoryUpdates = sale.items
         .filter(item => item.locationId !== 'ST-MOSTRUARIO' && item.locationId !== 'ST-ENCOMENDA') // NÃO DESCONTA MOSTRUÁRIO OU ENCOMENDA
-        .map(item => {
+        .map(async item => {
           const currentQty = inventory.find(i => i.productId === item.productId && i.locationId === item.locationId)?.quantity || 0;
           const locationStore = stores.find(s => s.id === item.locationId);
           const storeType = locationStore?.type || 'STORE_STOCK';
-          return supabaseService.updateInventory(item.productId, item.locationId, Math.max(0, currentQty - item.quantity), storeType);
+
+          await supabaseService.updateInventory(item.productId, item.locationId, Math.max(0, currentQty - item.quantity), storeType);
+
+          // Registrar movimento
+          await supabaseService.logInventoryMovement({
+            productId: item.productId,
+            locationId: item.locationId,
+            quantity: item.quantity,
+            type: 'SAIDA',
+            referenceId: sale.id,
+            reason: 'VENDA',
+            createdBy: user?.name || 'Sistema'
+          });
         });
       await Promise.all(inventoryUpdates);
 
@@ -432,6 +448,9 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       console.error("Erro ao salvar venda:", err);
       const msg = err?.message || JSON.stringify(err);
       alert(`Erro ao salvar venda no banco de dados.\n${msg}`);
+    } finally {
+      setIsSubmitting(false);
+      setIsCreating(false);
     }
   };
 
@@ -666,8 +685,17 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total do Pedido</span>
                   <span className="text-3xl font-black text-blue-700">R$ {calculateTotal().toFixed(2)}</span>
                 </div>
-                <button onClick={handleSaveSale} className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2">
-                  <CheckCircle2 className="w-5 h-5" /> Finalizar Venda
+                <button
+                  onClick={handleSaveSale}
+                  disabled={isSubmitting}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5" />
+                  )}
+                  {isSubmitting ? 'Finalizando...' : 'Finalizar Venda'}
                 </button>
               </div>
             </div>
@@ -797,7 +825,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
             <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Busca Geral</label>
             <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" placeholder="Buscar venda ou cliente..." className="w-full pl-10 pr-4 py-2 bg-slate-50 rounded-xl text-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
           </div>
-          <div className="flex flex-wrap md:flex-nowrap gap-4">
+          <div className="flex flex-wrap gap-4 items-end">
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Início</label>
               <div className="relative"><Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><input type="date" className="pl-9 pr-4 py-2 bg-slate-50 rounded-xl text-sm font-bold" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
@@ -812,6 +840,15 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 <select className="pl-10 pr-4 py-2 bg-slate-50 rounded-xl text-sm uppercase font-bold" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                   <option value="all">Todos</option>
                   {Object.values(OrderStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Unidade</label>
+              <div className="relative"><Package className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <select className="pl-10 pr-4 py-2 bg-slate-50 rounded-xl text-sm uppercase font-bold" value={storeFilter} onChange={e => setStoreFilter(e.target.value)}>
+                  <option value="all">Todas</option>
+                  {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
             </div>
@@ -945,7 +982,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                         )}
                         {/* Botão Pago na Loja para gerentes — pagamento de entrega recebido no balcão */}
                         {sale.payments?.some(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO')) &&
-                          (user?.role === 'GERENTE' || isAdminOrSupervisor) && (
+                          (user?.role === 'GERENTE') && (
                             <button
                               onClick={async () => {
                                 const p = sale.payments.find(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));

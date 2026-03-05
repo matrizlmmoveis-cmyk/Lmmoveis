@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { supabaseService } from '../services/supabaseService';
-import { Sale, Payment, Employee, Store } from '../types';
-import { CheckCircle2, DollarSign, Clock, HelpCircle, User, MapPin } from 'lucide-react';
+import { Sale, Payment, Employee, Store, Product, Customer } from '../types';
+import { CheckCircle2, DollarSign, Clock, HelpCircle, User, MapPin, X, FileText, Calendar } from 'lucide-react';
+import SaleReceipt from './SaleReceipt';
 
 interface ReceiptSettlementProps {
     sales: Sale[];
     setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
     employees: Employee[];
     stores: Store[];
+    products: Product[];
+    customers: Customer[];
 }
 
-const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, employees, stores }) => {
+const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, employees, stores, products, customers }) => {
     const [activeTab, setActiveTab] = useState<'AGUARDANDO' | 'CONFERIDOS'>('AGUARDANDO');
+    const [selectedSaleForReceipt, setSelectedSaleForReceipt] = useState<Sale | null>(null);
 
     // Find all 'Entrega' payments
     const deliveryPayments = sales.flatMap(sale =>
@@ -58,6 +62,16 @@ const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, 
         }
     };
 
+    const groupSettlementsByStore = (settlements: any[]) => {
+        const groups: { [key: string]: any[] } = {};
+        settlements.forEach(dp => {
+            const storeName = dp.store?.name || 'Loja Desconhecida';
+            if (!groups[storeName]) groups[storeName] = [];
+            groups[storeName].push(dp);
+        });
+        return groups;
+    };
+
     const renderCard = (dp: any, isConferido: boolean) => (
         <div key={`${dp.sale.id}-${dp.payment.amount}`} className={`p-5 rounded-2xl border mb-4 font-bold ${isConferido ? 'bg-slate-50 border-slate-200' : dp.payment.status === 'PAGO_EM_LOJA' ? 'bg-violet-50 border-violet-300 shadow-sm' : 'bg-white border-blue-100 shadow-sm'}`}>
             {/* Banner de aviso para Pago na Loja */}
@@ -79,9 +93,9 @@ const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, 
                         <div className="text-right">
                             <span className="text-lg text-emerald-600 block">R$ {dp.payment.amount.toFixed(2)}</span>
                             <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full inline-block mt-1 ${dp.payment.status === 'PAGO_EM_LOJA' ? 'bg-violet-100 text-violet-700' :
-                                    dp.payment.status === 'AGUARDANDO_ACERTO' ? 'bg-amber-100 text-amber-700' :
-                                        dp.payment.status === 'PENDENTE_ENTREGA' ? 'bg-slate-100 text-slate-500' :
-                                            'bg-emerald-100 text-emerald-700'
+                                dp.payment.status === 'AGUARDANDO_ACERTO' ? 'bg-amber-100 text-amber-700' :
+                                    dp.payment.status === 'PENDENTE_ENTREGA' ? 'bg-slate-100 text-slate-500' :
+                                        'bg-emerald-100 text-emerald-700'
                                 }`}>
                                 {dp.payment.status === 'PENDENTE_ENTREGA' ? 'Na Rua (Motorista)' :
                                     dp.payment.status === 'AGUARDANDO_ACERTO' ? 'Aguardando Acerto' :
@@ -102,22 +116,44 @@ const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, 
                                 <span className="uppercase">Mot: {dp.driver.name}</span>
                             </div>
                         )}
+                        {dp.payment.status === 'AGUARDANDO_ACERTO' && dp.sale.deliveryDate && (
+                            <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-lg text-emerald-700 border border-emerald-100">
+                                <Calendar className="w-4 h-4" />
+                                <span className="uppercase font-black text-[10px]">Entregue em: {new Date(dp.sale.deliveryDate).toLocaleDateString()}</span>
+                            </div>
+                        )}
+                        {dp.payment.status === 'PAGO_EM_LOJA' && (
+                            <div className="flex items-center gap-1.5 bg-violet-50 px-3 py-1.5 rounded-lg text-violet-700 border border-violet-100">
+                                <Calendar className="w-4 h-4" />
+                                <span className="uppercase font-black text-[10px]">Pago na Loja Hoje</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {!isConferido && (
-                    <div className="md:border-l md:pl-6 shrink-0 w-full md:w-auto">
+                <div className="flex items-center gap-2 md:border-l md:pl-6 shrink-0 w-full md:w-auto">
+                    <button
+                        onClick={() => setSelectedSaleForReceipt(dp.sale)}
+                        className="flex-1 md:flex-none bg-blue-50 text-blue-600 hover:bg-blue-100 p-3 rounded-2xl transition-all flex items-center justify-center gap-2"
+                        title="Ver Nota"
+                    >
+                        <FileText className="w-5 h-5" />
+                        <span className="md:hidden text-xs font-black uppercase">Ver Nota</span>
+                    </button>
+                    {!isConferido && (
                         <button
                             onClick={() => handleConfirmar(dp.sale.id, dp.payment.amount)}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95"
+                            className="flex-[2] md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95"
                         >
                             <DollarSign className="w-4 h-4" /> Receber
                         </button>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );
+
+    const groupedData = groupSettlementsByStore(activeTab === 'AGUARDANDO' ? pendingSettlements : completedSettlements);
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-left duration-500 pb-20">
@@ -155,23 +191,53 @@ const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, 
                 </button>
             </div>
 
-            <div>
-                {activeTab === 'AGUARDANDO' ? (
-                    pendingSettlements.length === 0 ? (
-                        <div className="text-center py-12 text-slate-500 font-bold uppercase text-sm">Nenhum acerto pendente no momento.</div>
-                    ) : (
-                        pendingSettlements.map(dp => renderCard(dp, false))
-                    )
+            <div className="space-y-8">
+                {Object.keys(groupedData).length === 0 ? (
+                    <div className="text-center py-12 text-slate-500 font-bold uppercase text-sm">Nenhum acerto nesta aba.</div>
                 ) : (
-                    completedSettlements.length === 0 ? (
-                        <div className="text-center py-12 text-slate-500 font-bold uppercase text-sm">Nenhum acerto finalizado.</div>
-                    ) : (
-                        completedSettlements.map(dp => renderCard(dp, true))
-                    )
+                    Object.entries(groupedData).map(([storeName, items]) => (
+                        <div key={storeName} className="space-y-4">
+                            <div className="flex items-center gap-3 px-2">
+                                <div className="h-[1px] flex-1 bg-slate-200"></div>
+                                <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                                    <MapPin className="w-3 h-3" /> {storeName} ({items.length})
+                                </h2>
+                                <div className="h-[1px] flex-1 bg-slate-200"></div>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1">
+                                {items.map(dp => renderCard(dp, activeTab === 'CONFERIDOS'))}
+                            </div>
+                        </div>
+                    ))
                 )}
             </div>
+
+            {/* Modal de Visualização da Nota */}
+            {selectedSaleForReceipt && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl relative animate-in zoom-in-95 duration-200 my-auto">
+                        <button
+                            onClick={() => setSelectedSaleForReceipt(null)}
+                            className="absolute top-6 right-6 p-3 bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all z-10"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                        <div className="p-1 md:p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+                            <SaleReceipt
+                                sale={selectedSaleForReceipt}
+                                stores={stores}
+                                products={products}
+                                employees={employees}
+                                customers={customers}
+                                onBack={() => setSelectedSaleForReceipt(null)}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
 export default ReceiptSettlement;
+

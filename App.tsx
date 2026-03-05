@@ -285,7 +285,7 @@ const App: React.FC = () => {
       case 'delivery':
       case 'logistics': return <Logistics user={user} sales={sales} setSales={setSales} products={products} stores={stores} employees={employees} refreshData={initData} />;
       case 'assembly': return <Assembly user={user} sales={sales} setSales={setSales} products={products} stores={stores} employees={employees} refreshData={initData} />;
-      case 'settlement': return <ReceiptSettlement sales={sales} setSales={setSales} employees={employees} stores={stores} refreshData={initData} />;
+      case 'settlement': return <ReceiptSettlement sales={sales} setSales={setSales} employees={employees} stores={stores} products={products} customers={customers} />;
       case 'reports': return <Reports user={user} sales={sales} stores={stores} products={products} employees={employees} refreshData={initData} />;
       default: return <Dashboard user={user!} sales={sales} stores={stores} />;
     }

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer, Romaneio, OrderStatus, Supplier } from '../types';
+import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer, Romaneio, OrderStatus, Supplier, InventoryMovement } from '../types';
 
 // ─── Cache localStorage com TTL ───────────────────────────────────────────────
 const CACHE_TTL: Record<string, number> = {
@@ -433,6 +433,41 @@ export const supabaseService = {
         return true;
     },
 
+    async logInventoryMovement(movement: Partial<InventoryMovement>) {
+        const payload = {
+            product_id: movement.productId,
+            location_id: movement.locationId,
+            quantity: movement.quantity,
+            type: movement.type,
+            reference_id: movement.referenceId,
+            reason: movement.reason,
+            created_by: movement.createdBy
+        };
+        const { error } = await supabase.from('inventory_movements').insert(payload);
+        if (error) throw error;
+        return true;
+    },
+
+    async getProductMovements(productId: string) {
+        const { data, error } = await supabase
+            .from('inventory_movements')
+            .select('*')
+            .eq('product_id', productId)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return (data || []).map((m: any) => ({
+            id: m.id,
+            productId: m.product_id,
+            locationId: m.location_id,
+            quantity: m.quantity,
+            type: m.type,
+            referenceId: m.reference_id,
+            reason: m.reason,
+            createdAt: m.created_at,
+            createdBy: m.created_by
+        })) as InventoryMovement[];
+    },
+
     async updateSaleStatus(saleId: string, status: string, extra?: any) {
         const payload: any = { status };
 
@@ -726,6 +761,8 @@ export const supabaseService = {
 
     async updateCustomer(id: string, updates: Partial<Customer>) {
         const payload: any = { ...updates };
+        delete payload.id; // Não permitir alteração de ID
+
         if (updates.zipCode !== undefined) {
             payload.zip_code = updates.zipCode;
             delete payload.zipCode;
@@ -811,6 +848,17 @@ export const supabaseService = {
                     location_id: item.location_id,
                     quantity: newQty
                 }, { onConflict: 'product_id,location_id' });
+
+            // Registrar movimento (Devolução por cancelamento)
+            await this.logInventoryMovement({
+                productId: item.product_id,
+                locationId: item.location_id,
+                quantity: item.quantity,
+                type: 'ENTRADA',
+                referenceId: saleId,
+                reason: 'CANCELAMENTO',
+                createdBy: 'Sistema (Cancelamento)'
+            });
         }
 
         // 3. Atualizar status da venda para Cancelada
@@ -862,6 +910,17 @@ export const supabaseService = {
                     quantity: newQty,
                     ...(invData?.type ? { type: invData.type } : {})
                 }, { onConflict: 'product_id,location_id' });
+
+            // Registrar movimento
+            await this.logInventoryMovement({
+                productId: item.product_id,
+                locationId: targetLocationId,
+                quantity: item.quantity,
+                type: 'ENTRADA',
+                referenceId: saleId,
+                reason: 'CANCELAMENTO',
+                createdBy: 'Sistema'
+            });
         }
 
         // 3. Marcar venda como Cancelada
@@ -937,6 +996,17 @@ export const supabaseService = {
                             const { data: invData } = await supabase.from('inventory').select('quantity').eq('product_id', origItem.productId).eq('location_id', origItem.locationId).single();
                             const newQty = (invData?.quantity || 0) + origItem.quantity;
                             await supabase.from('inventory').upsert({ product_id: origItem.productId, location_id: origItem.locationId, quantity: newQty }, { onConflict: 'product_id,location_id' });
+
+                            // Registrar movimento (Devolução por remoção na edição)
+                            await this.logInventoryMovement({
+                                productId: origItem.productId,
+                                locationId: origItem.locationId,
+                                quantity: origItem.quantity,
+                                type: 'ENTRADA',
+                                referenceId: params.saleId,
+                                reason: 'AJUSTE',
+                                createdBy: params.authorizedBy
+                            });
                         }
                     } else {
                         // Já separado/indisponível → marcar para devolução física no CD
@@ -959,6 +1029,17 @@ export const supabaseService = {
                             const { data: invData } = await supabase.from('inventory').select('quantity').eq('product_id', origItem.productId).eq('location_id', origItem.locationId).single();
                             const newQty = (invData?.quantity || 0) + diff;
                             await supabase.from('inventory').upsert({ product_id: origItem.productId, location_id: origItem.locationId, quantity: newQty }, { onConflict: 'product_id,location_id' });
+
+                            // Registrar movimento (Devolução parcial por redução na edição)
+                            await this.logInventoryMovement({
+                                productId: origItem.productId,
+                                locationId: origItem.locationId,
+                                quantity: diff,
+                                type: 'ENTRADA',
+                                referenceId: params.saleId,
+                                reason: 'AJUSTE',
+                                createdBy: params.authorizedBy
+                            });
                         }
                     } else {
                         // Já separado → criar entrada DEVOLVER p/ devolução física da diferença
@@ -1014,6 +1095,17 @@ export const supabaseService = {
                         const { data: invData } = await supabase.from('inventory').select('quantity').eq('product_id', propItem.productId).eq('location_id', propItem.locationId).single();
                         const newQty = Math.max(0, (invData?.quantity || 0) - propItem.quantity);
                         await supabase.from('inventory').upsert({ product_id: propItem.productId, location_id: propItem.locationId, quantity: newQty }, { onConflict: 'product_id,location_id' });
+
+                        // Registrar movimento (Saída por adição na edição)
+                        await this.logInventoryMovement({
+                            productId: propItem.productId,
+                            locationId: propItem.locationId,
+                            quantity: propItem.quantity,
+                            type: 'SAIDA',
+                            referenceId: params.saleId,
+                            reason: 'VENDA',
+                            createdBy: params.authorizedBy
+                        });
                     }
                     changes.push({ field: 'item_added', product_id: propItem.productId, new_value: propItem.quantity });
                 }
@@ -1131,6 +1223,17 @@ export const supabaseService = {
                     quantity: newQty,
                     ...(invData?.type ? { type: invData.type } : {})
                 }, { onConflict: 'product_id,location_id' });
+
+            // Registrar movimento
+            await this.logInventoryMovement({
+                productId: item.product_id,
+                locationId: item.location_id,
+                quantity: item.quantity,
+                type: 'ENTRADA',
+                referenceId: saleId,
+                reason: 'CANCELAMENTO',
+                createdBy: 'Sistema'
+            });
         }
 
         // 3. Marcar venda como Cancelada
