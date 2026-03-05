@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { OrderStatus, Sale, Product, Employee } from '../types.ts';
+import { OrderStatus, Sale, Product, Employee, Store } from '../types.ts';
 import { supabaseService } from '../services/supabaseService';
 import { Wrench, MapPin, CheckCircle, Clock, Printer, Phone, History } from 'lucide-react';
 
@@ -8,10 +8,12 @@ interface AssemblyProps {
   sales: Sale[];
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   products: Product[];
+  stores: Store[];
+  employees: Employee[];
   refreshData: (scope?: any, start?: string, end?: string) => Promise<void>;
 }
 
-const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, refreshData }) => {
+const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, stores, employees, refreshData }) => {
   const [showHistory, setShowHistory] = useState(false);
 
   // Tarefas pendentes (aguardando entrega ou liberadas para montagem)
@@ -33,10 +35,12 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
   });
 
   const calculateTotalAssembly = (sale: Sale) => {
-    return sale.items.reduce((acc, item) => {
-      const prod = products.find(p => p.id === item.productId);
-      return acc + (prod?.assemblyPrice || 0) * item.quantity;
-    }, 0);
+    return sale.items
+      .filter(item => item.assemblyRequired) // Only items that need assembly
+      .reduce((acc, item) => {
+        const prod = products.find(p => p.id === item.productId);
+        return acc + (prod?.assemblyPrice || 0) * item.quantity;
+      }, 0);
   };
 
   // Formata telefone para WhatsApp com +55
@@ -75,6 +79,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
             .address { font-weight: bold; color: #555; margin-bottom: 8px; }
             .phone { color: #0284c7; font-weight: bold; margin-bottom: 15px; }
             .dates { font-size: 11px; color: #666; margin-bottom: 10px; }
+            .store-info { font-size: 10px; display: flex; gap: 15px; margin-bottom: 15px; color: #444; font-weight: bold; text-transform: uppercase; }
             .items { background: #f9f9f9; padding: 15px; border-radius: 10px; }
             .items-title { font-size: 10px; font-weight: bold; color: #999; text-transform: uppercase; margin-bottom: 5px; }
             .item { font-size: 14px; font-weight: bold; margin-bottom: 3px; display: flex; justify-content: space-between; }
@@ -84,7 +89,11 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
         <body>
           <h1>Agenda de Montagem - ${new Date().toLocaleDateString('pt-BR')}</h1>
           ${myTasks.map((task) => {
-      const itemsHtml = task.items.map(item => {
+      const store = stores.find(s => s.id === task.storeId);
+      const seller = employees.find(e => e.id === task.sellerId);
+      const assemblyItems = task.items.filter(item => item.assemblyRequired);
+
+      const itemsHtml = assemblyItems.map(item => {
         const p = products.find(prod => prod.id === item.productId);
         return `<div class="item"><span>• ${item.quantity}x ${p?.name || item.productId}</span></div>`;
       }).join('');
@@ -101,6 +110,10 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
                 <div class="dates">
                   Venda: ${new Date(task.date).toLocaleDateString('pt-BR')}
                   ${task.deliveryDate ? ` | Entrega: ${new Date(task.deliveryDate).toLocaleDateString('pt-BR')}` : ''}
+                </div>
+                <div class="store-info">
+                   <span>LOJA: ${store?.name || 'N/A'}</span>
+                   <span>VENDEDOR: ${seller?.name || 'N/A'}</span>
                 </div>
                 <div class="items">
                   <div class="items-title">Produtos para Montar</div>
@@ -123,6 +136,10 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
   const TaskCard = ({ task }: { task: Sale }) => {
     const val = calculateTotalAssembly(task);
     const isCompleted = task.status === OrderStatus.COMPLETED;
+    const store = stores.find(s => s.id === task.storeId);
+    const seller = employees.find(e => e.id === task.sellerId);
+    const assemblyItems = task.items.filter(item => item.assemblyRequired);
+
     return (
       <div key={task.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
         <div className="flex justify-between items-start">
@@ -150,6 +167,17 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
           <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-2">
             <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
             <span className="font-bold uppercase">{task.deliveryAddress}</span>
+          </div>
+
+          <div className="flex items-center gap-4 mt-2 mb-2">
+            <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+              <p className="text-[8px] font-black text-slate-400 uppercase">Unidade</p>
+              <p className="text-[10px] font-bold text-slate-700 uppercase">{store?.name || 'N/A'}</p>
+            </div>
+            <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+              <p className="text-[8px] font-black text-slate-400 uppercase">Vendedor</p>
+              <p className="text-[10px] font-bold text-slate-700 uppercase">{seller?.name || 'N/A'}</p>
+            </div>
           </div>
 
           {/* Telefone e WhatsApp */}
@@ -192,7 +220,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, re
 
         <div className="bg-slate-50 p-4 rounded-2xl">
           <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Produtos para Montar:</p>
-          {task.items.map((item, i) => {
+          {assemblyItems.map((item, i) => {
             const p = products.find(prod => prod.id === item.productId);
             return (
               <div key={i} className="flex justify-between items-center text-xs font-bold text-slate-700 uppercase mb-1">
