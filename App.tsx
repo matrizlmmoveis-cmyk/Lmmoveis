@@ -283,7 +283,7 @@ const App: React.FC = () => {
       case 'expedicao': return <Expedicao user={user} stores={stores} sales={sales} products={products} employees={employees} customers={customers} refreshData={initData} />;
       case 'tarefas': return <Tarefas user={user} stores={stores} sales={sales} setSales={setSales} products={products} refreshData={initData} />;
       case 'delivery':
-      case 'logistics': return <Logistics user={user} sales={sales} setSales={setSales} products={products} stores={stores} refreshData={initData} />;
+      case 'logistics': return <Logistics user={user} sales={sales} setSales={setSales} products={products} stores={stores} employees={employees} refreshData={initData} />;
       case 'assembly': return <Assembly user={user} sales={sales} setSales={setSales} products={products} stores={stores} employees={employees} refreshData={initData} />;
       case 'settlement': return <ReceiptSettlement sales={sales} setSales={setSales} employees={employees} stores={stores} refreshData={initData} />;
       case 'reports': return <Reports user={user} sales={sales} stores={stores} products={products} employees={employees} refreshData={initData} />;
