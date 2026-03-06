@@ -185,7 +185,9 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
 
       const itemsHtml = (delivery.items || []).map(item => {
         const p = products.find(prod => prod.id === item.productId);
-        return `<div class="item">• ${item.quantity}x ${p?.name || item.productId}</div>`;
+        const itemStore = (stores || []).find(s => s.id === item.locationId);
+        const itemStoreName = itemStore ? ` (${itemStore.name})` : '';
+        return `<div class="item">• ${item.quantity}x ${p?.name || item.productId}${itemStoreName}</div>`;
       }).join('');
 
       return `
@@ -339,9 +341,11 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
           <div className="space-y-1">
             {(task.items || []).map((item, i) => {
               const p = products.find(prod => prod.id === item.productId);
+              const itemStore = (stores || []).find(s => s.id === item.locationId);
+              const itemStoreName = itemStore ? ` (${itemStore.name})` : '';
               return (
                 <div key={i} className="flex justify-between items-center text-xs font-bold text-slate-700 uppercase">
-                  <span>• {item.quantity}x {p?.name || item.productId}</span>
+                  <span>• {item.quantity}x {p?.name || item.productId}{itemStoreName}</span>
                 </div>
               );
             })}
