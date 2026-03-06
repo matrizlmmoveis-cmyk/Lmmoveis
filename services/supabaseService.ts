@@ -154,7 +154,8 @@ export const supabaseService = {
                     imageUrl: p.image_url,
                     imageUrl2: p.image_url_2,
                     supplierId: p.supplier_id,
-                    description: p.description
+                    description: p.description,
+                    active: typeof p.active !== 'undefined' ? p.active : true
                 }));
                 allItems = allItems.concat(mapped as Product[]);
                 page++;
@@ -179,6 +180,7 @@ export const supabaseService = {
         if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
         if (updates.imageUrl2 !== undefined) payload.image_url_2 = updates.imageUrl2;
         if (updates.description !== undefined) payload.description = updates.description;
+        if (updates.active !== undefined) payload.active = updates.active;
         const { error } = await supabase.from('products').update(payload).eq('id', id);
         if (error) throw error;
         cacheInvalidate('products');
@@ -197,7 +199,8 @@ export const supabaseService = {
             supplier_id: product.supplierId || null,
             image_url: product.imageUrl || null,
             image_url_2: product.imageUrl2 || null,
-            description: product.description || null
+            description: product.description || null,
+            active: typeof product.active !== 'undefined' ? product.active : true
         };
         const { error } = await supabase.from('products').insert(payload);
         if (error) throw error;
@@ -420,6 +423,22 @@ export const supabaseService = {
 
         const { error: paymentsError } = await supabase.from('sale_payments').insert(paymentsToInsert);
         if (paymentsError) throw paymentsError;
+
+        // 4. Registrar movimentos de estoque
+        for (const item of sale.items) {
+            const isVirtual = item.locationId === 'ST-MOSTRUARIO' || item.locationId === 'ST-ENCOMENDA';
+            if (!isVirtual && item.locationId) {
+                await this.logInventoryMovement({
+                    productId: item.productId,
+                    locationId: item.locationId,
+                    quantity: item.quantity,
+                    type: 'SAIDA',
+                    referenceId: sale.id,
+                    reason: 'VENDA',
+                    createdBy: sale.sellerId
+                });
+            }
+        }
 
         return true;
     },

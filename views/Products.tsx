@@ -109,6 +109,19 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
         }
     };
 
+    const handleToggleActiveList = async (e: React.MouseEvent, product: Product) => {
+        e.stopPropagation();
+        if (!canEdit) return;
+        try {
+            const newActiveState = product.active === false ? true : false;
+            await supabaseService.updateProduct(product.id, { active: newActiveState });
+            await refreshData(true);
+        } catch (err: any) {
+            console.error('Erro ao alterar status do produto:', err);
+            alert(`Erro ao alterar status: ${err.message || 'Erro desconhecido'}`);
+        }
+    };
+
     const formatCurrencyBRL = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
@@ -202,20 +215,36 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                                         </div>
                                     </td>
                                     <td className="px-6 py-3">
-                                        <p className="font-bold text-slate-900 text-sm uppercase leading-tight truncate">{product.name || 'S/N'}</p>
-                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                                            <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1 py-0.5 rounded uppercase shrink-0">SKU: {product.sku || 'N/A'}</span>
+                                        <div className="flex items-start gap-3">
+                                            {canEdit && (
+                                                <button
+                                                    onClick={(e) => handleToggleActiveList(e, product)}
+                                                    className={`mt-0.5 w-8 h-4 rounded-full flex items-center transition-colors shrink-0 px-0.5 ${product.active !== false ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                                    title={product.active !== false ? 'Desativar Produto' : 'Ativar Produto'}
+                                                >
+                                                    <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${product.active !== false ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                </button>
+                                            )}
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-slate-900 text-sm uppercase leading-tight truncate">{product.name || 'S/N'}</p>
+                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                                                    {product.active === false && (
+                                                        <span className="text-[9px] font-black text-red-600 bg-red-50 border border-red-100 px-1 py-0.5 rounded uppercase shrink-0">INATIVO</span>
+                                                    )}
+                                                    <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1 py-0.5 rounded uppercase shrink-0">SKU: {product.sku || 'N/A'}</span>
 
-                                            {/* Saldos por Loja como texto compacto */}
-                                            {(stores || []).map(store => {
-                                                const stock = getStockForStore(product.id, store.id);
-                                                if (stock === 0) return null;
-                                                return (
-                                                    <span key={store.id} className="text-[9px] font-bold text-slate-500 uppercase whitespace-nowrap">
-                                                        {store.name}: <span className="text-slate-900 font-black">{stock}un</span>
-                                                    </span>
-                                                );
-                                            })}
+                                                    {/* Saldos por Loja como texto compacto */}
+                                                    {(stores || []).map(store => {
+                                                        const stock = getStockForStore(product.id, store.id);
+                                                        if (stock === 0) return null;
+                                                        return (
+                                                            <span key={store.id} className="text-[9px] font-bold text-slate-500 uppercase whitespace-nowrap">
+                                                                {store.name}: <span className="text-slate-900 font-black">{stock}un</span>
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-3 text-center">
@@ -375,12 +404,29 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                                                     placeholder="Descrição do produto..."
                                                 />
                                             </div>
+                                            {(user?.role === 'SUPERVISOR' || user?.role === 'ADMIN' || user?.username === 'Master') && (
+                                                <div className="pt-2 flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                                                    <div>
+                                                        <p className="text-xs font-black text-slate-900 uppercase">Produto Ativo</p>
+                                                        <p className="text-[10px] font-medium text-slate-500">Exibir produto para vendas</p>
+                                                    </div>
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input type="checkbox" className="sr-only peer" checked={editForm.active !== false} onChange={e => setEditForm(prev => ({ ...prev, active: e.target.checked }))} />
+                                                        <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                                    </label>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
                                             <div className="space-y-2">
                                                 <h3 className="text-2xl font-black text-slate-900 uppercase leading-tight italic">{selectedProduct.name}</h3>
                                                 <div className="flex flex-wrap gap-2">
+                                                    {selectedProduct.active === false && (
+                                                        <div className="inline-flex px-3 py-1 bg-red-50 text-red-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-red-100">
+                                                            INATIVO
+                                                        </div>
+                                                    )}
                                                     <div className="inline-flex px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100">
                                                         {selectedProduct.category}
                                                     </div>

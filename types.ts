@@ -76,6 +76,7 @@ export interface Product {
   supplierId?: string;
   description?: string;
   images?: ProductImage[];
+  active?: boolean;
 }
 
 export interface Customer {
