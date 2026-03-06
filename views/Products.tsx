@@ -30,6 +30,7 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
     const [movements, setMovements] = useState<any[]>([]);
     const [isLoadingMovements, setIsLoadingMovements] = useState(false);
     const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
+    const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
     const canEdit = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.name === 'Lucas' || user?.username === 'Master';
 
@@ -204,7 +205,14 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                                     onClick={() => openProductModal(product)}
                                 >
                                     <td className="px-6 py-3">
-                                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+                                        <div
+                                            className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 cursor-zoom-in"
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // Evita abrir o modal do produto
+                                                const imgUrl = product.images?.[0]?.url || product.imageUrl || FALLBACK_IMG;
+                                                setFullScreenImage(imgUrl);
+                                            }}
+                                        >
                                             <img
                                                 src={product.images?.[0]?.url || product.imageUrl || FALLBACK_IMG}
                                                 loading="lazy"
@@ -309,13 +317,17 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                             {/* Main Info Section */}
                             <div className="flex flex-col md:flex-row gap-8">
                                 <div className="w-full md:w-48 space-y-2 shrink-0">
-                                    <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 shadow-inner">
-                                        <img
-                                            src={selectedProduct.imageUrl || selectedProduct.images?.[0]?.url || FALLBACK_IMG}
-                                            className="w-full h-full object-cover"
-                                            alt=""
-                                            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
-                                        />
+                                    <div
+                                        className="w-32 h-32 rounded-3xl bg-slate-50 border-2 border-slate-100 flex items-center justify-center overflow-hidden cursor-zoom-in relative group"
+                                        onClick={() => {
+                                            const imgUrl = selectedProduct.images?.[0]?.url || selectedProduct.imageUrl || FALLBACK_IMG;
+                                            setFullScreenImage(imgUrl);
+                                        }}
+                                    >
+                                        <img src={selectedProduct.images?.[0]?.url || selectedProduct.imageUrl || FALLBACK_IMG} alt="" className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-slate-900/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Search className="w-6 h-6 text-white" />
+                                        </div>
                                     </div>
                                     {(selectedProduct.imageUrl2 || (selectedProduct.images?.length ?? 0) > 1) && (
                                         <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 shadow-inner">
@@ -630,6 +642,27 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                             )}
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* FULL SCREEN IMAGE LIGHTBOX */}
+            {fullScreenImage && (
+                <div
+                    className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setFullScreenImage(null)}
+                >
+                    <button
+                        className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white"
+                        onClick={(e) => { e.stopPropagation(); setFullScreenImage(null); }}
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                    <img
+                        src={fullScreenImage}
+                        alt="Imagem em tela cheia"
+                        className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()} // Impede fechar ao clicar na imagem
+                    />
                 </div>
             )}
         </div>

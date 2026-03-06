@@ -21,7 +21,7 @@ interface SalesProps {
   customers: Customer[];
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
   employees: Employee[];
-  refreshData: (force?: boolean) => Promise<void>;
+  refreshData: (type?: any, start?: string, end?: string) => Promise<void>;
 }
 
 const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInventory, stores, products, customers, setCustomers, employees, refreshData }) => {
@@ -41,6 +41,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [selectedRomaneioHistory, setSelectedRomaneioHistory] = useState<Sale | null>(null);
   const [storeFilter, setStoreFilter] = useState('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Lógica de acesso por unidade para colunas de logística
   const isAdminOrSupervisor = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master';
@@ -802,11 +803,19 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => refreshData('sales', startDate, endDate)}
-            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all shadow-sm"
+            onClick={async () => {
+              setIsRefreshing(true);
+              try {
+                await refreshData('sales', startDate, endDate);
+              } finally {
+                setIsRefreshing(false);
+              }
+            }}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50"
           >
-            <RefreshCw className="w-4 h-4" />
-            <span>Atualizar Vendas</span>
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Atualizando...' : 'Atualizar Vendas'}</span>
           </button>
           <button
             onClick={() => refreshData('static', true)}
