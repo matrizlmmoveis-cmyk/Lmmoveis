@@ -323,7 +323,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
               {task.customerPhone}
             </a>
             <a
-              href={`https://wa.me/${task.customerPhone.replace(/\D/g, '')}`}
+              href={`https://wa.me/55${task.customerPhone.replace(/\D/g, '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 hover:bg-emerald-100 transition-colors"
