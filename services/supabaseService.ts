@@ -337,13 +337,15 @@ export const supabaseService = {
             assemblyCompletedAt: s.assembly_completed_at || null,
             deliveryDate: s.delivery_date || null,
             items: (s.items || []).map((i: any) => ({
+                id: i.id,
                 productId: i.product_id,
                 quantity: i.quantity,
                 price: i.price,
                 discount: i.discount,
                 originalPrice: i.original_price,
                 locationId: i.location_id,
-                assemblyRequired: i.assembly_required
+                assemblyRequired: i.assembly_required,
+                dispatchStatus: i.dispatch_status
             })),
             payments: (s.payments || []).map((p: any) => ({
                 method: p.method,
@@ -956,6 +958,17 @@ export const supabaseService = {
             throw saleErr;
         }
 
+        // 4. Atualizar itens da expedição
+        await supabase.from('sale_items')
+            .update({ dispatch_status: 'DEVOLVER' })
+            .eq('sale_id', saleId)
+            .in('dispatch_status', ['SEPARADO', 'INDISPONIVEL']);
+
+        await supabase.from('sale_items')
+            .update({ dispatch_status: 'CANCELADO' })
+            .eq('sale_id', saleId)
+            .eq('dispatch_status', 'PENDENTE');
+
         console.log(`[restoreInventoryToLocation] Sucesso para Venda ${saleId}`);
         return true;
     },
@@ -1292,6 +1305,17 @@ export const supabaseService = {
             console.error("[restoreInventoryToOriginalLocation] Erro ao atualizar status da venda:", saleErr);
             throw saleErr;
         }
+
+        // 4. Atualizar itens da expedição
+        await supabase.from('sale_items')
+            .update({ dispatch_status: 'DEVOLVER' })
+            .eq('sale_id', saleId)
+            .in('dispatch_status', ['SEPARADO', 'INDISPONIVEL']);
+
+        await supabase.from('sale_items')
+            .update({ dispatch_status: 'CANCELADO' })
+            .eq('sale_id', saleId)
+            .eq('dispatch_status', 'PENDENTE');
 
         console.log(`[restoreInventoryToOriginalLocation] Sucesso para Venda ${saleId}`);
         return true;

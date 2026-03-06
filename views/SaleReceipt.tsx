@@ -292,21 +292,23 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, product
             </tr>
           </thead>
           <tbody>
-            {sale.items.map((item, i) => {
-              const prod = products.find(p => p.id === item.productId);
-              const sourceStore = stores.find(s => s.id === item.locationId);
-              const total = item.price * item.quantity;
-              return (
-                <tr key={i} className="border-b border-black" style={{ height: '36px' }}>
-                  <td className="border-r border-black px-3 py-2 font-medium uppercase text-[10.5px]">{prod?.name}</td>
-                  <td className="border-r border-black px-3 py-2 text-center">{item.quantity}</td>
-                  <td className="border-r border-black px-3 py-2 text-center text-[10px]">{sourceStore?.name || '—'}</td>
-                  <td className="border-r border-black px-3 py-2 text-right">R$ {item.price.toFixed(2)}</td>
-                  <td className="border-r border-black px-3 py-2 text-right font-bold">R$ {total.toFixed(2)}</td>
-                  <td className="px-3 py-2 text-center">{item.discount > 0 ? `${item.discount.toFixed(0)}%` : '0'}</td>
-                </tr>
-              );
-            })}
+            {sale.items
+              .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
+              .map((item, i) => {
+                const prod = products.find(p => p.id === item.productId);
+                const sourceStore = stores.find(s => s.id === item.locationId);
+                const total = item.price * item.quantity;
+                return (
+                  <tr key={i} className="border-b border-black" style={{ height: '36px' }}>
+                    <td className="border-r border-black px-3 py-2 font-medium uppercase text-[10.5px]">{prod?.name}</td>
+                    <td className="border-r border-black px-3 py-2 text-center">{item.quantity}</td>
+                    <td className="border-r border-black px-3 py-2 text-center text-[10px]">{sourceStore?.name || '—'}</td>
+                    <td className="border-r border-black px-3 py-2 text-right">R$ {item.price.toFixed(2)}</td>
+                    <td className="border-r border-black px-3 py-2 text-right font-bold">R$ {total.toFixed(2)}</td>
+                    <td className="px-3 py-2 text-center">{item.discount > 0 ? `${item.discount.toFixed(0)}%` : '0'}</td>
+                  </tr>
+                );
+              })}
             {/* Linhas vazias — altura maior para preencher A4 */}
             {[...Array(Math.max(0, 8 - sale.items.length))].map((_, i) => (
               <tr key={`empty-${i}`} className="border-b border-black" style={{ height: '36px' }}>

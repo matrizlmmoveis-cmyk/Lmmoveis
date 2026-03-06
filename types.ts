@@ -113,6 +113,7 @@ export interface Payment {
 }
 
 export interface SaleItem {
+  id?: string;
   productId: string;
   quantity: number;
   price: number;
@@ -120,6 +121,7 @@ export interface SaleItem {
   originalPrice: number;
   locationId: string;
   assemblyRequired: boolean;
+  dispatchStatus?: string;
 }
 
 export interface Sale {
