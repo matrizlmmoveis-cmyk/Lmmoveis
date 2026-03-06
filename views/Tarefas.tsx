@@ -746,17 +746,21 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSal
                                                     if (!stockReturnModal.selectedLocationId) return;
                                                     await supabaseService.restoreInventoryToLocation(stockReturnModal.task.sale_id!, stockReturnModal.selectedLocationId);
                                                 }
-                                                const cdName = useOriginal ? 'estoque original' : stores.find(s => s.id === stockReturnModal.selectedLocationId)?.name;
+                                                const cdName = useOriginal ? 'estoque original' : (stores.find(s => s.id === stockReturnModal.selectedLocationId)?.name || 'CD selecionado');
                                                 await supabase.from('tasks').update({ status: 'CONCLUIDA', resolved_at: new Date().toISOString(), notes: `Saldo devolvido ao ${cdName}` }).eq('id', stockReturnModal.task.id);
                                                 setTasks(prev => prev.map(t => t.id === stockReturnModal.task.id ? { ...t, status: 'CONCLUIDA', resolved_at: new Date().toISOString() } : t));
-                                                if (setSales && stockReturnModal.task.sale_id) {
-                                                    setSales(prev => prev.map(s => s.id === stockReturnModal.task.sale_id ? { ...s, status: OrderStatus.CANCELED } : s));
+
+                                                // @ts-ignore
+                                                if (props.setSales && stockReturnModal.task.sale_id) {
+                                                    // @ts-ignore
+                                                    props.setSales(prev => prev.map(s => s.id === stockReturnModal.task.sale_id ? { ...s, status: OrderStatus.CANCELED } : s));
                                                 }
                                                 setStockReturnModal(null);
                                                 showToast('✅ Cancelamento autorizado e saldo devolvido!');
                                                 loadTasks();
-                                            } catch (err) {
-                                                showToast('Erro ao devolver saldo.', 'error');
+                                            } catch (err: any) {
+                                                console.error("Erro completo na devolução:", err);
+                                                showToast(`Erro ao devolver saldo: ${err?.message || 'Erro desconhecido'}`, 'error');
                                             } finally {
                                                 setReturningStock(false);
                                             }

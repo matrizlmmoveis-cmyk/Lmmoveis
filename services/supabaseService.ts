@@ -883,26 +883,43 @@ export const supabaseService = {
 
     // Devolve o estoque dos itens da venda para um CD/loja escolhido e cancela a venda
     async restoreInventoryToLocation(saleId: string, targetLocationId: string) {
+        console.log(`[restoreInventoryToLocation] Iniciando para Venda ${saleId} -> Local ${targetLocationId}`);
         // 1. Buscar itens da venda
         const { data: items, error: fetchErr } = await supabase
             .from('sale_items')
             .select('product_id, quantity, location_id')
             .eq('sale_id', saleId);
-        if (fetchErr) throw fetchErr;
 
-        // 2. Devolver cada item ao CD escolhido
+        if (fetchErr) {
+            console.error("[restoreInventoryToLocation] Erro ao buscar itens:", fetchErr);
+            throw fetchErr;
+        }
+
+        if (!items || items.length === 0) {
+            console.warn("[restoreInventoryToLocation] Nenhum item encontrado para a venda:", saleId);
+        }
+
+        // 2. Devolver cada item ao CD escolhido (ignorar locais virtuais no estorno)
         for (const item of (items || [])) {
-            const { data: invData } = await supabase
+            // Se o item saiu originalmente de um local virtual, ainda assim devolvemos para o CD físico escolhido
+            // pois o cancelamento implica retorno físico do produto ao estoque.
+
+            const { data: invData, error: invErr } = await supabase
                 .from('inventory')
                 .select('quantity, type')
                 .eq('product_id', item.product_id)
                 .eq('location_id', targetLocationId)
-                .single();
+                .maybeSingle();
+
+            if (invErr) {
+                console.error(`[restoreInventoryToLocation] Erro ao consultar estoque (Prod: ${item.product_id}, Loc: ${targetLocationId}):`, invErr);
+                throw invErr;
+            }
 
             const currentQty = invData?.quantity || 0;
             const newQty = currentQty + item.quantity;
 
-            await supabase
+            const { error: upsertErr } = await supabase
                 .from('inventory')
                 .upsert({
                     product_id: item.product_id,
@@ -910,6 +927,11 @@ export const supabaseService = {
                     quantity: newQty,
                     ...(invData?.type ? { type: invData.type } : {})
                 }, { onConflict: 'product_id,location_id' });
+
+            if (upsertErr) {
+                console.error(`[restoreInventoryToLocation] Erro ao fazer upsert no estoque (Prod: ${item.product_id}, Loc: ${targetLocationId}):`, upsertErr);
+                throw upsertErr;
+            }
 
             // Registrar movimento
             await this.logInventoryMovement({
@@ -928,7 +950,13 @@ export const supabaseService = {
             .from('sales')
             .update({ status: 'Cancelada' })
             .eq('id', saleId);
-        if (saleErr) throw saleErr;
+
+        if (saleErr) {
+            console.error("[restoreInventoryToLocation] Erro ao atualizar status da venda:", saleErr);
+            throw saleErr;
+        }
+
+        console.log(`[restoreInventoryToLocation] Sucesso para Venda ${saleId}`);
         return true;
     },
 
@@ -1193,29 +1221,42 @@ export const supabaseService = {
 
     // Devolve cada item da venda ao seu location_id ORIGINAL (não um CD único) e cancela a venda
     async restoreInventoryToOriginalLocation(saleId: string) {
+        console.log(`[restoreInventoryToOriginalLocation] Iniciando para Venda ${saleId}`);
         // 1. Buscar itens da venda com seus locationIds originais
         const { data: items, error: fetchErr } = await supabase
             .from('sale_items')
             .select('product_id, quantity, location_id')
             .eq('sale_id', saleId);
-        if (fetchErr) throw fetchErr;
+
+        if (fetchErr) {
+            console.error("[restoreInventoryToOriginalLocation] Erro ao buscar itens:", fetchErr);
+            throw fetchErr;
+        }
 
         // 2. Devolver cada item ao seu estoque original (ignorar locais virtuais)
         for (const item of (items || [])) {
             const isVirtual = item.location_id === 'ST-ENCOMENDA' || item.location_id === 'ST-MOSTRUARIO';
-            if (isVirtual || !item.location_id) continue;
+            if (isVirtual || !item.location_id) {
+                console.log(`[restoreInventoryToOriginalLocation] Pulando local virtual/nulo: ${item.location_id} para prod ${item.product_id}`);
+                continue;
+            }
 
-            const { data: invData } = await supabase
+            const { data: invData, error: invErr } = await supabase
                 .from('inventory')
                 .select('quantity, type')
                 .eq('product_id', item.product_id)
                 .eq('location_id', item.location_id)
-                .single();
+                .maybeSingle();
+
+            if (invErr) {
+                console.error(`[restoreInventoryToOriginalLocation] Erro ao consultar estoque (Prod: ${item.product_id}, Loc: ${item.location_id}):`, invErr);
+                throw invErr;
+            }
 
             const currentQty = invData?.quantity || 0;
             const newQty = currentQty + item.quantity;
 
-            await supabase
+            const { error: upsertErr } = await supabase
                 .from('inventory')
                 .upsert({
                     product_id: item.product_id,
@@ -1223,6 +1264,11 @@ export const supabaseService = {
                     quantity: newQty,
                     ...(invData?.type ? { type: invData.type } : {})
                 }, { onConflict: 'product_id,location_id' });
+
+            if (upsertErr) {
+                console.error(`[restoreInventoryToOriginalLocation] Erro ao fazer upsert no estoque (Prod: ${item.product_id}, Loc: ${item.location_id}):`, upsertErr);
+                throw upsertErr;
+            }
 
             // Registrar movimento
             await this.logInventoryMovement({
@@ -1241,7 +1287,13 @@ export const supabaseService = {
             .from('sales')
             .update({ status: 'Cancelada' })
             .eq('id', saleId);
-        if (saleErr) throw saleErr;
+
+        if (saleErr) {
+            console.error("[restoreInventoryToOriginalLocation] Erro ao atualizar status da venda:", saleErr);
+            throw saleErr;
+        }
+
+        console.log(`[restoreInventoryToOriginalLocation] Sucesso para Venda ${saleId}`);
         return true;
     },
 };
