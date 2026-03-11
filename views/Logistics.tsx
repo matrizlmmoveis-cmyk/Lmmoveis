@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Truck, MapPin, CheckCircle2, Navigation, Package, Camera, X, Check, Eraser, Phone, MessageSquare, Printer, History } from 'lucide-react';
+import { Truck, MapPin, CheckCircle2, Navigation, Package, Camera, X, Check, Eraser, Phone, MessageSquare, Printer, History, ChevronUp, ChevronDown } from 'lucide-react';
 import { OrderStatus, Sale, Employee, Product, Store } from '../types.ts';
 import { supabaseService } from '../services/supabaseService';
 
@@ -536,34 +536,42 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
                 return (
                   <div
                     key={task.id}
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('text/plain', index.toString());
-                      e.dataTransfer.effectAllowed = 'move';
-                      (e.target as HTMLElement).classList.add('opacity-50');
-                    }}
-                    onDragEnd={(e) => {
-                      (e.target as HTMLElement).classList.remove('opacity-50');
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'move';
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                      const toIndex = index;
-                      if (isNaN(fromIndex) || fromIndex === toIndex) return;
-                      const newRoute = [...customRouteIds];
-                      const [moved] = newRoute.splice(fromIndex, 1);
-                      newRoute.splice(toIndex, 0, moved);
-                      setCustomRouteIds(newRoute);
-                    }}
-                    className="cursor-move"
                   >
-                    <div className="flex items-center gap-2 mb-2 px-2">
-                      <span className="bg-slate-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black">{index + 1}</span>
-                      <span className="text-[10px] font-black text-slate-400 uppercase">Arraste para reordenar</span>
+                    <div className="flex items-center justify-between gap-2 mb-2 px-2 bg-slate-100 p-2 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-slate-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black">{index + 1}</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase">Ordem de Entrega</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className={`p-1.5 rounded-lg transition-colors ${index === 0 ? 'text-slate-300 bg-slate-50 cursor-not-allowed' : 'text-blue-600 bg-blue-50 hover:bg-blue-100 shadow-sm'}`}
+                          disabled={index === 0}
+                          onClick={() => {
+                            const newRoute = [...customRouteIds];
+                            const temp = newRoute[index - 1];
+                            newRoute[index - 1] = newRoute[index];
+                            newRoute[index] = temp;
+                            setCustomRouteIds(newRoute);
+                          }}
+                          title="Mover para cima"
+                        >
+                          <ChevronUp className="w-5 h-5" />
+                        </button>
+                        <button
+                          className={`p-1.5 rounded-lg transition-colors ${index === customRouteIds.length - 1 ? 'text-slate-300 bg-slate-50 cursor-not-allowed' : 'text-blue-600 bg-blue-50 hover:bg-blue-100 shadow-sm'}`}
+                          disabled={index === customRouteIds.length - 1}
+                          onClick={() => {
+                            const newRoute = [...customRouteIds];
+                            const temp = newRoute[index + 1];
+                            newRoute[index + 1] = newRoute[index];
+                            newRoute[index] = temp;
+                            setCustomRouteIds(newRoute);
+                          }}
+                          title="Mover para baixo"
+                        >
+                          <ChevronDown className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
                     <DeliveryCard task={task} />
                   </div>
