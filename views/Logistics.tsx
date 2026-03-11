@@ -17,6 +17,25 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
   const [activeDeliveryId, setActiveDeliveryId] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [activeTab, setActiveTab] = useState<'PADRAO' | 'ROTEIRO'>('PADRAO');
+  const [customRouteIds, setCustomRouteIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('customRouteIds');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('customRouteIds', JSON.stringify(customRouteIds));
+  }, [customRouteIds]);
+
+  const toggleCustomRoute = (taskId: string) => {
+    setCustomRouteIds(prev =>
+      prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]
+    );
+  };
 
   // Polling removido por solicitação do usuário para economizar dados
   const [photo, setPhoto] = useState<string | null>(null);
@@ -404,6 +423,12 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
                 <CheckCircle2 className="w-4 h-4" /> Baixar Entrega
               </button>
             )}
+            <button
+              onClick={() => toggleCustomRoute(task.id)}
+              className={`col-span-2 py-3 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 transition-all active:scale-95 ${customRouteIds.includes(task.id) ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+            >
+              {customRouteIds.includes(task.id) ? 'Remover do Meu Roteiro' : '+ Adicionar ao Meu Roteiro'}
+            </button>
           </div>
         )}
       </div>
@@ -441,6 +466,23 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
         </div>
       </header>
 
+      {!showHistory && (
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
+          <button
+            onClick={() => setActiveTab('PADRAO')}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'PADRAO' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+          >
+            Visão Geral
+          </button>
+          <button
+            onClick={() => setActiveTab('ROTEIRO')}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'ROTEIRO' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+          >
+            Meu Roteiro ({customRouteIds.length})
+          </button>
+        </div>
+      )}
+
       <div className="space-y-8 pb-20">
         {showHistory ? (
           <>
@@ -458,7 +500,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
               myHistory.map(task => <DeliveryCard key={task.id} task={task} isHistory />)
             )}
           </>
-        ) : (
+        ) : activeTab === 'PADRAO' ? (
           groupedTasks.length === 0 ? (
             <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-100 shadow-sm">
               <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
@@ -478,6 +520,56 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
                 </div>
               </div>
             ))
+          )
+        ) : (
+          customRouteIds.length === 0 ? (
+            <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-100 shadow-sm">
+              <Navigation className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+              <p className="text-slate-900 font-black text-xl">ROTEIRO VAZIO</p>
+              <p className="text-slate-500 text-sm mt-1 uppercase font-bold">Adicione pedidos da visão geral para organizar sua rota.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {customRouteIds.map((id, index) => {
+                const task = myDeliveries.find(t => t.id === id);
+                if (!task) return null;
+                return (
+                  <div
+                    key={task.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', index.toString());
+                      e.dataTransfer.effectAllowed = 'move';
+                      (e.target as HTMLElement).classList.add('opacity-50');
+                    }}
+                    onDragEnd={(e) => {
+                      (e.target as HTMLElement).classList.remove('opacity-50');
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                      const toIndex = index;
+                      if (isNaN(fromIndex) || fromIndex === toIndex) return;
+                      const newRoute = [...customRouteIds];
+                      const [moved] = newRoute.splice(fromIndex, 1);
+                      newRoute.splice(toIndex, 0, moved);
+                      setCustomRouteIds(newRoute);
+                    }}
+                    className="cursor-move"
+                  >
+                    <div className="flex items-center gap-2 mb-2 px-2">
+                      <span className="bg-slate-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black">{index + 1}</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase">Arraste para reordenar</span>
+                    </div>
+                    <DeliveryCard task={task} />
+                  </div>
+                );
+              })}
+            </div>
           )
         )}
       </div>

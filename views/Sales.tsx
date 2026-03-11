@@ -36,7 +36,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0 });
   const [currentSaleToPrint, setCurrentSaleToPrint] = useState<Sale | null>(null);
-  const isShowroomPeriod = new Date() <= new Date('2026-03-10T23:59:59');
+  const isShowroomPeriod = new Date() <= new Date('2026-03-30T23:59:59');
   const [romaneios, setRomaneios] = useState<Romaneio[]>([]);
   const [selectedRomaneioHistory, setSelectedRomaneioHistory] = useState<Sale | null>(null);
   const [storeFilter, setStoreFilter] = useState('all');
