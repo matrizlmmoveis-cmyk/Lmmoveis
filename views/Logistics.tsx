@@ -17,7 +17,14 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
   const [activeDeliveryId, setActiveDeliveryId] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [activeTab, setActiveTab] = useState<'PADRAO' | 'ROTEIRO'>('PADRAO');
+  const [activeTab, setActiveTab] = useState<'PADRAO' | 'ROTEIRO' | 'ENTREGUE_LOJA'>(() => {
+    const saved = localStorage.getItem('logisticsActiveTab');
+    return (saved === 'PADRAO' || saved === 'ROTEIRO' || saved === 'ENTREGUE_LOJA') ? (saved as any) : 'PADRAO';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('logisticsActiveTab', activeTab);
+  }, [activeTab]);
   const [customRouteIds, setCustomRouteIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('customRouteIds');
@@ -31,8 +38,27 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
     localStorage.setItem('customRouteIds', JSON.stringify(customRouteIds));
   }, [customRouteIds]);
 
+  const [storeDeliveryIds, setStoreDeliveryIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('storeDeliveryIds');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('storeDeliveryIds', JSON.stringify(storeDeliveryIds));
+  }, [storeDeliveryIds]);
+
   const toggleCustomRoute = (taskId: string) => {
     setCustomRouteIds(prev =>
+      prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]
+    );
+  };
+
+  const toggleStoreDelivery = (taskId: string) => {
+    setStoreDeliveryIds(prev =>
       prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]
     );
   };
@@ -425,9 +451,15 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
             )}
             <button
               onClick={() => toggleCustomRoute(task.id)}
-              className={`col-span-2 py-3 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 transition-all active:scale-95 ${customRouteIds.includes(task.id) ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+              className={`py-3 rounded-2xl font-black text-[10px] sm:text-xs uppercase flex items-center justify-center gap-2 transition-all active:scale-95 ${customRouteIds.includes(task.id) ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
             >
-              {customRouteIds.includes(task.id) ? 'Remover do Meu Roteiro' : '+ Adicionar ao Meu Roteiro'}
+              {customRouteIds.includes(task.id) ? 'Rmv. Roteiro' : '+ Roteiro'}
+            </button>
+            <button
+              onClick={() => toggleStoreDelivery(task.id)}
+              className={`py-3 rounded-2xl font-black text-[10px] sm:text-xs uppercase flex items-center justify-center gap-2 transition-all active:scale-95 ${storeDeliveryIds.includes(task.id) ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
+            >
+              {storeDeliveryIds.includes(task.id) ? 'Rmv. Loja' : '+ À Loja'}
             </button>
           </div>
         )}
@@ -470,15 +502,21 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
         <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
           <button
             onClick={() => setActiveTab('PADRAO')}
-            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'PADRAO' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+            className={`flex-1 py-3 px-2 rounded-xl text-[10px] sm:text-xs font-black uppercase transition-all ${activeTab === 'PADRAO' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
           >
             Visão Geral
           </button>
           <button
             onClick={() => setActiveTab('ROTEIRO')}
-            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'ROTEIRO' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+            className={`flex-1 py-3 px-2 rounded-xl text-[10px] sm:text-xs font-black uppercase transition-all ${activeTab === 'ROTEIRO' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
           >
             Meu Roteiro ({customRouteIds.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('ENTREGUE_LOJA')}
+            className={`flex-1 py-3 px-2 rounded-xl text-[10px] sm:text-xs font-black uppercase transition-all ${activeTab === 'ENTREGUE_LOJA' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+          >
+            Entregue Loja ({storeDeliveryIds.length})
           </button>
         </div>
       )}
@@ -521,7 +559,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
               </div>
             ))
           )
-        ) : (
+        ) : activeTab === 'ROTEIRO' ? (
           customRouteIds.length === 0 ? (
             <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-100 shadow-sm">
               <Navigation className="w-12 h-12 text-slate-200 mx-auto mb-4" />
@@ -573,6 +611,26 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
                         </button>
                       </div>
                     </div>
+                    <DeliveryCard task={task} />
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          storeDeliveryIds.length === 0 ? (
+            <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-100 shadow-sm">
+              <Package className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+              <p className="text-slate-900 font-black text-xl">NENHUM ITEM NA LOJA</p>
+              <p className="text-slate-500 text-sm mt-1 uppercase font-bold">Adicione pedidos para registrar que foram entregues na loja para montagem.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {storeDeliveryIds.map((id, index) => {
+                const task = myDeliveries.find(t => t.id === id);
+                if (!task) return null;
+                return (
+                  <div key={task.id}>
                     <DeliveryCard task={task} />
                   </div>
                 );

@@ -92,6 +92,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     justification: string;
     productSearch: string;
     submitting: boolean;
+    editedObs: string;
+    editedSellerId: string;
   } | null>(null);
 
   const handleCustomerCreated = (customer: Customer) => {
@@ -1023,7 +1025,9 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                                 editedPayments: sale.payments ? [...sale.payments] : [],
                                 justification: '',
                                 productSearch: '',
-                                submitting: false
+                                submitting: false,
+                                editedObs: sale.deliveryObs || '',
+                                editedSellerId: sale.sellerId || ''
                               })}
                               className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-black uppercase border border-amber-200"
                             >
@@ -1211,6 +1215,30 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                     <span className="text-sm font-black text-slate-700">Total proposto: <span className="text-emerald-600">R$ {saleTotal.toFixed(2)}</span></span>
                   </div>
 
+                  {/* Vendedor */}
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase mb-2">Vendedor</label>
+                    <select
+                      value={er.editedSellerId}
+                      onChange={e => setEditRequest({ ...er, editedSellerId: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:border-amber-400"
+                    >
+                      <option value="">Selecione um vendedor</option>
+                      {employees.filter(emp => emp.role === 'VENDEDOR' || emp.role === 'GERENTE').map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Observações */}
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase mb-2">Observações de Entrega</label>
+                    <textarea rows={3} placeholder="Instruções para a entrega..."
+                      value={er.editedObs}
+                      onChange={e => setEditRequest({ ...er, editedObs: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-700 resize-none outline-none focus:border-amber-400" />
+                  </div>
+
                   {/* Justification */}
                   <div>
                     <label className="block text-xs font-black text-slate-400 uppercase mb-2">Justificativa obrigatória</label>
@@ -1237,7 +1265,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           storeId: er.sale.storeId,
                           justification: er.justification,
                           originalSnapshot: { ...er.sale, requestedBy: user?.name || user?.username, justification: er.justification, prevStatus: er.sale.status },
-                          proposedSnapshot: { ...er.sale, items: er.editedItems, payments: er.editedPayments, total: saleTotal },
+                          proposedSnapshot: { ...er.sale, items: er.editedItems, payments: er.editedPayments, total: saleTotal, deliveryObs: er.editedObs, sellerId: er.editedSellerId },
                           productNames,
                         });
                         setSales(prev => prev.map(s => s.id === er.sale.id ? { ...s, status: OrderStatus.EDIT_PENDING } : s));
