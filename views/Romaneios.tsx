@@ -87,7 +87,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
 
       const promises = batchIds.map(id => {
         if (type === 'entrega') {
-          return supabaseService.updateSale(id, { assignedDriverId: selectedEmployeeId, status: OrderStatus.SHIPPED });
+          return supabaseService.updateSale(id, { assignedDriverId: selectedEmployeeId, status: OrderStatus.AWAITING_LOAD });
         } else {
           return supabaseService.updateSale(id, { assignedAssemblerId: selectedEmployeeId });
         }
@@ -107,7 +107,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
       setSales(prevSales => prevSales.map(s => {
         if (batchIds.includes(s.id)) {
           if (type === 'entrega') {
-            return { ...s, assignedDriverId: selectedEmployeeId, status: OrderStatus.SHIPPED };
+            return { ...s, assignedDriverId: selectedEmployeeId, status: OrderStatus.AWAITING_LOAD };
           } else {
             return { ...s, assignedAssemblerId: selectedEmployeeId };
           }

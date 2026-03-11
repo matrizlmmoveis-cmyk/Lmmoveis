@@ -318,7 +318,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
 
     try {
       if (type === 'entrega') {
-        await supabaseService.updateSale(saleId, { assignedDriverId: employeeId, status: OrderStatus.SHIPPED });
+        await supabaseService.updateSale(saleId, { assignedDriverId: employeeId, status: OrderStatus.AWAITING_LOAD });
       } else {
         await supabaseService.updateSale(saleId, { assignedAssemblerId: employeeId });
       }
@@ -332,7 +332,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
 
       setSales(prev => prev.map(s => {
         if (s.id === saleId) {
-          if (type === 'entrega') return { ...s, assignedDriverId: employeeId, status: OrderStatus.SHIPPED };
+          if (type === 'entrega') return { ...s, assignedDriverId: employeeId, status: OrderStatus.AWAITING_LOAD };
           return { ...s, assignedAssemblerId: employeeId };
         }
         return s;

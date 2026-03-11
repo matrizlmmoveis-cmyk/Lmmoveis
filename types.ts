@@ -1,6 +1,7 @@
 
 export enum OrderStatus {
   PENDING = 'Aguardando Entrega',
+  AWAITING_LOAD = 'Aguardando Carregamento',
   SHIPPED = 'Em Rota',
   DELIVERED = 'Entregue - Aguardando Montagem',
   ASSEMBLY_PENDING = 'Montagem Pendente',

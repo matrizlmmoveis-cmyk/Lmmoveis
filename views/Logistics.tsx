@@ -25,9 +25,9 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
   const photoCanvasRef = useRef<HTMLCanvasElement>(null); // Para redimensionar foto
   const [isDrawing, setIsDrawing] = useState(false);
 
-  // Entregas ativas (PENDING ou SHIPPED)
+  // Entregas ativas (PENDING, AWAITING_LOAD ou SHIPPED)
   const myDeliveries = (sales || []).filter(s =>
-    (s.status === OrderStatus.PENDING || s.status === OrderStatus.SHIPPED) &&
+    (s.status === OrderStatus.PENDING || s.status === OrderStatus.AWAITING_LOAD || s.status === OrderStatus.SHIPPED) &&
     (user?.id === 'admin' || s.assignedDriverId === user?.id || (user && 'role' in user && user.role === 'GERENTE' && s.storeId === user.storeId))
   );
 
@@ -117,6 +117,16 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext('2d');
       if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    }
+  };
+
+  const handleLoadDelivery = async (saleId: string) => {
+    try {
+      await supabaseService.updateSaleStatus(saleId, OrderStatus.SHIPPED);
+      setSales(prev => prev.map(s => s.id === saleId ? { ...s, status: OrderStatus.SHIPPED } : s));
+    } catch (err) {
+      console.error("Erro ao carregar entrega:", err);
+      alert("Erro ao marcar como carregado.");
     }
   };
 
@@ -260,10 +270,22 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
       <div key={task.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
         <div className="flex justify-between items-start">
           <div className="flex flex-col gap-1">
-            <div className={`px-3 py-1 rounded-lg font-black text-[10px] uppercase inline-flex items-center gap-1 ${isHistory ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
-              {isHistory ? <CheckCircle2 className="w-3 h-3" /> : <Package className="w-3 h-3" />}
-              {isHistory ? 'Entrega Concluída' : 'Pendente de Entrega'}
-            </div>
+            {task.status === OrderStatus.AWAITING_LOAD ? (
+              <div className="px-3 py-1 rounded-lg font-black text-[10px] uppercase inline-flex items-center gap-1 bg-amber-50 text-amber-600">
+                <Package className="w-3 h-3" />
+                Aguardando Carregamento
+              </div>
+            ) : task.status === OrderStatus.SHIPPED ? (
+              <div className="px-3 py-1 rounded-lg font-black text-[10px] uppercase inline-flex items-center gap-1 bg-blue-50 text-blue-600">
+                <Truck className="w-3 h-3" />
+                Em Rota
+              </div>
+            ) : (
+              <div className={`px-3 py-1 rounded-lg font-black text-[10px] uppercase inline-flex items-center gap-1 ${isHistory ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-600'}`}>
+                {isHistory ? <CheckCircle2 className="w-3 h-3" /> : <Package className="w-3 h-3" />}
+                {isHistory ? 'Entrega Concluída' : 'Pendente de Entrega'}
+              </div>
+            )}
           </div>
           <div className="text-right">
             <p className="text-[10px] font-black text-slate-400">PEDIDO</p>
@@ -368,9 +390,20 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
             <button className="bg-slate-100 text-slate-900 py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2">
               <Navigation className="w-4 h-4" /> Rota GPS
             </button>
-            <button onClick={() => setActiveDeliveryId(task.id)} className="bg-emerald-600 text-white py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 transition-all active:scale-95">
-              <CheckCircle2 className="w-4 h-4" /> Baixar Entrega
-            </button>
+            {task.status === OrderStatus.AWAITING_LOAD ? (
+              <button onClick={() => handleLoadDelivery(task.id)} className="bg-blue-600 text-white py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-blue-100 transition-all active:scale-95">
+                <Truck className="w-4 h-4" /> Carregado
+              </button>
+            ) : (
+              <button
+                onClick={() => setActiveDeliveryId(task.id)}
+                disabled={task.status !== OrderStatus.SHIPPED}
+                className={`text-white py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 ${task.status === OrderStatus.SHIPPED ? 'bg-emerald-600 shadow-emerald-100' : 'bg-slate-300 shadow-none cursor-not-allowed'}`}
+                title={task.status !== OrderStatus.SHIPPED ? "A entrega precisa estar Em Rota para ser baixada" : ""}
+              >
+                <CheckCircle2 className="w-4 h-4" /> Baixar Entrega
+              </button>
+            )}
           </div>
         )}
       </div>
