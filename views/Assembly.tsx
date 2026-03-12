@@ -29,7 +29,8 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
   // Histórico: montagens concluídas (ordenado pela data de conclusão da montagem)
   const myHistory = sales.filter(s =>
     s.assemblyRequired &&
-    (s.status === OrderStatus.COMPLETED || s.status === OrderStatus.FINISHED) &&
+    ((s.status === OrderStatus.COMPLETED || s.status === OrderStatus.FINISHED) || 
+     (s.status === OrderStatus.CANCELED && s.assemblyCompletedAt)) &&
     (user?.id === 'admin' || user?.id === 'master' || s.assignedAssemblerId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
   ).sort((a, b) => {
     const dateA = a.assemblyCompletedAt || a.date;

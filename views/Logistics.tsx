@@ -78,7 +78,8 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
 
   // Histórico de entregas (DELIVERED, ASSEMBLY_PENDING, COMPLETED, FINISHED)
   const myHistory = (sales || []).filter(s =>
-    (s.status === OrderStatus.DELIVERED || s.status === OrderStatus.COMPLETED || s.status === OrderStatus.ASSEMBLY_PENDING || s.status === OrderStatus.FINISHED) &&
+    ((s.status === OrderStatus.DELIVERED || s.status === OrderStatus.COMPLETED || s.status === OrderStatus.ASSEMBLY_PENDING || s.status === OrderStatus.FINISHED) ||
+     (s.status === OrderStatus.CANCELED && s.deliveryDate)) &&
     (user?.id === 'admin' || user?.id === 'master' || s.assignedDriverId === user?.id || (user && 'role' in user && user.role === 'GERENTE' && s.storeId === user.storeId))
   ).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
