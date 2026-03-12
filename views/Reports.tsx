@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Download, FileText, Printer, X } from 'lucide-react';
 import { Sale, Store, Product, Employee } from '../types.ts';
@@ -9,11 +9,12 @@ interface ReportsProps {
   stores: Store[];
   products: Product[];
   employees: Employee[];
+  refreshData?: (scope?: any, start?: string, end?: string) => Promise<void>;
 }
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#f59e0b', '#6366f1'];
 
-const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employees }) => {
+const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employees, refreshData }) => {
   const [dateFilter, setDateFilter] = useState('this_month');
   const [storeFilter, setStoreFilter] = useState(user?.role === 'GERENTE' ? (user.storeId || 'all') : 'all');
   const [sellerFilter, setSellerFilter] = useState('all');
@@ -21,6 +22,40 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
   const [customEnd, setCustomEnd] = useState('');
   const [showPdf, setShowPdf] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Efeito para refazer a consulta ao banco quando o filtro de data mudar.
+  // Evita o problema do App.tsx carregar apenas os últimos 7 dias.
+  useEffect(() => {
+    if (!refreshData) return;
+
+    const now = new Date();
+    let start: string | undefined;
+    let end: string | undefined;
+
+    if (dateFilter === 'today') {
+      start = now.toISOString().split('T')[0];
+      end = start;
+    } else if (dateFilter === 'this_week') {
+      const startD = new Date(now); startD.setDate(now.getDate() - now.getDay());
+      start = startD.toISOString().split('T')[0];
+      end = now.toISOString().split('T')[0];
+    } else if (dateFilter === 'this_month') {
+      const startD = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endD = new Date(now.getFullYear(), now.getMonth() + 1, 0); // último dia do mês
+      start = startD.toISOString().split('T')[0];
+      end = endD.toISOString().split('T')[0];
+    } else if (dateFilter === 'custom' && customStart && customEnd) {
+      start = customStart;
+      end = customEnd;
+    } else if (dateFilter === 'all') {
+      start = undefined;
+      end = undefined;
+    }
+
+    if (dateFilter !== 'custom' || (dateFilter === 'custom' && customStart && customEnd)) {
+      refreshData('sales', start, end);
+    }
+  }, [dateFilter, customStart, customEnd, refreshData]);
 
   const filteredSales = useMemo(() => {
     let filtered = sales.filter(s => s.status !== 'Cancelada');
