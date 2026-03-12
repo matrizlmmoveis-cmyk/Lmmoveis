@@ -25,6 +25,7 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
     // Modal State
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [isCreationMode, setIsCreationMode] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editForm, setEditForm] = useState<Partial<Product>>({});
     const [movements, setMovements] = useState<any[]>([]);
@@ -76,8 +77,37 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
         setSelectedProduct(product);
         setEditForm({ ...product });
         setIsEditMode(false);
+        setIsCreationMode(false);
         setActiveTab('details');
         loadMovements(product.id);
+    };
+
+    const handleNewProduct = async () => {
+        setIsSaving(true);
+        try {
+            const nextId = await supabaseService.getNextProductId();
+            const newProduct: Product = {
+                id: nextId,
+                name: '',
+                category: categories[0] || CATEGORIES[0] || 'Geral',
+                price: 0,
+                costPrice: 0,
+                assemblyPrice: 0,
+                sku: nextId,
+                active: true,
+                images: []
+            };
+            setSelectedProduct(newProduct);
+            setEditForm(newProduct);
+            setIsEditMode(true);
+            setIsCreationMode(true);
+            setActiveTab('details');
+            setMovements([]);
+        } catch (err) {
+            console.error('Erro ao preparar novo produto:', err);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const loadMovements = async (productId: string) => {
@@ -93,14 +123,23 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
     };
 
     const handleSave = async () => {
-        if (!selectedProduct) return;
+        if (!selectedProduct || !editForm.name || !editForm.sku) {
+            alert('Nome e SKU são obrigatórios!');
+            return;
+        }
         setIsSaving(true);
         try {
-            await supabaseService.updateProduct(selectedProduct.id, editForm);
+            if (isCreationMode) {
+                await supabaseService.createProduct(editForm as Product);
+                alert('Produto criado com sucesso!');
+            } else {
+                await supabaseService.updateProduct(selectedProduct.id, editForm);
+                alert('Produto atualizado com sucesso!');
+            }
             await refreshData(true);
-            setSelectedProduct({ ...selectedProduct, ...editForm });
+            setSelectedProduct(null);
             setIsEditMode(false);
-            alert('Produto atualizado com sucesso!');
+            setIsCreationMode(false);
         } catch (err: any) {
             console.error('Erro ao salvar produto:', err);
             const msg = err.message || err.details || 'Erro desconhecido';
@@ -149,6 +188,15 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                     <h1 className="text-2xl font-bold text-slate-900">Consulta de Produtos</h1>
                     <p className="text-slate-500 text-sm">Catálogo otimizado ({filteredProducts.length} itens)</p>
                 </div>
+                {canEdit && (
+                    <button
+                        onClick={handleNewProduct}
+                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl shadow-slate-200"
+                    >
+                        <Box className="w-4 h-4" />
+                        Novo Produto
+                    </button>
+                )}
             </header>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -300,9 +348,11 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-black text-slate-900 uppercase italic tracking-tight leading-none">
-                                        {isEditMode ? 'Editar Produto' : 'Detalhes do Produto'}
+                                        {isCreationMode ? 'Novo Produto' : (isEditMode ? 'Editar Produto' : 'Detalhes do Produto')}
                                     </h2>
-                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">SKU: {selectedProduct.sku}</p>
+                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">
+                                        {isCreationMode ? 'Cadastro Inicial' : `SKU: ${selectedProduct.sku}`}
+                                    </p>
                                 </div>
                             </div>
                             <button
@@ -618,7 +668,7 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                                                 className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 transition-all flex items-center gap-2 uppercase text-xs tracking-widest"
                                             >
                                                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                                Salvar Alterações
+                                                {isCreationMode ? 'Cadastrar Produto' : 'Salvar Alterações'}
                                             </button>
                                         </>
                                     ) : (

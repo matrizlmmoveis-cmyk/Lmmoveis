@@ -1,0 +1,6 @@
+[{"id":"330","status":"Entregue","assembly_required":false,"assigned_assembler_id":null}, 
+ {"id":"345","status":"Entregue - Aguardando Montagem","assembly_required":true,"assigned_assembler_id":null}, 
+ {"id":"361","status":"Entregue","assembly_required":false,"assigned_assembler_id":"E1772644932554"}, 
+ {"id":"414","status":"Aguardando Carregamento","assembly_required":false,"assigned_assembler_id":"E1772644932554"}, 
+ {"id":"426","status":"Aguardando Carregamento","assembly_required":false,"assigned_assembler_id":null}, 
+ {"id":"446","status":"Aguardando Carregamento","assembly_required":false,"assigned_assembler_id":null}]

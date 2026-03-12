@@ -168,6 +168,18 @@ export const supabaseService = {
         return allItems;
     },
 
+    async getNextProductId() {
+        const { data, error } = await supabase
+            .from('products')
+            .select('id')
+            .order('id', { ascending: false })
+            .limit(50);
+        if (error) throw error;
+        const ids = (data || []).map(p => parseInt(p.id)).filter(n => !isNaN(n));
+        const lastIdNum = ids.length > 0 ? Math.max(...ids) : 9000;
+        return (lastIdNum + 1).toString();
+    },
+
     async updateProduct(id: string, updates: Partial<Product>) {
         const payload: any = {};
         if (updates.name !== undefined) payload.name = updates.name;
