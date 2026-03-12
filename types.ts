@@ -6,6 +6,7 @@ export enum OrderStatus {
   DELIVERED = 'Entregue - Aguardando Montagem',
   ASSEMBLY_PENDING = 'Montagem Pendente',
   COMPLETED = 'Entregue',
+  FINISHED = 'Finalizado',
   CANCEL_PENDING = 'Cancelamento Pendente',
   EDIT_PENDING = 'Edição Pendente',
   CANCELED = 'Cancelada'

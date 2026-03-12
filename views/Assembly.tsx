@@ -19,15 +19,18 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
   // Tarefas pendentes (aguardando entrega ou liberadas para montagem)
   const myTasks = sales.filter(s =>
     s.assemblyRequired &&
-    (s.status === OrderStatus.DELIVERED || s.status === OrderStatus.SHIPPED || s.status === OrderStatus.PENDING) &&
-    (user?.id === 'admin' || s.assignedAssemblerId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
+    (s.status === OrderStatus.DELIVERED || 
+     s.status === OrderStatus.SHIPPED || 
+     s.status === OrderStatus.PENDING || 
+     s.status === OrderStatus.ASSEMBLY_PENDING) &&
+    (user?.id === 'admin' || user?.id === 'master' || s.assignedAssemblerId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
   );
 
   // Histórico: montagens concluídas (ordenado pela data de conclusão da montagem)
   const myHistory = sales.filter(s =>
     s.assemblyRequired &&
-    s.status === OrderStatus.COMPLETED &&
-    (user?.id === 'admin' || s.assignedAssemblerId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
+    (s.status === OrderStatus.COMPLETED || s.status === OrderStatus.FINISHED) &&
+    (user?.id === 'admin' || user?.id === 'master' || s.assignedAssemblerId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
   ).sort((a, b) => {
     const dateA = a.assemblyCompletedAt || a.date;
     const dateB = b.assemblyCompletedAt || b.date;

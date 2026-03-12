@@ -304,12 +304,12 @@ export const supabaseService = {
         } else {
             // Padrão: Últimos 7 dias OU status não finalizado
             const defaultDate = new Date();
-            defaultDate.setDate(defaultDate.getDate() - 7);
+            defaultDate.setDate(defaultDate.getDate() - 30); // Aumentado para 30 dias para garantir histórico recente
             const dateStr = defaultDate.toISOString().split('T')[0];
 
-            // Queremos: (date >= defaultDate) OR (status NOT IN (COMPLETED, CANCELED))
-            // No Supabase JS, filtros complexos OR são feitos com .or()
-            query = query.or(`date.gte.${dateStr},status.not.in.("${OrderStatus.COMPLETED}","${OrderStatus.CANCELED}")`);
+            // Queremos: (date >= defaultDate) OR (status NOT IN (COMPLETED, FINISHED, CANCELED))
+            // E também queremos garantir que qualquer coisa pendente de montagem ou entrega (não cancelada) venha
+            query = query.or(`date.gte.${dateStr},and(status.not.in.("${OrderStatus.COMPLETED}","${OrderStatus.FINISHED}","${OrderStatus.CANCELED}"))`);
         }
 
         if (endDate) {

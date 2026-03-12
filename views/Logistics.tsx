@@ -73,13 +73,13 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
   // Entregas ativas (PENDING, AWAITING_LOAD ou SHIPPED)
   const myDeliveries = (sales || []).filter(s =>
     (s.status === OrderStatus.PENDING || s.status === OrderStatus.AWAITING_LOAD || s.status === OrderStatus.SHIPPED) &&
-    (user?.id === 'admin' || s.assignedDriverId === user?.id || (user && 'role' in user && user.role === 'GERENTE' && s.storeId === user.storeId))
+    (user?.id === 'admin' || user?.id === 'master' || s.assignedDriverId === user?.id || (user && 'role' in user && user.role === 'GERENTE' && s.storeId === user.storeId))
   );
 
-  // Histórico de entregas (DELIVERED, ASSEMBLY_PENDING, COMPLETED)
+  // Histórico de entregas (DELIVERED, ASSEMBLY_PENDING, COMPLETED, FINISHED)
   const myHistory = (sales || []).filter(s =>
-    (s.status === OrderStatus.DELIVERED || s.status === OrderStatus.COMPLETED || s.status === OrderStatus.ASSEMBLY_PENDING) &&
-    (user?.id === 'admin' || s.assignedDriverId === user?.id || (user && 'role' in user && user.role === 'GERENTE' && s.storeId === user.storeId))
+    (s.status === OrderStatus.DELIVERED || s.status === OrderStatus.COMPLETED || s.status === OrderStatus.ASSEMBLY_PENDING || s.status === OrderStatus.FINISHED) &&
+    (user?.id === 'admin' || user?.id === 'master' || s.assignedDriverId === user?.id || (user && 'role' in user && user.role === 'GERENTE' && s.storeId === user.storeId))
   ).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
   // Lógica da Câmera
