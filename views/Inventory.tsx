@@ -1,18 +1,23 @@
 
 import React, { useState } from 'react';
-import { Box, MapPin, MoveHorizontal, Search, Settings2, X, Plus, Minus, FileText, RefreshCw } from 'lucide-react';
-import { InventoryItem, Product, Store } from '../types.ts';
+import { Box, MapPin, MoveHorizontal, Search, Settings2, X, Plus, Minus, FileText, RefreshCw, Package } from 'lucide-react';
+import { InventoryItem, Product, Store, Supplier, Employee } from '../types.ts';
 import { supabaseService } from '../services/supabaseService.ts';
+import ProductModal from '../components/ProductModal.tsx';
+import { CATEGORIES } from '../constants.tsx';
 
 interface InventoryProps {
   inventory: InventoryItem[];
   setInventory: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
   products: Product[];
   stores: Store[];
+  suppliers: Supplier[];
+  employees: Employee[];
+  user: any;
   refreshData: (force?: boolean) => Promise<void>;
 }
 
-const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products, stores, refreshData }) => {
+const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products, stores, suppliers, employees, user, refreshData }) => {
   const [selectedStockType, setSelectedStockType] = useState<'CD' | 'STORE_STOCK'>('CD');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,6 +34,40 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  
+  // Product Modal State
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isCreationMode, setIsCreationMode] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+
+  const canCreateProduct = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master';
+
+  const handleNewProduct = async () => {
+    setIsSavingProduct(true);
+    try {
+      const nextId = await supabaseService.getNextProductId();
+      const newProduct: Product = {
+        id: nextId,
+        name: '',
+        category: CATEGORIES[0] || 'Geral',
+        price: 0,
+        costPrice: 0,
+        assemblyPrice: 0,
+        sku: nextId,
+        active: true,
+        images: []
+      };
+      setSelectedProduct(newProduct);
+      setIsEditMode(true);
+      setIsCreationMode(true);
+    } catch (err) {
+      console.error('Erro ao preparar novo produto:', err);
+    } finally {
+      setIsSavingProduct(false);
+    }
+  };
 
   const handleAdjustmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,9 +142,18 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
             <Settings2 className="w-4 h-4" />
             <span>Ajuste Avulso</span>
           </button>
+          {canCreateProduct && (
+            <button
+              onClick={handleNewProduct}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Novo Produto</span>
+            </button>
+          )}
           <button
             onClick={() => alert("Módulo de Entrada de Nota por XML em construção.")}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+            className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all shadow-sm"
           >
             Entrada de Nota
           </button>

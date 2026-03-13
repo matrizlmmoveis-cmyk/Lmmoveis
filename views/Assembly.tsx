@@ -54,6 +54,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
   };
 
   const handleComplete = async (id: string) => {
+    if (!window.confirm("Deseja marcar esta montagem como CONCLUÍDA?")) return;
     try {
       await supabaseService.updateSaleStatus(id, OrderStatus.COMPLETED);
       setSales(prev => prev.map(s =>

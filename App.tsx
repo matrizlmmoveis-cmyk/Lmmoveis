@@ -275,7 +275,7 @@ const App: React.FC = () => {
       case 'customers': return <Customers customers={customers} setCustomers={setCustomers} refreshData={initData} />;
       case 'products': return <Products user={user} products={products} inventory={inventory} stores={stores} employees={employees} suppliers={suppliers} refreshData={initData} />;
       case 'sales': return <Sales user={user} sales={sales} setSales={setSales} inventory={inventory} setInventory={setInventory} stores={stores} products={products} customers={customers} setCustomers={setCustomers} employees={employees} refreshData={initData} />;
-      case 'inventory': return <Inventory inventory={inventory} setInventory={setInventory} products={products} stores={stores} refreshData={initData} />;
+      case 'inventory': return <Inventory inventory={inventory} setInventory={setInventory} products={products} stores={stores} suppliers={suppliers} employees={employees} user={user} refreshData={initData} />;
       case 'stores': return <Stores stores={stores} setStores={setStores} employees={employees} refreshData={initData} />;
       case 'employees': return <EmployeesView user={user} employees={employees} setEmployees={setEmployees} stores={stores} refreshData={initData} />;
       case 'suppliers': return <SuppliersView suppliers={suppliers} setSuppliers={setSuppliers} refreshData={initData} />;

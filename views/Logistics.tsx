@@ -179,6 +179,8 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
   const handleFinalizeDelivery = async () => {
     if (!activeDeliveryId) return;
 
+    if (!window.confirm("Deseja realmente finalizar esta entrega?")) return;
+
     const sale = sales.find(s => s.id === activeDeliveryId);
     if (!sale) return;
 

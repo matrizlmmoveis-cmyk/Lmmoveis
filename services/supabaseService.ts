@@ -169,13 +169,15 @@ export const supabaseService = {
     },
 
     async getNextProductId() {
+        // Fetch all IDs to find the true numeric maximum (IDs are stored as strings)
         const { data, error } = await supabase
             .from('products')
-            .select('id')
-            .order('id', { ascending: false })
-            .limit(50);
+            .select('id');
+            
         if (error) throw error;
-        const ids = (data || []).map(p => parseInt(p.id)).filter(n => !isNaN(n));
+        if (!data || data.length === 0) return "100";
+
+        const ids = data.map(p => parseInt(p.id)).filter(n => !isNaN(n));
         const lastIdNum = ids.length > 0 ? Math.max(...ids) : 9000;
         return (lastIdNum + 1).toString();
     },
@@ -371,12 +373,12 @@ export const supabaseService = {
     },
 
     async getNextSaleId() {
-        // Busca os IDs mais recentes para evitar limites de paginação e encontrar o maior número atual
+        // Fetch the most recent IDs by creation date to find the highest number
         const { data, error } = await supabase
             .from('sales')
             .select('id')
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(100);
 
         if (error) throw error;
 
