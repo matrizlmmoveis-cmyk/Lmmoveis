@@ -169,8 +169,8 @@ export const supabaseService = {
     },
 
     async getNextProductId() {
-        // Fetch all IDs in chunks to find the true numeric maximum, circumventing Supabase's default limit
-        let allIds: number[] = [];
+        // Fetch all IDs and SKUs in chunks to find the true numeric maximum and avoid conflicts
+        let allIdentifiers: number[] = [];
         let hasMore = true;
         let page = 0;
         const limit = 1000;
@@ -178,14 +178,19 @@ export const supabaseService = {
         while (hasMore) {
             const { data, error } = await supabase
                 .from('products')
-                .select('id')
+                .select('id, sku')
                 .range(page * limit, (page + 1) * limit - 1);
                 
             if (error) throw error;
             
             if (data && data.length > 0) {
-                const ids = data.map(p => parseInt(p.id)).filter(n => !isNaN(n));
-                allIds = allIds.concat(ids);
+                data.forEach(p => {
+                    const idNum = parseInt(p.id);
+                    if (!isNaN(idNum)) allIdentifiers.push(idNum);
+                    
+                    const skuNum = parseInt(p.sku);
+                    if (!isNaN(skuNum)) allIdentifiers.push(skuNum);
+                });
                 page++;
                 if (data.length < limit) hasMore = false;
             } else {
@@ -193,8 +198,8 @@ export const supabaseService = {
             }
         }
 
-        if (allIds.length === 0) return "100";
-        const lastIdNum = Math.max(...allIds);
+        if (allIdentifiers.length === 0) return "100";
+        const lastIdNum = Math.max(...allIdentifiers);
         return (lastIdNum + 1).toString();
     },
 
@@ -1232,10 +1237,16 @@ export const supabaseService = {
             changes.push({ field: 'payments', old_value: origPayments, new_value: propPayments });
         }
 
-        // Update sale total
+        // Update sale total and assembly requirement
         const newTotal = propItems.reduce((acc: number, i: any) => acc + (i.price * i.quantity), 0);
+        const assemblyRequired = propItems.some((i: any) => i.assemblyRequired);
         const prevStatus = orig.status === 'Edição Pendente' ? (orig.prevStatus || 'Aguardando Entrega') : orig.status;
-        await supabase.from('sales').update({ total: newTotal, status: prevStatus }).eq('id', params.saleId);
+        
+        await supabase.from('sales').update({ 
+            total: newTotal, 
+            status: prevStatus,
+            assembly_required: assemblyRequired 
+        }).eq('id', params.saleId);
 
         // Close the task
         await supabase.from('tasks').update({ status: 'CONCLUIDA', resolved_at: new Date().toISOString(), notes: `Autorizado por ${params.authorizedBy}` }).eq('id', params.taskId);

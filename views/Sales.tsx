@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Employee, Store, OrderStatus, Sale, Product, Customer, SaleItem, Payment, InventoryItem, Romaneio } from '../types.ts';
-import { Search, Plus, Eye, X, ShoppingCart, User, Package, CheckCircle2, ArrowLeft, Trash2, AlertCircle, CreditCard, DollarSign, Box, Filter, Calendar, Printer, Check, CheckSquare, Square, RefreshCw } from 'lucide-react';
+import { Search, Plus, Eye, X, ShoppingCart, User, Package, CheckCircle2, ArrowLeft, Trash2, AlertCircle, CreditCard, DollarSign, Box, Filter, Calendar, Printer, Check, CheckSquare, Square, RefreshCw, Wrench } from 'lucide-react';
 import SaleReceipt from './SaleReceipt.tsx';
 import CustomerModal from '../components/CustomerModal.tsx';
 // @ts-ignore
@@ -1178,6 +1178,16 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                                   {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
                               </div>
+                              <div className="flex flex-col items-center">
+                                <span className="text-[9px] text-slate-400 uppercase mb-0.5">Montar</span>
+                                <button
+                                  onClick={() => updateItem(idx, 'assemblyRequired', !item.assemblyRequired)}
+                                  className={`p-1.5 rounded-lg transition-all ${item.assemblyRequired ? 'bg-amber-100 text-amber-600 border border-amber-200 shadow-sm' : 'bg-slate-100 text-slate-400 border border-slate-200 grayscale opacity-70'}`}
+                                  title={item.assemblyRequired ? 'Necessita Montagem' : 'Sem Montagem'}
+                                >
+                                  <Wrench className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                               <button onClick={() => removeItem(idx)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"><X className="w-4 h-4" /></button>
                             </div>
                           </div>
@@ -1265,7 +1275,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           storeId: er.sale.storeId,
                           justification: er.justification,
                           originalSnapshot: { ...er.sale, requestedBy: user?.name || user?.username, justification: er.justification, prevStatus: er.sale.status },
-                          proposedSnapshot: { ...er.sale, items: er.editedItems, payments: er.editedPayments, total: saleTotal, deliveryObs: er.editedObs, sellerId: er.editedSellerId },
+                          proposedSnapshot: { ...er.sale, items: er.editedItems, payments: er.editedPayments, total: saleTotal, deliveryObs: er.editedObs, sellerId: er.editedSellerId, assemblyRequired: er.editedItems.some(i => i.assemblyRequired) },
                           productNames,
                         });
                         setSales(prev => prev.map(s => s.id === er.sale.id ? { ...s, status: OrderStatus.EDIT_PENDING } : s));

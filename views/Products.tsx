@@ -30,7 +30,7 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
     const [isSaving, setIsSaving] = useState(false);
     const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
-    const canEdit = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.role === 'GERENTE' || user?.name === 'Lucas' || user?.username === 'Master';
+    const canEdit = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.name === 'Lucas' || user?.username === 'Master';
 
     // Otimização: Indexar inventário por ProdutoID e StoreID para busca O(1)
     const stockMap = useMemo(() => {
