@@ -42,7 +42,7 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
-  const canCreateProduct = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master';
+  const canCreateProduct = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.role === 'GERENTE' || user?.username === 'Master';
 
   const handleNewProduct = async () => {
     setIsSavingProduct(true);

@@ -169,16 +169,32 @@ export const supabaseService = {
     },
 
     async getNextProductId() {
-        // Fetch all IDs to find the true numeric maximum (IDs are stored as strings)
-        const { data, error } = await supabase
-            .from('products')
-            .select('id');
-            
-        if (error) throw error;
-        if (!data || data.length === 0) return "100";
+        // Fetch all IDs in chunks to find the true numeric maximum, circumventing Supabase's default limit
+        let allIds: number[] = [];
+        let hasMore = true;
+        let page = 0;
+        const limit = 1000;
 
-        const ids = data.map(p => parseInt(p.id)).filter(n => !isNaN(n));
-        const lastIdNum = ids.length > 0 ? Math.max(...ids) : 9000;
+        while (hasMore) {
+            const { data, error } = await supabase
+                .from('products')
+                .select('id')
+                .range(page * limit, (page + 1) * limit - 1);
+                
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+                const ids = data.map(p => parseInt(p.id)).filter(n => !isNaN(n));
+                allIds = allIds.concat(ids);
+                page++;
+                if (data.length < limit) hasMore = false;
+            } else {
+                hasMore = false;
+            }
+        }
+
+        if (allIds.length === 0) return "100";
+        const lastIdNum = Math.max(...allIds);
         return (lastIdNum + 1).toString();
     },
 
@@ -373,19 +389,31 @@ export const supabaseService = {
     },
 
     async getNextSaleId() {
-        // Fetch the most recent IDs by creation date to find the highest number
-        const { data, error } = await supabase
-            .from('sales')
-            .select('id')
-            .order('created_at', { ascending: false })
-            .limit(100);
+        // Fetch all IDs in chunks to find the true numeric maximum
+        let allIds: number[] = [];
+        let hasMore = true;
+        let page = 0;
+        const limit = 1000;
 
-        if (error) throw error;
+        while (hasMore) {
+            const { data, error } = await supabase
+                .from('sales')
+                .select('id')
+                .range(page * limit, (page + 1) * limit - 1);
 
-        const ids = (data || []).map(s => parseInt(s.id)).filter(n => !isNaN(n));
-        const lastIdNum = ids.length > 0 ? Math.max(...ids) : 100;
+            if (error) throw error;
 
-        // Garante que o novo ID seja único tentando o próximo número disponível
+            if (data && data.length > 0) {
+                const ids = data.map(s => parseInt(s.id)).filter(n => !isNaN(n));
+                allIds = allIds.concat(ids);
+                page++;
+                if (data.length < limit) hasMore = false;
+            } else {
+                hasMore = false;
+            }
+        }
+
+        const lastIdNum = allIds.length > 0 ? Math.max(...allIds) : 100;
         return (lastIdNum + 1).toString();
     },
 
