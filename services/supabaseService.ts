@@ -155,6 +155,9 @@ export const supabaseService = {
                     imageUrl2: p.image_url_2,
                     supplierId: p.supplier_id,
                     description: p.description,
+                    ncm: p.ncm,
+                    cfop: p.cfop,
+                    unidade: p.unidade,
                     active: typeof p.active !== 'undefined' ? p.active : true
                 }));
                 allItems = allItems.concat(mapped as Product[]);
@@ -215,6 +218,9 @@ export const supabaseService = {
         if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
         if (updates.imageUrl2 !== undefined) payload.image_url_2 = updates.imageUrl2;
         if (updates.description !== undefined) payload.description = updates.description;
+        if (updates.ncm !== undefined) payload.ncm = updates.ncm;
+        if (updates.cfop !== undefined) payload.cfop = updates.cfop;
+        if (updates.unidade !== undefined) payload.unidade = updates.unidade;
         if (updates.active !== undefined) payload.active = updates.active;
         const { error } = await supabase.from('products').update(payload).eq('id', id);
         if (error) throw error;
@@ -235,6 +241,9 @@ export const supabaseService = {
             image_url: product.imageUrl || null,
             image_url_2: product.imageUrl2 || null,
             description: product.description || null,
+            ncm: product.ncm || null,
+            cfop: product.cfop || null,
+            unidade: product.unidade || null,
             active: typeof product.active !== 'undefined' ? product.active : true
         };
         const { error } = await supabase.from('products').insert(payload);
@@ -781,22 +790,25 @@ export const supabaseService = {
     async getCustomers() {
         const { data, error } = await supabase.from('customers').select('*').order('name', { ascending: true });
         if (error) throw error;
-        return (data || []).map((c: any) => ({
-            id: c.id,
-            type: c.type,
-            name: c.name,
-            document: c.document,
-            email: c.email,
-            phone: c.phone,
-            zipCode: c.zip_code,
-            address: c.address,
-            number: c.number,
-            complement: c.complement,
-            neighborhood: c.neighborhood,
-            city: c.city,
-            state: c.state,
-            reference: c.reference
-        })) as Customer[];
+        return (data || []).map((c: any) => {
+            const addr = typeof c.address === 'object' ? c.address : {};
+            return {
+                id: c.id,
+                type: c.type,
+                name: c.name,
+                document: c.document,
+                email: c.email,
+                phone: c.phone,
+                zipCode: addr.cep || c.zip_code || '',
+                address: addr.street || (typeof c.address === 'string' ? c.address : ''),
+                number: addr.number || c.number || '',
+                complement: addr.complement || c.complement || '',
+                neighborhood: addr.neighborhood || c.neighborhood || '',
+                city: addr.city || c.city || '',
+                state: addr.state || c.state || '',
+                reference: addr.reference || c.reference || ''
+            };
+        }) as Customer[];
     },
 
     async getEmployeeByEmail(email: string) {
@@ -813,14 +825,16 @@ export const supabaseService = {
             document: customer.document,
             email: customer.email,
             phone: customer.phone,
-            zip_code: customer.zipCode,
-            address: customer.address,
-            number: customer.number,
-            complement: customer.complement,
-            neighborhood: customer.neighborhood,
-            city: customer.city,
-            state: customer.state,
-            reference: customer.reference
+            address: {
+                cep: customer.zipCode,
+                street: customer.address,
+                number: customer.number,
+                complement: customer.complement,
+                neighborhood: customer.neighborhood,
+                city: customer.city,
+                state: customer.state,
+                reference: customer.reference
+            }
         };
         const { error } = await supabase.from('customers').insert(payload);
         if (error) throw error;
@@ -828,13 +842,33 @@ export const supabaseService = {
     },
 
     async updateCustomer(id: string, updates: Partial<Customer>) {
-        const payload: any = { ...updates };
-        delete payload.id; // Não permitir alteração de ID
+        // Obter dados atuais para mesclar o endereço se necessário
+        const { data: current } = await supabase.from('customers').select('address').eq('id', id).single();
+        const currentAddr = current?.address || {};
 
-        if (updates.zipCode !== undefined) {
-            payload.zip_code = updates.zipCode;
-            delete payload.zipCode;
+        const payload: any = { ...updates };
+        delete payload.id;
+
+        // Se houver campos de endereço, mesclar no objeto JSONB
+        const addressFields = ['zipCode', 'address', 'number', 'complement', 'neighborhood', 'city', 'state', 'reference'];
+        const hasAddressChange = addressFields.some(f => f in updates);
+
+        if (hasAddressChange) {
+            payload.address = {
+                cep: updates.zipCode !== undefined ? updates.zipCode : currentAddr.cep,
+                street: updates.address !== undefined ? updates.address : currentAddr.street,
+                number: updates.number !== undefined ? updates.number : currentAddr.number,
+                complement: updates.complement !== undefined ? updates.complement : currentAddr.complement,
+                neighborhood: updates.neighborhood !== undefined ? updates.neighborhood : currentAddr.neighborhood,
+                city: updates.city !== undefined ? updates.city : currentAddr.city,
+                state: updates.state !== undefined ? updates.state : currentAddr.state,
+                reference: updates.reference !== undefined ? updates.reference : currentAddr.reference
+            };
+            
+            // Remover campos avulsos do payload
+            addressFields.forEach(f => delete payload[f]);
         }
+
         const { error } = await supabase.from('customers').update(payload).eq('id', id);
         if (error) throw error;
         return true;
@@ -863,6 +897,58 @@ export const supabaseService = {
         }).select().single();
         if (error) throw error;
         return data.id.toString();
+    },
+
+    async syncRomaneioStatus(saleId: string) {
+        // Encontrar romaneios que contenham esta venda
+        const { data: roms, error: rErr } = await supabase
+            .from('romaneios')
+            .select('*')
+            .contains('sale_ids', [saleId]);
+
+        if (rErr || !roms) return;
+
+        for (const rom of roms) {
+            if (rom.status === 'CONCLUIDO') continue;
+
+            // Buscar status atual de todas as vendas deste romaneio
+            const { data: slys, error: sErr } = await supabase
+                .from('sales')
+                .select('id, status')
+                .in('id', rom.sale_ids);
+
+            if (sErr || !slys) continue;
+
+            // Verificar se todas as vendas estão em um estado "final" para o tipo de carga
+            let allFinished = true;
+            for (const s of slys) {
+                if (rom.type === 'entrega') {
+                    // Para entrega, basta que a venda tenha saído do fluxo de pendência
+                    const finishedStates = [
+                        'Entregue - Aguardando Montagem',
+                        'Montagem Pendente',
+                        'Entregue',
+                        'Finalizado',
+                        'Cancelada'
+                    ];
+                    if (!finishedStates.includes(s.status)) {
+                        allFinished = false;
+                        break;
+                    }
+                } else if (rom.type === 'montagem') {
+                    // Para montagem, deve estar Finalizado ou Cancelado
+                    const finishedStates = ['Entregue', 'Finalizado', 'Cancelada'];
+                    if (!finishedStates.includes(s.status)) {
+                        allFinished = false;
+                        break;
+                    }
+                }
+            }
+
+            if (allFinished) {
+                await supabase.from('romaneios').update({ status: 'CONCLUIDO' }).eq('id', rom.id);
+            }
+        }
     },
 
     async deleteRomaneio(romaneioId: string, saleIds: string[], type: 'entrega' | 'montagem') {
@@ -1391,6 +1477,96 @@ export const supabaseService = {
 
         console.log(`[restoreInventoryToOriginalLocation] Sucesso para Venda ${saleId}`);
         return true;
+    },
+
+    // NFe
+    async getNFeSettings() {
+        try {
+            const { data, error } = await supabase.from('nfe_settings').select('*').single();
+            if (error) throw error;
+            if (data) {
+                return {
+                    id: data.id,
+                    nextNumber: data.next_number,
+                    currentSeries: data.current_series,
+                    environment: data.environment,
+                    cnpj: data.cnpj,
+                    apiKey: data.api_key,
+                    taxRegime: data.tax_regime,
+                    issuer: {
+                        name: data.issuer_name || '',
+                        street: data.issuer_street || '',
+                        number: data.issuer_number || '',
+                        neighborhood: data.issuer_neighborhood || '',
+                        city: data.issuer_city || '',
+                        state: data.issuer_state || '',
+                        cep: data.issuer_cep || '',
+                        ibge: data.issuer_ibge || ''
+                    }
+                };
+            }
+            return null;
+        } catch (error) {
+            console.error("Erro ao carregar configurações de NFe:", error);
+            return null;
+        }
+    },
+
+    async updateSaleNFe(saleId: string, nfeData: {
+        number: number,
+        series: number,
+        key: string,
+        status: string,
+        nfeId: string,
+        settingsId: string
+    }) {
+        // 1. Atualizar a venda (tabela sales)
+        const { error: saleError } = await supabase.from('sales').update({
+            nfe_number: nfeData.number,
+            nfe_series: nfeData.series,
+            nfe_key: nfeData.key,
+            nfe_status: nfeData.status,
+            nfe_id: nfeData.nfeId
+        }).eq('id', saleId);
+
+        if (saleError) throw saleError;
+
+        // 2. Incrementar o próximo número na nfe_settings usando o ID dinâmico
+        const { error: settingsError } = await supabase.from('nfe_settings')
+            .update({ next_number: nfeData.number + 1 })
+            .eq('id', nfeData.settingsId);
+
+        if (settingsError) {
+            console.error("Erro ao incrementar número da NFe:", settingsError);
+        }
+    },
+
+    async getNFeSales() {
+        // Busca vendas que possuem número de nota fiscal
+        const { data, error } = await supabase
+            .from('sales')
+            .select('*')
+            .not('nfe_number', 'is', null)
+            .order('date', { ascending: false });
+
+        if (error) {
+            console.error("Erro ao buscar vendas com NFe:", error);
+            return [];
+        }
+
+        return data.map((item: any) => ({
+            id: item.id,
+            date: item.date,
+            customerName: item.customer_name,
+            customerCpf: item.customer_cpf,
+            total: item.total,
+            status: item.status,
+            nfeNumber: item.nfe_number,
+            nfeSeries: item.nfe_series,
+            nfeKey: item.nfe_key,
+            nfeStatus: item.nfe_status,
+            nfeId: item.nfe_id
+        }));
     },
 };
 

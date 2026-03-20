@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Truck, Wrench, Plus, Trash2, Printer, Search, User, ClipboardList, CheckCircle2, AlertCircle, History, ArrowLeft, Calendar, Package, Phone, MapPin, MessageSquare, RefreshCw } from 'lucide-react';
-import { OrderStatus, Sale, Employee, Romaneio, Product } from '../types.ts';
+import { OrderStatus, Sale, Employee, Romaneio, Product, Store } from '../types.ts';
 import { supabaseService } from '../services/supabaseService.ts';
 
 interface RomaneiosProps {
@@ -9,10 +9,11 @@ interface RomaneiosProps {
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   employees: Employee[];
   products: Product[];
+  stores: Store[];
   refreshData: (force?: boolean) => Promise<void>;
 }
 
-const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees: allEmployees, products, refreshData }) => {
+const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees: allEmployees, products, stores, refreshData }) => {
   const [view, setView] = useState<'create' | 'history'>('create');
   const [romaneios, setRomaneios] = useState<Romaneio[]>([]);
   const [type, setType] = useState<'entrega' | 'montagem'>('entrega');
@@ -21,6 +22,9 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
   const [batchSales, setBatchSales] = useState<Sale[]>([]);
   const [error, setError] = useState('');
   const [showPrint, setShowPrint] = useState(false);
+  const [filterEmployeeId, setFilterEmployeeId] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [selectedRomaneioIds, setSelectedRomaneioIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadRomaneios();
@@ -82,7 +86,6 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
     }
 
     try {
-      // Persistir as atribuições no Supabase
       const batchIds = batchSales.map(bs => bs.id);
 
       const promises = batchIds.map(id => {
@@ -95,7 +98,6 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
 
       await Promise.all(promises);
 
-      // Salvar histórico de Romaneio
       await supabaseService.createRomaneio({
         type,
         employeeId: selectedEmployeeId,
@@ -103,7 +105,6 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
         status: 'ATIVO'
       });
 
-      // Atualizar estado local
       setSales(prevSales => prevSales.map(s => {
         if (batchIds.includes(s.id)) {
           if (type === 'entrega') {
@@ -137,6 +138,127 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
     }
   };
 
+  const handleOpenBatchPrint = () => {
+    const selectedRomaneios = romaneios.filter(r => selectedRomaneioIds.includes(r.id));
+    if (selectedRomaneios.length === 0) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Por favor, permita pop-ups para imprimir.");
+      return;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Impressão em Lote - Móveis LM</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; margin: 0; padding: 15px; font-size: 10px; color: #000; background: #fff; }
+            .no-print-btn { background: #1e293b; color: #fff; border: none; padding: 10px 25px; border-radius: 12px; font-weight: 900; font-size: 11px; cursor: pointer; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+            .no-print-btn:hover { background: #0f172a; }
+            @media print { .no-print-btn { display: none; } body { padding: 0; } }
+            table { width: 100%; border-collapse: collapse; }
+            .border-container { border-top: 2px solid #000; border-left: 2px solid #000; border-right: 2px solid #000; }
+            .row { border-bottom: 2px solid #000; display: flex; gap: 8px; padding: 4px; page-break-inside: avoid; align-items: stretch; }
+            .col-info { width: 65px; border-right: 1.5px solid #000; padding-right: 4px; flex-shrink: 0; }
+            .col-sales { flex: 1; border-right: 1.5px solid #000; padding-right: 4px; min-width: 0; }
+            .col-products { flex: 1.3; border-right: 1.5px solid #000; padding-right: 4px; flex-shrink: 0; }
+            .col-sigs { width: 100px; display: flex; flex-direction: column; justify-content: space-around; padding: 2px 0; flex-shrink: 0; }
+            .font-black { font-weight: 900; }
+            .font-bold { font-weight: 700; }
+            .uppercase { text-transform: uppercase; }
+            .text-7 { font-size: 7px; }
+            .text-6 { font-size: 5.5px; }
+            .text-8 { font-size: 8.5px; }
+            .opacity-40 { opacity: 0.5; }
+            .underline { text-decoration: underline; }
+            .sig-box { border-bottom: 1px solid #ddd; height: 16px; display: flex; align-items: center; justify-content: center; }
+            .footer { margin-top: 8px; text-align: right; font-size: 6px; font-weight: 900; font-style: italic; opacity: 0.4; }
+            .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .item-row { border-bottom: 1px solid #f1f5f9; }
+            .item-row:last-child { border-bottom: none; }
+          </style>
+        </head>
+        <body>
+          <button class="no-print-btn" onclick="window.print()">🖨️ Iniciar Impressão</button>
+          <div class="border-container">
+            ${selectedRomaneios.map(r => {
+              const emp = allEmployees.find(e => e.id === r.employeeId);
+              const romaneioSales = sales.filter(s => r.saleIds.includes(s.id));
+              return `
+                <div class="row">
+                  <div class="col-info">
+                    <div class="font-black" style="font-size: 7px;">CARGA ${r.id}</div>
+                    <div class="font-black uppercase" style="font-size: 9px; line-height: 1;">${r.type === 'entrega' ? 'ENT' : 'MONT'}</div>
+                    <div class="font-bold uppercase opacity-40 truncate" style="font-size: 6px; margin-top: 2px;">${emp?.name || '—'}</div>
+                  </div>
+                  <div class="col-sales">
+                    ${romaneioSales.map(sale => `
+                      <div style="margin-bottom: 3px; border-bottom: 1px dashed #eee; padding-bottom: 2px;">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 4px;">
+                          <span class="font-black underline text-8">#${sale.id}</span>
+                          <span class="font-black uppercase text-8 truncate" style="flex: 1;">${sale.customerName}</span>
+                        </div>
+                        <div class="font-bold uppercase text-7 truncate" style="font-style: italic; opacity: 0.8;">${sale.deliveryAddress}</div>
+                        <div class="text-7 uppercase" style="display: flex; gap: 5px; margin-top: 1px;">
+                          ${sale.customerPhone ? `<span class="font-bold">📞 ${sale.customerPhone}</span>` : ''}
+                          ${sale.deliveryObs ? `<span class="font-black" style="color: #1e40af;">OBS: ${sale.deliveryObs}</span>` : ''}
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                  <div class="col-products">
+                    <table class="text-7">
+                      <thead>
+                        <tr style="border-bottom: 1.5px solid #000;">
+                          <th style="text-align: left; width: 18px;">Q</th>
+                          <th style="text-align: left;">PRODUTO</th>
+                          <th style="text-align: right; width: 55px;">ORIGEM</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${romaneioSales.flatMap(s => s.items).map(item => {
+                          const prod = products.find(p => p.id === item.productId);
+                          const storeName = stores.find(st => st.id === item.locationId)?.name || item.locationId || '—';
+                          return `
+                            <tr class="item-row font-bold">
+                              <td class="font-black">${item.quantity}x</td>
+                              <td class="uppercase truncate" style="max-width: 140px;">${prod?.name || item.productId}</td>
+                              <td style="text-align: right;" class="font-black opacity-40 uppercase">${storeName}</td>
+                            </tr>
+                          `;
+                        }).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="col-sigs">
+                    <div class="sig-box">
+                      <span class="text-6 font-black uppercase opacity-40">ASSINATURA CLIENTE</span>
+                    </div>
+                    <div class="sig-box">
+                      <span class="text-6 font-black uppercase opacity-40">CONFERÊNCIA LM</span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <div class="footer uppercase">
+            Móveis LM — Gerado em: ${new Date().toLocaleString('pt-BR')} — Romaneios: ${selectedRomaneios.length} — Itens: ${selectedRomaneios.reduce((acc, r) => acc + sales.filter(s => r.saleIds.includes(s.id)).reduce((a, s) => a + s.items.reduce((q, i) => q + i.quantity, 0), 0), 0)} UN
+          </div>
+          <script>
+            // Auto-trigger print if requested? User might prefer to click.
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   if (showPrint) {
     const emp = allEmployees.find(e => e.id === selectedEmployeeId);
     const isEntrega = type === 'entrega';
@@ -150,13 +272,11 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
         </div>
 
         <div className="border-4 border-black p-6 font-mono text-black print:border-2">
-          {/* Cabeçalho */}
           <div className="text-center border-b-2 border-black pb-4 mb-4">
             <h1 className="text-2xl font-black uppercase">Móveis LM — Romaneio de {isEntrega ? 'Entrega' : 'Montagem'}</h1>
             <p className="text-sm font-bold mt-1">Gerado em: {new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR')}</p>
           </div>
 
-          {/* Responsável */}
           <div className="grid grid-cols-2 gap-4 mb-6 border-b-2 border-black pb-4">
             <div>
               <p className="text-[10px] font-black uppercase">{isEntrega ? 'Motorista' : 'Montador'} Responsável:</p>
@@ -171,11 +291,9 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
             </div>
           </div>
 
-          {/* Lista de Pedidos */}
           <div className="space-y-6">
             {batchSales.map((sale, idx) => (
               <div key={sale.id} className="border-2 border-black">
-                {/* Header do pedido */}
                 <div className={`px-4 py-2 flex items-center justify-between ${isEntrega ? 'bg-gray-100' : 'bg-gray-50'}`}>
                   <div className="flex items-center gap-3">
                     <span className="text-xl font-black">#{sale.id}</span>
@@ -185,19 +303,14 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                 </div>
 
                 <div className="p-4 grid grid-cols-1 gap-3">
-                  {/* Dados do Cliente (entrega: completo, montagem: básico) */}
                   <div className="border-b border-dashed border-gray-400 pb-3">
                     <p className="text-[9px] font-black uppercase mb-1">Cliente / {isEntrega ? 'Destino' : 'Local'}</p>
                     <p className="text-base font-black uppercase">{sale.customerName}</p>
                     {isEntrega && (
                       <>
                         <p className="text-xs font-bold uppercase mt-0.5">{sale.deliveryAddress}</p>
-                        {sale.customerPhone && (
-                          <p className="text-xs font-bold mt-0.5">📞 {sale.customerPhone}</p>
-                        )}
-                        {sale.customerCpf && (
-                          <p className="text-[10px] text-gray-600 font-bold mt-0.5">CPF: {sale.customerCpf}</p>
-                        )}
+                        {sale.customerPhone && <p className="text-xs font-bold mt-0.5">📞 {sale.customerPhone}</p>}
+                        {sale.customerCpf && <p className="text-[10px] text-gray-600 font-bold mt-0.5">CPF: {sale.customerCpf}</p>}
                         {sale.deliveryObs && (
                           <div className="mt-1 bg-gray-100 border border-gray-300 rounded px-2 py-1">
                             <p className="text-[9px] font-black uppercase">Obs da Venda:</p>
@@ -208,7 +321,6 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                     )}
                   </div>
 
-                  {/* Itens do Pedido */}
                   <div>
                     <p className="text-[9px] font-black uppercase mb-1">Itens do Pedido</p>
                     <table className="w-full border-collapse">
@@ -236,7 +348,6 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                     </table>
                   </div>
 
-                  {/* Assinatura */}
                   {isEntrega && (
                     <div className="mt-2 pt-2 border-t border-dashed border-gray-400">
                       <div className="h-10 border-b border-black mt-4"></div>
@@ -248,7 +359,6 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
             ))}
           </div>
 
-          {/* Assinaturas finais */}
           <div className="grid grid-cols-2 gap-8 mt-12">
             <div className="text-center">
               <div className="border-t border-black pt-2 text-[10px] font-bold uppercase">Assinatura: {emp?.name}</div>
@@ -262,6 +372,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
     );
   }
 
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <header className="flex justify-between items-center">
@@ -271,8 +382,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
         </div>
         <button
           onClick={() => setView(view === 'create' ? 'history' : 'create')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all font-bold text-xs uppercase ${view === 'create' ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-blue-600 text-white shadow-lg'
-            }`}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all font-bold text-xs uppercase ${view === 'create' ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-blue-600 text-white shadow-lg'}`}
         >
           {view === 'create' ? (
             <><History className="w-4 h-4" /> Histórico</>
@@ -283,105 +393,200 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
       </header>
 
       {view === 'history' ? (
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden animate-in slide-in-from-right-4 duration-500">
-          <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-blue-500" />
-              Histórico de Cargas Lançadas
-            </h3>
-            <button
-              onClick={() => { loadRomaneios(); refreshData('sales'); }}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all"
-            >
-              <RefreshCw className="w-3 h-3" /> Atualizar Tudo
-            </button>
+        <div className="space-y-4 animate-in slide-in-from-right-4 duration-500">
+          <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-widest pl-2">Filtrar por Responsável</label>
+              <select
+                className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-blue-500 transition-all uppercase"
+                value={filterEmployeeId}
+                onChange={(e) => setFilterEmployeeId(e.target.value)}
+              >
+                <option value="">Todos os Responsáveis</option>
+                {allEmployees.map(emp => (
+                  <option key={emp.id} value={emp.id}>{emp.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 min-w-[150px]">
+              <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-widest pl-2">Filtrar por Status</label>
+              <select
+                className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-blue-500 transition-all uppercase"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="">Todos os Status</option>
+                <option value="ATIVO">Ativo</option>
+                <option value="CONCLUIDO">Concluído</option>
+              </select>
+            </div>
+            <div className="flex items-end gap-2">
+              {(filterEmployeeId || filterStatus) && (
+                <button
+                  onClick={() => { setFilterEmployeeId(''); setFilterStatus(''); }}
+                  className="h-10 px-4 text-[10px] font-black uppercase text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                >
+                  Limpar Filtros
+                </button>
+              )}
+              {selectedRomaneioIds.length > 0 && (
+                <button
+                  onClick={handleOpenBatchPrint}
+                  className="h-10 px-6 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase shadow-lg shadow-blue-100 flex items-center gap-2 hover:bg-blue-700 transition-all"
+                >
+                  <Printer className="w-4 h-4" /> Abrir em HTML ({selectedRomaneioIds.length})
+                </button>
+              )}
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] uppercase font-black text-slate-400">
-                  <th className="px-6 py-4">Data / Hora</th>
-                  <th className="px-6 py-4">Tipo</th>
-                  <th className="px-6 py-4">Responsável</th>
-                  <th className="px-6 py-4">Volumes</th>
-                  <th className="px-6 py-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {romaneios.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-20 text-center">
-                      <p className="text-slate-400 font-bold uppercase text-xs">Nenhum romaneio encontrado no histórico.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  romaneios.map(r => {
-                    const emp = allEmployees.find(e => e.id === r.employeeId);
-                    return (
-                      <tr key={r.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-bold text-slate-700">
-                            {new Date(r.createdAt!).toLocaleDateString('pt-BR')}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-bold">
-                            {new Date(r.createdAt!).toLocaleTimeString('pt-BR')}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${r.type === 'entrega' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'
-                            }`}>
-                            {r.type}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-bold text-slate-700 uppercase">{emp?.name || 'Não identificado'}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">{emp?.role}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex -space-x-2">
-                            {r.saleIds.slice(0, 5).map((id, i) => (
-                              <div key={i} className="w-7 h-7 bg-slate-100 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-black text-slate-600 shadow-sm">
-                                #{id}
-                              </div>
-                            ))}
-                            {r.saleIds.length > 5 && (
-                              <div className="w-7 h-7 bg-blue-600 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-black text-white shadow-sm">
-                                +{r.saleIds.length - 5}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => {
-                                // Re-habilitar impressão para um item do histórico
-                                const romaneioSales = sales.filter(s => r.saleIds.includes(s.id));
-                                setType(r.type);
-                                setSelectedEmployeeId(r.employeeId);
-                                setBatchSales(romaneioSales);
-                                setShowPrint(true);
-                              }}
-                              className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-200 transition-all flex items-center gap-2"
-                            >
-                              <Printer className="w-3 h-3" /> Re-imprimir
-                            </button>
-                            {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || user?.role === 'ADMIN') && (
-                              <button
-                                onClick={() => handleDeleteRomaneio(r)}
-                                className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all flex items-center gap-2"
-                              >
-                                <Trash2 className="w-3 h-3" /> Excluir
-                              </button>
-                            )}
-                          </div>
-                        </td>
+
+          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-500" />
+                Histórico de Cargas Lançadas
+              </h3>
+              <button
+                onClick={() => { loadRomaneios(); refreshData('sales'); }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all"
+              >
+                <RefreshCw className="w-3 h-3" /> Atualizar Tudo
+              </button>
+            </div>
+            
+            {/* Lógica de cálculo dinâmico de status */}
+            {(() => {
+              const getRomaneioStatus = (r: Romaneio) => {
+                if (r.status === 'CONCLUIDO') return 'CONCLUIDO';
+                const romSales = sales.filter(s => r.saleIds.includes(s.id));
+                if (romSales.length === 0) return r.status || 'ATIVO';
+                const allFinished = romSales.every(s => {
+                  if (r.type === 'entrega') {
+                    return ['Entregue - Aguardando Montagem', 'Montagem Pendente', 'Entregue', 'Finalizado', 'Cancelada'].includes(s.status);
+                  }
+                  return ['Entregue', 'Finalizado', 'Cancelada'].includes(s.status);
+                });
+                return allFinished ? 'CONCLUIDO' : 'ATIVO';
+              };
+
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 text-[10px] uppercase font-black text-slate-400">
+                        <th className="px-6 py-4 w-10">
+                          <input
+                            type="checkbox"
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            checked={romaneios.length > 0 && selectedRomaneioIds.length === romaneios.length}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedRomaneioIds(romaneios.map(r => r.id));
+                              } else {
+                                setSelectedRomaneioIds([]);
+                              }
+                            }}
+                          />
+                        </th>
+                        <th className="px-6 py-4">Data / Hora</th>
+                        <th className="px-6 py-4">Tipo / Status</th>
+                        <th className="px-6 py-4">Responsável</th>
+                        <th className="px-6 py-4">Volumes</th>
+                        <th className="px-6 py-4 text-right">Ações</th>
                       </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {romaneios.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-20 text-center">
+                            <p className="text-slate-400 font-bold uppercase text-xs">Nenhum romaneio encontrado no histórico.</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        romaneios
+                          .filter(r => {
+                            const currentStatus = getRomaneioStatus(r);
+                            const matchesEmp = !filterEmployeeId || r.employeeId === filterEmployeeId;
+                            const matchesStatus = !filterStatus || currentStatus === filterStatus;
+                            return matchesEmp && matchesStatus;
+                          })
+                          .map(r => {
+                            const emp = allEmployees.find(e => e.id === r.employeeId);
+                            const isSelected = selectedRomaneioIds.includes(r.id);
+                            const currentStatus = getRomaneioStatus(r);
+                            return (
+                              <tr key={r.id} className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-blue-50/50' : ''}`}>
+                                <td className="px-6 py-4">
+                                  <input
+                                    type="checkbox"
+                                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedRomaneioIds([...selectedRomaneioIds, r.id]);
+                                      } else {
+                                        setSelectedRomaneioIds(selectedRomaneioIds.filter(id => id !== r.id));
+                                      }
+                                    }}
+                                  />
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className="text-sm font-bold text-slate-700">{new Date(r.createdAt!).toLocaleDateString('pt-BR')}</p>
+                                  <p className="text-[10px] text-slate-400 font-bold">{new Date(r.createdAt!).toLocaleTimeString('pt-BR')}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="flex flex-col gap-1">
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase w-fit ${r.type === 'entrega' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>{r.type}</span>
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase w-fit ${currentStatus === 'ATIVO' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>{currentStatus}</span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className="text-sm font-bold text-slate-700 uppercase">{emp?.name || 'Não identificado'}</p>
+                                  <p className="text-[10px] text-slate-400 font-bold uppercase">{emp?.role}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="flex -space-x-2">
+                                    {r.saleIds.slice(0, 5).map((id, i) => (
+                                      <div key={i} className="w-7 h-7 bg-slate-100 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-black text-slate-600 shadow-sm">#{id}</div>
+                                    ))}
+                                    {r.saleIds.length > 5 && (
+                                      <div className="w-7 h-7 bg-blue-600 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-black text-white shadow-sm">+{r.saleIds.length - 5}</div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => {
+                                        const romaneioSales = sales.filter(s => r.saleIds.includes(s.id));
+                                        setType(r.type);
+                                        setSelectedEmployeeId(r.employeeId);
+                                        setBatchSales(romaneioSales);
+                                        setShowPrint(true);
+                                      }}
+                                      className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-200 transition-all flex items-center gap-2"
+                                    >
+                                      <Printer className="w-3 h-3" /> Re-imprimir
+                                    </button>
+                                    {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || user?.role === 'ADMIN') && (
+                                      <button
+                                        onClick={() => handleDeleteRomaneio(r)}
+                                        className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all flex items-center gap-2"
+                                      >
+                                        <Trash2 className="w-3 h-3" /> Excluir
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         </div>
       ) : (
@@ -433,10 +638,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                     value={saleInput}
                     onChange={(e) => setSaleInput(e.target.value)}
                   />
-                  <button
-                    type="submit"
-                    className="bg-slate-900 text-white px-6 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95"
-                  >
+                  <button type="submit" className="bg-slate-900 text-white px-6 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95">
                     <Plus className="w-6 h-6" />
                   </button>
                 </div>

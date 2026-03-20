@@ -195,6 +195,8 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
         deliveryPhoto: photo || undefined
       });
 
+      await supabaseService.syncRomaneioStatus(activeDeliveryId);
+
       setSales(prev => prev.map(s =>
         s.id === activeDeliveryId
           ? { ...s, status: nextStatus, deliverySignature: signatureData, deliveryPhoto: photo || undefined }

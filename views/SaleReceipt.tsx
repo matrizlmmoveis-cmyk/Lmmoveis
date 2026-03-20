@@ -4,6 +4,7 @@ import { Printer, ArrowLeft, FileText, Loader2, CheckCircle, AlertCircle } from 
 import { nfEmailService } from '../services/nfe/nfeService';
 import { SEFAZTxtGenerator } from '../services/nfe/sefazGenerator';
 import { NFeIssuer, NFeDest, NFeItem } from '../services/nfe/types';
+import { supabaseService } from '../services/supabaseService';
 
 interface SaleReceiptProps {
   sale: Sale;
@@ -33,67 +34,118 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, product
     setErrorMessage('');
 
     try {
-      // 1. Validar / Buscar dados completos do cliente
+      // 1. Buscar configurações e dados do emitente real
+      const settings = await supabaseService.getNFeSettings();
+      if (!settings) {
+        throw new Error("As configurações de NF-e não foram encontradas no banco de dados. Por favor, realize a configuração inicial.");
+      }
+      // 2. Buscar dados completos do cliente
       const customer = customers.find(c => c.document === sale.customerCpf);
       if (!customer) throw new Error("Dados detalhados do cliente não encontrados no cadastro.");
 
-      // 2. Preparar Emitente (Mock da Loja Selecionada)
+      // 3. Preparar Emitente (Dados do Banco)
       const issuer: NFeIssuer = {
-        name: store?.name || 'Móveis LM',
-        cnpj: '12345678000199', // Mock
-        state: 'RJ',
-        ibge: '3304557',
-        street: store?.location || 'Rua Principal',
-        number: '100',
-        neighborhood: 'Centro',
-        city: 'Rio de Janeiro',
-        cep: '20000000'
+        name: settings.issuer.name || store?.name || 'Móveis LM',
+        cnpj: settings.cnpj,
+        state: settings.issuer.state || 'RJ',
+        ibge: settings.issuer.ibge || '3304557',
+        street: settings.issuer.street || store?.location || 'Rua Principal',
+        number: settings.issuer.number || '0',
+        neighborhood: settings.issuer.neighborhood || 'Centro',
+        city: settings.issuer.city || 'Rio de Janeiro',
+        cep: settings.issuer.cep || '00000000'
       };
 
-      // 3. Preparar Destinatário
+      // 4. Preparar Destinatário
       const dest: NFeDest = {
         name: customer.name,
         document: customer.document,
         type: customer.type === 'PJ' ? 'CNPJ' : 'CPF',
         email: customer.email,
         street: customer.address,
-        number: customer.number,
+        number: customer.number || 'S/N',
         neighborhood: customer.neighborhood,
         city: customer.city,
         state: customer.state,
         cep: customer.zipCode,
-        ibge: '3304557' // Mock IBGE
+        ibge: settings.issuer.ibge || '3304557' // Na falta, usa o mesmo da cidade do emitente (simplificado)
       };
 
-      // 4. Preparar Itens
+      // 5. Preparar Itens
       const items: NFeItem[] = sale.items.map(item => {
         const prod = products.find(p => p.id === item.productId);
         return {
           description: prod?.name || 'Produto',
-          ncm: '94036000', // Mock NCM para móveis de madeira
-          cfop: '5102', // Venda de mercadoria
-          unit: 'UN',
+          ncm: prod?.ncm || '94036000', // Pega NCM do produto ou default móveis
+          cfop: prod?.cfop || '5102', // Pega CFOP do produto ou default venda
+          unit: prod?.unidade || 'UN',
           qty: item.quantity,
           unitValue: item.price,
-          totalValue: item.price * item.quantity * (1 - item.discount / 100)
+          totalValue: item.price * item.quantity * (1 - (item.discount || 0) / 100)
         };
       });
 
-      // 5. Configurar API (Credenciais Mock)
+      // 6. Configurar API
       nfEmailService.setConfig({
-        cnpj: issuer.cnpj,
-        apiKey: 'sk_test_api_key_nfe_lm'
+        cnpj: settings.cnpj,
+        apiKey: settings.apiKey
       });
 
-      // 6. Gerar TXT
-      const txtContent = SEFAZTxtGenerator.generate(issuer, dest, items, parseInt(sale.id), 1);
+      // 7. Gerar TXT (Usa próximo número do banco)
+      const txtContent = SEFAZTxtGenerator.generate(
+        issuer, 
+        dest, 
+        items, 
+        settings.nextNumber, 
+        settings.currentSeries,
+        settings.environment,
+        settings.taxRegime
+      );
+      
       console.log("TXT SEFAZ Gerado:\n", txtContent);
 
-      // 7. Transmitir
+      // 8. Transmitir
       const response = await nfEmailService.sendNFe(txtContent);
       console.log("Resposta API:", response);
 
-      setNfeStatus('success');
+      const nfeId = response.id || response.nfe_id;
+      if (response && nfeId) {
+        // 9. Tentar buscar os detalhes (Chave e Status) caso não tenham vindo
+        let finalKey = response.chave || '';
+        let finalStatus = response.status || 'Enviada';
+
+        if (!finalKey) {
+          try {
+            const statusRaw = await nfEmailService.getNFeStatus(nfeId);
+            const statusData = JSON.parse(statusRaw);
+            // Os dados no GET NotasFiscais vêm dentro de ListaNotaFiscal
+            const nfeDetails = statusData?.ListaNotaFiscal?.[0];
+            if (nfeDetails) {
+              finalKey = nfeDetails.nfe_chave || '';
+              finalStatus = nfeDetails.dsc_processo || 'Processando';
+            }
+          } catch (e) {
+            console.warn("Não foi possível buscar a chave imediatamente:", e);
+          }
+        }
+
+        // 10. Atualizar Pedido com os dados da Nota
+        await supabaseService.updateSaleNFe(sale.id, {
+          number: settings.nextNumber,
+          series: settings.currentSeries,
+          key: finalKey,
+          status: finalStatus,
+          nfeId: nfeId,
+          settingsId: settings.id
+        });
+
+        // 10. Atualizar Status Local
+        setNfeStatus('success');
+      } else {
+        const detail = response.rawResponse || response.message || "Sem ID de retorno";
+        throw new Error(`NF-e: ${detail}`);
+      }
+
     } catch (error: any) {
       console.error("Erro na emissão:", error);
       setNfeStatus('error');

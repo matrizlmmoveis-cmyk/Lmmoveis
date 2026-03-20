@@ -77,6 +77,9 @@ export interface Product {
   imageUrl2?: string;
   supplierId?: string;
   description?: string;
+  ncm?: string;
+  cfop?: string;
+  unidade?: string;
   images?: ProductImage[];
   active?: boolean;
 }

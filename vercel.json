@@ -21,6 +21,10 @@
     ],
     "rewrites": [
         {
+            "source": "/api/nfemail/(.*)",
+            "destination": "https://api.nfemail.com.br/api/$1"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
         }

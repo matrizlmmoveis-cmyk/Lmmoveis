@@ -57,6 +57,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
     if (!window.confirm("Deseja marcar esta montagem como CONCLUÍDA?")) return;
     try {
       await supabaseService.updateSaleStatus(id, OrderStatus.COMPLETED);
+      await supabaseService.syncRomaneioStatus(id);
       setSales(prev => prev.map(s =>
         s.id === id ? { ...s, status: OrderStatus.COMPLETED, assemblyCompletedAt: new Date().toISOString() } : s
       ));

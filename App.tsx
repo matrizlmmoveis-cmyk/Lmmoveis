@@ -17,6 +17,7 @@ import SuppliersView from './views/Suppliers.tsx';
 import Expedicao from './views/Expedicao.tsx';
 import Tarefas from './views/Tarefas.tsx';
 import ReceiptSettlement from './views/ReceiptSettlement.tsx';
+import NFeManagement from './views/NFeManagement.tsx';
 import { Bell, Search, User, Lock, Store as StoreIcon, AlertCircle, X, Menu, Loader2, LogOut } from 'lucide-react';
 import { Employee, UserRole, Sale, InventoryItem, Store, Product, Customer, Supplier } from './types.ts';
 import { CartProvider } from './components/CartContext.tsx';
@@ -279,7 +280,7 @@ const App: React.FC = () => {
       case 'stores': return <Stores stores={stores} setStores={setStores} employees={employees} refreshData={initData} />;
       case 'employees': return <EmployeesView user={user} employees={employees} setEmployees={setEmployees} stores={stores} refreshData={initData} />;
       case 'suppliers': return <SuppliersView suppliers={suppliers} setSuppliers={setSuppliers} refreshData={initData} />;
-      case 'romaneios': return <Romaneios user={user} sales={sales} setSales={setSales} employees={employees} products={products} refreshData={initData} />;
+      case 'romaneios': return <Romaneios user={user} sales={sales} setSales={setSales} employees={employees} products={products} stores={stores} refreshData={initData} />;
       case 'expedicao': return <Expedicao user={user} stores={stores} sales={sales} products={products} employees={employees} customers={customers} refreshData={initData} />;
       case 'tarefas': return <Tarefas user={user} stores={stores} sales={sales} setSales={setSales} products={products} refreshData={initData} />;
       case 'delivery':
@@ -287,6 +288,7 @@ const App: React.FC = () => {
       case 'assembly': return <Assembly user={user} sales={sales} setSales={setSales} products={products} stores={stores} employees={employees} refreshData={initData} />;
       case 'settlement': return <ReceiptSettlement sales={sales} setSales={setSales} employees={employees} stores={stores} products={products} customers={customers} />;
       case 'reports': return <Reports user={user} sales={sales} stores={stores} products={products} employees={employees} refreshData={initData} />;
+      case 'nfe': return <NFeManagement sales={sales} products={products} stores={stores} refreshData={initData} />;
       default: return <Dashboard user={user!} sales={sales} stores={stores} />;
     }
   };

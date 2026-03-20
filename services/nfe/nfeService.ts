@@ -10,6 +10,16 @@ export interface NFEmailConfig {
     apiKey: string;
 }
 
+export interface NFEmailResponse {
+    id?: string;
+    nfe_id?: string;
+    chave?: string;
+    status?: string;
+    message?: string;
+    rawResponse?: string;
+    [key: string]: any;
+}
+
 export const nfEmailService = {
     config: {
         cnpj: '',
@@ -24,7 +34,7 @@ export const nfEmailService = {
      * Envia uma nota fiscal no formato TXT SEFAZ para o portal.
      * @param txtContent Conteúdo formatado em pipes (|) conforme padrão SEFAZ
      */
-    async sendNFe(txtContent: string) {
+    async sendNFe(txtContent: string): Promise<NFEmailResponse> {
         if (!this.config.cnpj || !this.config.apiKey) {
             throw new Error("Credenciais do NFEmail não configuradas.");
         }
@@ -33,9 +43,7 @@ export const nfEmailService = {
         const authHeader = 'Basic ' + btoa(`${this.config.cnpj}:${this.config.apiKey}`);
 
         try {
-            // Recomenda-se o uso de um Proxy para evitar erros de CORS no browser
-            // Em ambiente de desenvolvimento Vite, deve-se configurar o dev server proxy
-            const apiUrl = '/api/nfemail/NotasFiscais';
+            const apiUrl = '/api/nfemail/ArquivoTXT';
 
             const response = await fetch(apiUrl, {
                 method: "POST",
@@ -47,12 +55,22 @@ export const nfEmailService = {
             });
 
             const responseText = await response.text();
+            console.log("NFEmail Raw Response:", responseText);
 
             if (!response.ok) {
                 throw new Error(`Erro API NFEmail (${response.status}): ${responseText}`);
             }
 
-            return responseText;
+            try {
+                // Se a resposta for apenas um número (ID), retorna como objeto
+                if (/^\d+$/.test(responseText.trim())) {
+                    return { id: responseText.trim(), rawResponse: responseText };
+                }
+                const data = JSON.parse(responseText) as NFEmailResponse;
+                return { ...data, rawResponse: responseText };
+            } catch (e) {
+                return { message: responseText, rawResponse: responseText } as NFEmailResponse;
+            }
         } catch (error) {
             console.error("Erro na transmissão NFEmail:", error);
             throw error;
@@ -62,9 +80,9 @@ export const nfEmailService = {
     /**
      * Consulta o status de uma nota pela chave de acesso ou ID interno.
      */
-    async getNFeStatus(keyOrId: string) {
+    async getNFeStatus(id: string) {
         const authHeader = 'Basic ' + btoa(`${this.config.cnpj}:${this.config.apiKey}`);
-        const apiUrl = `/api/nfemail/NotasFiscais/${keyOrId}`;
+        const apiUrl = `/api/nfemail/NotasFiscais?id=${id}`;
 
         const response = await fetch(apiUrl, {
             headers: { "Authorization": authHeader }
