@@ -454,7 +454,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
               </button>
             </div>
             
-            {/* Lógica de cálculo dinâmico de status */}
+            {/* Lógica de cálculo dinâmico de status e filtragem */}
             {(() => {
               const getRomaneioStatus = (r: Romaneio) => {
                 if (r.status === 'CONCLUIDO') return 'CONCLUIDO';
@@ -469,6 +469,15 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                 return allFinished ? 'CONCLUIDO' : 'ATIVO';
               };
 
+              const filteredRows = romaneios.filter(r => {
+                const currentStatus = getRomaneioStatus(r);
+                const matchesEmp = !filterEmployeeId || r.employeeId === filterEmployeeId;
+                const matchesStatus = !filterStatus || currentStatus === filterStatus;
+                return matchesEmp && matchesStatus;
+              });
+
+              const isAllFilteredSelected = filteredRows.length > 0 && filteredRows.every(r => selectedRomaneioIds.includes(r.id));
+
               return (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
@@ -478,12 +487,14 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                           <input
                             type="checkbox"
                             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            checked={romaneios.length > 0 && selectedRomaneioIds.length === romaneios.length}
+                            checked={isAllFilteredSelected}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setSelectedRomaneioIds(romaneios.map(r => r.id));
+                                const newIds = Array.from(new Set([...selectedRomaneioIds, ...filteredRows.map(r => r.id)]));
+                                setSelectedRomaneioIds(newIds);
                               } else {
-                                setSelectedRomaneioIds([]);
+                                const remainingIds = selectedRomaneioIds.filter(id => !filteredRows.some(r => r.id === id));
+                                setSelectedRomaneioIds(remainingIds);
                               }
                             }}
                           />
@@ -503,19 +514,12 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                           </td>
                         </tr>
                       ) : (
-                        romaneios
-                          .filter(r => {
-                            const currentStatus = getRomaneioStatus(r);
-                            const matchesEmp = !filterEmployeeId || r.employeeId === filterEmployeeId;
-                            const matchesStatus = !filterStatus || currentStatus === filterStatus;
-                            return matchesEmp && matchesStatus;
-                          })
-                          .map(r => {
-                            const emp = allEmployees.find(e => e.id === r.employeeId);
-                            const isSelected = selectedRomaneioIds.includes(r.id);
-                            const currentStatus = getRomaneioStatus(r);
-                            return (
-                              <tr key={r.id} className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-blue-50/50' : ''}`}>
+                        filteredRows.map(r => {
+                          const emp = allEmployees.find(e => e.id === r.employeeId);
+                          const isSelected = selectedRomaneioIds.includes(r.id);
+                          const currentStatus = getRomaneioStatus(r);
+                          return (
+                            <tr key={r.id} className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-blue-50/50' : ''}`}>
                                 <td className="px-6 py-4">
                                   <input
                                     type="checkbox"
