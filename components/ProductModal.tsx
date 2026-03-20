@@ -3,6 +3,7 @@ import { Product, Store, InventoryItem, Employee, Supplier, ProductImage } from 
 import { X, Package, Search, Filter, DollarSign, Edit2, Loader2, Save, MapPin, RefreshCw } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService.ts';
 import { CATEGORIES } from '../constants.tsx';
+import { getDirectImageUrl } from '../utils/imageUtils.ts';
 
 interface ProductModalProps {
     isOpen: boolean;
@@ -149,11 +150,11 @@ const ProductModal: React.FC<ProductModalProps> = ({
                             <div
                                 className="w-32 h-32 rounded-3xl bg-slate-50 border-2 border-slate-100 flex items-center justify-center overflow-hidden cursor-zoom-in relative group"
                                 onClick={() => {
-                                    const imgUrl = editForm.images?.[0]?.url || editForm.imageUrl || FALLBACK_IMG;
-                                    onOpenImage(imgUrl);
+                                    const rawUrl = editForm.images?.[0]?.url || editForm.imageUrl || FALLBACK_IMG;
+                                    onOpenImage(getDirectImageUrl(rawUrl));
                                 }}
                             >
-                                <img src={editForm.images?.[0]?.url || editForm.imageUrl || FALLBACK_IMG} alt="" className="w-full h-full object-cover" />
+                                <img src={getDirectImageUrl(editForm.images?.[0]?.url || editForm.imageUrl || FALLBACK_IMG)} alt="" className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-slate-900/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                     <Search className="w-6 h-6 text-white" />
                                 </div>
@@ -161,7 +162,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                             {(editForm.imageUrl2 || (editForm.images?.length ?? 0) > 1) && (
                                 <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 shadow-inner">
                                     <img
-                                        src={editForm.imageUrl2 || editForm.images?.[1]?.url || FALLBACK_IMG}
+                                        src={getDirectImageUrl(editForm.imageUrl2 || editForm.images?.[1]?.url || FALLBACK_IMG)}
                                         className="w-full h-full object-cover"
                                         alt=""
                                         onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}

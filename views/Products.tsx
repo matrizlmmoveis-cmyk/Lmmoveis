@@ -4,6 +4,7 @@ import { Search, Box, Filter, ChevronDown, X, Edit2, Loader2, Save, MapPin, Pack
 import { supabaseService } from '../services/supabaseService.ts';
 import ProductModal from '../components/ProductModal.tsx';
 import { CATEGORIES } from '../constants.tsx';
+import { getDirectImageUrl } from '../utils/imageUtils.ts';
 
 interface ProductsProps {
     user: Employee | any;
@@ -192,12 +193,13 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                                             className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 cursor-zoom-in"
                                             onClick={(e) => {
                                                 e.stopPropagation(); // Evita abrir o modal do produto
-                                                const imgUrl = product.images?.[0]?.url || product.imageUrl || FALLBACK_IMG;
+                                                const rawUrl = product.images?.[0]?.url || product.imageUrl || FALLBACK_IMG;
+                                                const imgUrl = getDirectImageUrl(rawUrl);
                                                 setFullScreenImage(imgUrl);
                                             }}
                                         >
                                             <img
-                                                src={product.images?.[0]?.url || product.imageUrl || FALLBACK_IMG}
+                                                src={getDirectImageUrl(product.images?.[0]?.url || product.imageUrl || FALLBACK_IMG)}
                                                 loading="lazy"
                                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                                 alt=""
