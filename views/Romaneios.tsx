@@ -155,27 +155,27 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
           <title>Impressão em Lote - Móveis LM</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-            body { font-family: 'Inter', sans-serif; margin: 0; padding: 15px; font-size: 10px; color: #000; background: #fff; }
-            .no-print-btn { background: #1e293b; color: #fff; border: none; padding: 10px 25px; border-radius: 12px; font-weight: 900; font-size: 11px; cursor: pointer; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+            body { font-family: 'Inter', sans-serif; margin: 0; padding: 15px; font-size: 11.5px; color: #000; background: #fff; }
+            .no-print-btn { background: #1e293b; color: #fff; border: none; padding: 10px 25px; border-radius: 12px; font-weight: 900; font-size: 13px; cursor: pointer; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
             .no-print-btn:hover { background: #0f172a; }
             @media print { .no-print-btn { display: none; } body { padding: 0; } }
             table { width: 100%; border-collapse: collapse; }
             .border-container { border-top: 2px solid #000; border-left: 2px solid #000; border-right: 2px solid #000; }
-            .row { border-bottom: 2px solid #000; display: flex; gap: 8px; padding: 4px; page-break-inside: avoid; align-items: stretch; }
-            .col-info { width: 65px; border-right: 1.5px solid #000; padding-right: 4px; flex-shrink: 0; }
-            .col-sales { flex: 1; border-right: 1.5px solid #000; padding-right: 4px; min-width: 0; }
-            .col-products { flex: 1.3; border-right: 1.5px solid #000; padding-right: 4px; flex-shrink: 0; }
-            .col-sigs { width: 100px; display: flex; flex-direction: column; justify-content: space-around; padding: 2px 0; flex-shrink: 0; }
+            .row { border-bottom: 2px solid #000; display: flex; gap: 10px; padding: 6px; page-break-inside: avoid; align-items: stretch; }
+            .col-info { width: 75px; border-right: 1.5px solid #000; padding-right: 6px; flex-shrink: 0; }
+            .col-sales { flex: 1.1; border-right: 1.5px solid #000; padding-right: 6px; min-width: 0; }
+            .col-products { flex: 1.4; border-right: 1.5px solid #000; padding-right: 6px; flex-shrink: 0; }
+            .col-sigs { width: 120px; display: flex; flex-direction: column; justify-content: space-around; padding: 2px 0; flex-shrink: 0; }
             .font-black { font-weight: 900; }
             .font-bold { font-weight: 700; }
             .uppercase { text-transform: uppercase; }
-            .text-7 { font-size: 7px; }
-            .text-6 { font-size: 5.5px; }
-            .text-8 { font-size: 8.5px; }
+            .text-7 { font-size: 8.5px; }
+            .text-6 { font-size: 7px; }
+            .text-8 { font-size: 10.5px; }
             .opacity-40 { opacity: 0.5; }
             .underline { text-decoration: underline; }
-            .sig-box { border-bottom: 1px solid #ddd; height: 16px; display: flex; align-items: center; justify-content: center; }
-            .footer { margin-top: 8px; text-align: right; font-size: 6px; font-weight: 900; font-style: italic; opacity: 0.4; }
+            .sig-box { border-bottom: 1px solid #ccc; height: 22px; display: flex; align-items: center; justify-content: center; }
+            .footer { margin-top: 10px; text-align: right; font-size: 7.5px; font-weight: 900; font-style: italic; opacity: 0.4; }
             .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .item-row { border-bottom: 1px solid #f1f5f9; }
             .item-row:last-child { border-bottom: none; }
@@ -190,19 +190,19 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
               return `
                 <div class="row">
                   <div class="col-info">
-                    <div class="font-black" style="font-size: 7px;">CARGA ${r.id}</div>
-                    <div class="font-black uppercase" style="font-size: 9px; line-height: 1;">${r.type === 'entrega' ? 'ENT' : 'MONT'}</div>
-                    <div class="font-bold uppercase opacity-40 truncate" style="font-size: 6px; margin-top: 2px;">${emp?.name || '—'}</div>
+                    <div class="font-black" style="font-size: 9px;">CARGA ${r.id}</div>
+                    <div class="font-black uppercase" style="font-size: 11px; line-height: 1;">${r.type === 'entrega' ? 'ENT' : 'MONT'}</div>
+                    <div class="font-bold uppercase opacity-40 truncate" style="font-size: 7.5px; margin-top: 3px;">${emp?.name || '—'}</div>
                   </div>
                   <div class="col-sales">
                     ${romaneioSales.map(sale => `
-                      <div style="margin-bottom: 3px; border-bottom: 1px dashed #eee; padding-bottom: 2px;">
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 4px;">
+                      <div style="margin-bottom: 5px; border-bottom: 1px dashed #eee; padding-bottom: 3px;">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 5px;">
                           <span class="font-black underline text-8">#${sale.id}</span>
                           <span class="font-black uppercase text-8 truncate" style="flex: 1;">${sale.customerName}</span>
                         </div>
                         <div class="font-bold uppercase text-7 truncate" style="font-style: italic; opacity: 0.8;">${sale.deliveryAddress}</div>
-                        <div class="text-7 uppercase" style="display: flex; gap: 5px; margin-top: 1px;">
+                        <div class="text-7 uppercase" style="display: flex; gap: 7px; margin-top: 2px;">
                           ${sale.customerPhone ? `<span class="font-bold">📞 ${sale.customerPhone}</span>` : ''}
                           ${sale.deliveryObs ? `<span class="font-black" style="color: #1e40af;">OBS: ${sale.deliveryObs}</span>` : ''}
                         </div>
@@ -213,9 +213,9 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                     <table class="text-7">
                       <thead>
                         <tr style="border-bottom: 1.5px solid #000;">
-                          <th style="text-align: left; width: 18px;">Q</th>
+                          <th style="text-align: left; width: 22px;">Q</th>
                           <th style="text-align: left;">PRODUTO</th>
-                          <th style="text-align: right; width: 55px;">ORIGEM</th>
+                          <th style="text-align: right; width: 65px;">ORIGEM</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -224,8 +224,8 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                           const storeName = stores.find(st => st.id === item.locationId)?.name || item.locationId || '—';
                           return `
                             <tr class="item-row font-bold">
-                              <td class="font-black">${item.quantity}x</td>
-                              <td class="uppercase truncate" style="max-width: 140px;">${prod?.name || item.productId}</td>
+                              <td class="font-black" style="font-size: 10px;">${item.quantity}x</td>
+                              <td class="uppercase truncate" style="max-width: 160px; font-size: 9px;">${prod?.name || item.productId}</td>
                               <td style="text-align: right;" class="font-black opacity-40 uppercase">${storeName}</td>
                             </tr>
                           `;
