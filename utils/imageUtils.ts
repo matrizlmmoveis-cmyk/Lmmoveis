@@ -14,22 +14,33 @@ export const getDirectImageUrl = (url: string | null | undefined): string => {
   try {
     let fileId = '';
     
-    // Caso 1: /file/d/FILE_ID/view
-    if (url.includes('/file/d/')) {
-      fileId = url.split('/file/d/')[1].split('/')[0].split('?')[0];
-    } 
-    // Caso 2: ?id=FILE_ID ou &id=FILE_ID
-    else if (url.includes('id=')) {
-      const urlParams = new URLSearchParams(url.split('?')[1]);
-      fileId = urlParams.get('id') || '';
+    // Regex para extrair o ID do arquivo em diversos formatos:
+    // 1. /file/d/FILE_ID/view
+    // 2. /file/u/0/d/FILE_ID/view
+    // 3. /open?id=FILE_ID
+    // 4. /uc?id=FILE_ID
+    // 5. /thumbnail?id=FILE_ID
+    const regexPatterns = [
+      /\/file\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]+)/, // Formato /file/d/ID ou /file/u/0/d/ID
+      /[?&]id=([a-zA-Z0-9_-]+)/,                 // Parâmetro ?id=ID ou &id=ID
+    ];
+
+    for (const pattern of regexPatterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        fileId = match[1];
+        break;
+      }
     }
 
     if (fileId) {
-      // Retorna o link direto usando o endpoint uc
-      return `https://drive.google.com/uc?export=view&id=${fileId}`;
+      // Usar o endpoint thumbnail com sz=w1000 costuma ser MAIS CONFIÁVEL que o /uc
+      // pois o /uc às vezes falha em arquivos grandes devido ao aviso de vírus do Google.
+      // E para exibição em interface, a miniatura de alta resolução (w1000) é perfeita.
+      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
     }
   } catch (e) {
-    console.error('Erro ao processar link do Google Drive:', e);
+    console.warn('Erro ao processar link do Google Drive:', e);
   }
 
   return url;
