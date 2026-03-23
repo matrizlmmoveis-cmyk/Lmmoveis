@@ -9,6 +9,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 import { supabaseService } from '../services/supabaseService.ts';
+import { getDirectImageUrl } from '../utils/imageUtils.ts';
 
 interface SalesProps {
   user?: any;
@@ -557,7 +558,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                   return (
                     <div key={p.id} className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all ${hasStock ? 'bg-slate-50 border-slate-100 hover:border-blue-100 hover:bg-blue-50' : 'bg-slate-50/50 border-slate-100 opacity-60'}`}>
                       <div className="w-8 h-8 bg-white rounded-lg overflow-hidden border shrink-0">
-                        <img src={p.imageUrl || p.images?.[0]?.url} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        <img src={getDirectImageUrl(p.imageUrl || p.images?.[0]?.url)} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[9px] font-black uppercase truncate text-slate-800">{p.name}</p>

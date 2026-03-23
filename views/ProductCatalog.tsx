@@ -5,6 +5,7 @@ import { Product, ProductImage, Supplier, Employee, InventoryItem, Store, OrderS
 import { Search, Plus, X, Truck, Box, ShoppingCart, Trash2, CheckCircle2, Edit2, ImagePlus, Loader2, AlertCircle, Upload, RefreshCw } from 'lucide-react';
 import { useCart } from '../components/CartContext.tsx';
 import { supabaseService } from '../services/supabaseService';
+import { getDirectImageUrl } from '../utils/imageUtils.ts';
 
 interface ProductCatalogProps {
   user: Employee | { id: 'admin', name: 'Lucas', role: 'ADMIN', storeId?: string } | null;
@@ -153,7 +154,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
 
   // Função para obter a imagem principal do produto
   const getProductImage = (product: Product): string => {
-    return product.imageUrl || product.imageUrl2 || product.images?.[0]?.url || FALLBACK_IMG;
+    const rawUrl = product.imageUrl || product.imageUrl2 || product.images?.[0]?.url;
+    return getDirectImageUrl(rawUrl) || FALLBACK_IMG;
   };
 
   return (
@@ -308,7 +310,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                   <div className="flex gap-2 h-full">
                     <div className="flex-1 aspect-square bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
                       <img
-                        src={editingProduct.imageUrl || FALLBACK_IMG}
+                        src={getDirectImageUrl(editingProduct.imageUrl) || FALLBACK_IMG}
                         className="w-full h-full object-cover"
                         alt=""
                         onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
@@ -316,7 +318,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                     </div>
                     <div className="flex-1 aspect-square bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
                       <img
-                        src={editingProduct.imageUrl2 || FALLBACK_IMG}
+                        src={getDirectImageUrl(editingProduct.imageUrl2) || FALLBACK_IMG}
                         className="w-full h-full object-cover"
                         alt=""
                         onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}

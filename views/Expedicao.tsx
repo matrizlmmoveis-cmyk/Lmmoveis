@@ -3,6 +3,7 @@ import { supabase } from '../services/supabase.ts';
 import { CheckCircle, XCircle, Package, RefreshCw, Search, AlertTriangle, ChevronDown, ChevronUp, Clock, FileText } from 'lucide-react';
 import { Sale, Product, Employee, Customer, Store } from '../types.ts';
 import SaleReceipt from './SaleReceipt.tsx';
+import { getDirectImageUrl } from '../utils/imageUtils.ts';
 
 interface SaleItem {
     id: string;
@@ -35,13 +36,7 @@ interface ExpedicaoProps {
     refreshData: (force?: boolean) => Promise<void>;
 }
 
-const DRIVE_PREFIX = 'https://drive.google.com/drive/folders/1V6M5rwQDy-1W4ZSmbIhR_x9zjsfS3ha3/';
-
-const getImageUrl = (imageUrl?: string) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    return DRIVE_PREFIX + imageUrl;
-};
+// getImageUrl removido em favor do utilitário padronizado getDirectImageUrl
 
 const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, employees, customers, refreshData }) => {
     const [items, setItems] = useState<SaleItem[]>([]);
@@ -308,7 +303,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
 
                                     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                                         {unitItems.map(item => {
-                                            const imgUrl = getImageUrl(item.products?.image_url);
+                                            const imgUrl = getDirectImageUrl(item.products?.image_url);
                                             const isProcessing = processingId === item.id;
                                             return (
                                                 <div key={item.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 flex flex-col gap-4 hover:shadow-md transition-shadow relative overflow-hidden group">
