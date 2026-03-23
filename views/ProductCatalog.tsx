@@ -29,6 +29,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
   // EDIÇÃO
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -308,21 +309,33 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                     </div>
                   </div>
                   <div className="flex gap-2 h-full">
-                    <div className="flex-1 aspect-square bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
+                    <div 
+                      className="flex-1 aspect-square bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 cursor-zoom-in relative group"
+                      onClick={() => setFullScreenImage(getDirectImageUrl(editingProduct.imageUrl || ''))}
+                    >
                       <img
                         src={getDirectImageUrl(editingProduct.imageUrl) || FALLBACK_IMG}
                         className="w-full h-full object-cover"
                         alt=""
                         onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
                       />
+                      <div className="absolute inset-0 bg-slate-900/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Search className="w-6 h-6 text-white" />
+                      </div>
                     </div>
-                    <div className="flex-1 aspect-square bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
+                    <div 
+                      className="flex-1 aspect-square bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 cursor-zoom-in relative group"
+                      onClick={() => setFullScreenImage(getDirectImageUrl(editingProduct.imageUrl2 || ''))}
+                    >
                       <img
                         src={getDirectImageUrl(editingProduct.imageUrl2) || FALLBACK_IMG}
                         className="w-full h-full object-cover"
                         alt=""
                         onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
                       />
+                      <div className="absolute inset-0 bg-slate-900/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Search className="w-6 h-6 text-white" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -664,6 +677,27 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
               <button type="submit" className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold transition-all">ADICIONAR</button>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* LIGHTBOX DE IMAGEM */}
+      {fullScreenImage && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setFullScreenImage(null)}
+        >
+          <button
+            className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white"
+            onClick={(e) => { e.stopPropagation(); setFullScreenImage(null); }}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={fullScreenImage}
+            alt="Imagem em tela cheia"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>

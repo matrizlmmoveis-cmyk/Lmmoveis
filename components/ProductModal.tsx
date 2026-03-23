@@ -160,13 +160,22 @@ const ProductModal: React.FC<ProductModalProps> = ({
                                 </div>
                             </div>
                             {(editForm.imageUrl2 || (editForm.images?.length ?? 0) > 1) && (
-                                <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 shadow-inner">
+                                <div 
+                                    className="aspect-square bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 shadow-inner cursor-zoom-in relative group"
+                                    onClick={() => {
+                                        const rawUrl = editForm.imageUrl2 || editForm.images?.[1]?.url || FALLBACK_IMG;
+                                        onOpenImage(getDirectImageUrl(rawUrl));
+                                    }}
+                                >
                                     <img
                                         src={getDirectImageUrl(editForm.imageUrl2 || editForm.images?.[1]?.url || FALLBACK_IMG)}
                                         className="w-full h-full object-cover"
                                         alt=""
                                         onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
                                     />
+                                    <div className="absolute inset-0 bg-slate-900/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Search className="w-6 h-6 text-white" />
+                                    </div>
                                 </div>
                             )}
                         </div>
