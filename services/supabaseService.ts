@@ -61,7 +61,14 @@ export const supabaseService = {
         }
         const { data, error } = await supabase.from('stores').select('*');
         if (error) throw error;
-        const result = data as Store[];
+        const result = (data || []).map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            location: s.location,
+            phones: s.phones,
+            type: s.type,
+            defaultDriverId: s.default_driver_id
+        })) as Store[];
         cacheSet('stores', result);
         return result;
     },
@@ -432,6 +439,24 @@ export const supabaseService = {
     },
 
     async createSale(sale: Sale) {
+        // --- LOGICA DE MOTORISTA PADRÃO ---
+        let assignedDriverId = sale.assignedDriverId || null;
+        let status = sale.status;
+
+        if (!assignedDriverId && sale.storeId) {
+            // Se não informou motorista, tenta buscar o padrão da unidade
+            const { data: storeData } = await supabase
+                .from('stores')
+                .select('default_driver_id')
+                .eq('id', sale.storeId)
+                .single();
+
+            if (storeData?.default_driver_id) {
+                assignedDriverId = storeData.default_driver_id;
+                status = OrderStatus.AWAITING_LOAD; // Muda status se atribuiu motorista
+            }
+        }
+
         // 1. Inserir cabeçalho da venda
         const { error: saleError } = await supabase.from('sales').insert({
             id: sale.id,
@@ -442,17 +467,27 @@ export const supabaseService = {
             customer_email: sale.customerEmail,
             customer_reference: sale.customerReference,
             store_id: sale.storeId || null,
-            seller_id: sale.sellerId || null, // send null not '' to avoid FK violation
+            seller_id: sale.sellerId || null,
             total: sale.total,
-            status: sale.status,
+            status: status,
             delivery_address: sale.deliveryAddress,
             delivery_obs: sale.deliveryObs,
             assembly_required: sale.assemblyRequired,
-            assigned_driver_id: sale.assignedDriverId || null,
+            assigned_driver_id: assignedDriverId,
             assigned_assembler_id: sale.assignedAssemblerId || null
         });
 
         if (saleError) throw saleError;
+
+        // Se atribuiu motorista automaticamente, criar o Romaneio
+        if (assignedDriverId && !sale.assignedDriverId) {
+            await this.createRomaneio({
+                type: 'entrega',
+                employeeId: assignedDriverId,
+                saleIds: [sale.id],
+                status: 'ATIVO'
+            });
+        }
 
         // 2. Inserir itens
         const itemsToInsert = sale.items.map(item => ({
@@ -675,7 +710,8 @@ export const supabaseService = {
             name: store.name,
             type: store.type,
             location: store.location || null,
-            phones: store.phones || []
+            phones: store.phones || [],
+            default_driver_id: store.defaultDriverId || null
         };
         const { error } = await supabase.from('stores').insert(payload);
         if (error) throw error;
@@ -689,6 +725,7 @@ export const supabaseService = {
         if (updates.type !== undefined) payload.type = updates.type;
         if (updates.location !== undefined) payload.location = updates.location;
         if (updates.phones !== undefined) payload.phones = updates.phones;
+        if (updates.defaultDriverId !== undefined) payload.default_driver_id = updates.defaultDriverId || null;
 
         const { error } = await supabase.from('stores').update(payload).eq('id', id);
         if (error) throw error;

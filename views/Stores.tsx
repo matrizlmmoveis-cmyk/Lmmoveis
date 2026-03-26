@@ -25,7 +25,8 @@ const Stores: React.FC<StoresProps> = ({ stores, setStores, employees }) => {
     name: '',
     location: '',
     phones: [''],
-    type: 'STORE_STOCK'
+    type: 'STORE_STOCK',
+    defaultDriverId: ''
   });
 
   const handleOpenModal = (store?: Store) => {
@@ -34,7 +35,7 @@ const Stores: React.FC<StoresProps> = ({ stores, setStores, employees }) => {
       setFormData(store);
     } else {
       setEditingStore(null);
-      setFormData({ name: '', location: '', phones: [''], type: 'STORE_STOCK' });
+      setFormData({ name: '', location: '', phones: [''], type: 'STORE_STOCK', defaultDriverId: '' });
     }
     setIsModalOpen(true);
   };
@@ -252,7 +253,25 @@ const Stores: React.FC<StoresProps> = ({ stores, setStores, employees }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-slate-400 uppercase mb-1">Telefone de Contato</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Motorista Padrão (Entrega Automática)</label>
+                <select
+                  value={formData.defaultDriverId || ''}
+                  onChange={(e) => setFormData({ ...formData, defaultDriverId: e.target.value })}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                >
+                  <option value="">Nenhum (Manual)</option>
+                  {employees
+                    .filter(emp => emp.role === 'MOTORISTA' && emp.active)
+                    .map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.name}</option>
+                    ))
+                  }
+                </select>
+                <p className="text-xs text-slate-500 mt-1">Vendas desta unidade serão vinculadas automaticamente a este motorista.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1">Telefone de Contato</label>
                   <input
                     type="text"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 transition-all outline-none"

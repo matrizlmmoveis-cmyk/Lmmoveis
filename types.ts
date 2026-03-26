@@ -39,8 +39,9 @@ export interface Store {
   id: string;
   name: string;
   location: string;
-  phones?: string[];
+  phones: string[];
   type: 'CD' | 'STORE_STOCK' | 'CD_LOJA';
+  defaultDriverId?: string;
 }
 
 export interface Seller {
