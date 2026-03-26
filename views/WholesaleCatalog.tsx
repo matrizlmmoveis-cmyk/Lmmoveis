@@ -28,8 +28,6 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     const [loadingReservations, setLoadingReservations] = useState(false);
     const [markup, setMarkup] = useState<number>(() => Number(localStorage.getItem('wholesale_markup')) || 0);
     const [showWholesalePrices, setShowWholesalePrices] = useState(false);
-    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-    const [passwordInput, setPasswordInput] = useState('');
     const [isMarkupModalOpen, setIsMarkupModalOpen] = useState(false);
 
     // Persistir margem
@@ -76,8 +74,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 .filter(i => i.productId === p.id && i.locationId === norteWarehouseId)
                 .reduce((acc: number, i: any) => acc + i.quantity, 0);
             
-            const calculatedStock = norteStock - 5;
-            
+            const calculatedStock = norteStock - 3;
             if (calculatedStock <= 0) return false;
 
             if (search) {
@@ -89,7 +86,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             const norteStock = (inventory || [])
                 .filter(i => i.productId === p.id && i.locationId === norteWarehouseId)
                 .reduce((acc: number, i: any) => acc + (i.quantity || 0), 0);
-            return { ...p, calculatedStock: norteStock - 5 };
+            return { ...p, calculatedStock: norteStock - 3 };
         });
     }, [products, inventory, stores, search]);
 
@@ -155,23 +152,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     };
 
     const handleToggleWholesalePrice = () => {
-        if (!showWholesalePrices) {
-            setIsPasswordModalOpen(true);
-        } else {
-            setShowWholesalePrices(false);
-        }
-    };
-
-    const handleVerifyPassword = (e: React.FormEvent) => {
-        e.preventDefault();
-        const correctPassword = user.password + "@";
-        if (passwordInput === correctPassword) {
-            setShowWholesalePrices(true);
-            setIsPasswordModalOpen(false);
-            setPasswordInput('');
-        } else {
-            alert('Senha incorreta!');
-        }
+        setShowWholesalePrices(!showWholesalePrices);
     };
 
     const getPrice = (price: number = 0) => {
@@ -342,7 +323,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                             alt={product.name}
                                                             className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-700"
                                                         />
-                                                        {product.calculatedStock <= 5 && (
+                                                        {product.calculatedStock <= 3 && (
                                                             <div className="absolute top-4 left-4">
                                                                 <span className="bg-amber-500 text-white text-[9px] font-black px-3 py-1.5 rounded-full shadow-lg shadow-amber-500/20 uppercase tracking-widest animate-pulse">
                                                                     Últimas Unidades
@@ -564,7 +545,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                             const norteStock = (inventory || [])
                                                                 .filter(i => i.productId === p.id && i.locationId === norteWarehouseId)
                                                                 .reduce((acc: number, i: any) => acc + (i.quantity || 0), 0);
-                                                            addToCart(id, norteStock - 5);
+                                                            addToCart(id, norteStock - 3);
                                                         }} 
                                                         className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-500 transition-colors"
                                                     ><Plus className="w-4 h-4" /></button>
@@ -707,36 +688,6 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                         alt="Fullscreen" 
                         className="max-w-full max-h-full object-contain rounded-3xl animate-in zoom-in-95 duration-500"
                     />
-                </div>
-            )}
-
-            {/* Modal de Senha para Ver Custo */}
-            {isPasswordModalOpen && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
-                    <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-in zoom-in duration-300 border border-white/20">
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                                <Lock className="w-8 h-8 text-blue-600" />
-                            </div>
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Acesso Restrito</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-widest">Digite a senha para exibir o custo</p>
-                            <p className="text-[9px] font-black text-blue-600 mt-1 uppercase tracking-tighter opacity-50">(Sua senha + @)</p>
-                        </div>
-                        <form onSubmit={handleVerifyPassword} className="space-y-4">
-                            <input 
-                                autoFocus
-                                type="password" 
-                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 font-black text-center text-lg"
-                                placeholder="••••••••"
-                                value={passwordInput}
-                                onChange={(e) => setPasswordInput(e.target.value)}
-                            />
-                            <div className="flex gap-2">
-                                <button type="button" onClick={() => { setIsPasswordModalOpen(false); setPasswordInput(''); }} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] hover:bg-slate-200 transition-all tracking-widest">Cancelar</button>
-                                <button type="submit" className="flex-2 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 tracking-widest px-8">Desbloquear</button>
-                            </div>
-                        </form>
-                    </div>
                 </div>
             )}
 
