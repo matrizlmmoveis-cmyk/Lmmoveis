@@ -368,7 +368,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                             <div>
                                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 flex items-center gap-1">
                                                                     {showWholesalePrices ? <Lock className="w-3 h-3 text-amber-500" /> : <Unlock className="w-3 h-3 text-blue-500" />}
-                                                                    {showWholesalePrices ? 'Preço de Custo' : `Venda (+${markup}%)`}
+                                                                    {showWholesalePrices ? 'Custo' : 'Venda'}
                                                                 </p>
                                                                 <p className={`text-xl font-black tracking-tighter italic ${showWholesalePrices ? 'text-amber-600' : 'text-slate-900'}`}>
                                                                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0))}
@@ -672,7 +672,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                     <div>
                                         <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1">
                                             {showWholesalePrices ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                                            {showWholesalePrices ? 'Preço Atacado Especial' : 'Preço Sugerido Venda'}
+                                            {showWholesalePrices ? 'Custo' : 'Venda'}
                                         </p>
                                         <p className={`text-3xl font-black italic ${showWholesalePrices ? 'text-amber-600' : 'text-blue-600'}`}>
                                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(selectedProduct.wholesalePrice || 0))}
