@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Product, InventoryItem, WholesaleReservation, Store } from '../types.ts';
-import { ShoppingCart, Plus, Minus, CheckCircle, Package, Info, Search, ShoppingBag, X, Filter } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, CheckCircle, Package, Info, Search, ShoppingBag, X, Filter, Settings, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService.ts';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
 
@@ -26,6 +26,16 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     const [activeTab, setActiveTab] = useState<'catalog' | 'history'>('catalog');
     const [reservations, setReservations] = useState<any[]>([]);
     const [loadingReservations, setLoadingReservations] = useState(false);
+    const [markup, setMarkup] = useState<number>(() => Number(localStorage.getItem('wholesale_markup')) || 0);
+    const [showWholesalePrices, setShowWholesalePrices] = useState(false);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [passwordInput, setPasswordInput] = useState('');
+    const [isMarkupModalOpen, setIsMarkupModalOpen] = useState(false);
+
+    // Persistir margem
+    React.useEffect(() => {
+        localStorage.setItem('wholesale_markup', markup.toString());
+    }, [markup]);
 
     // Fetch reservations when tab changes
     const fetchReservations = async () => {
@@ -115,7 +125,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     const cartCount = (Object.values(cart) as number[]).reduce((acc: number, q: number) => acc + q, 0);
     const cartTotal = (Object.entries(cart) as [string, number][]).reduce((acc: number, [id, qty]: [string, number]) => {
         const p = products.find(prod => prod.id === id);
-        return acc + (p?.wholesalePrice || 0) * qty;
+        return acc + getPrice(p?.wholesalePrice || 0) * qty;
     }, 0);
 
     const handleConfirmReservation = async () => {
@@ -142,6 +152,31 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             setLoading(false);
             refreshData();
         }
+    };
+
+    const handleToggleWholesalePrice = () => {
+        if (!showWholesalePrices) {
+            setIsPasswordModalOpen(true);
+        } else {
+            setShowWholesalePrices(false);
+        }
+    };
+
+    const handleVerifyPassword = (e: React.FormEvent) => {
+        e.preventDefault();
+        const correctPassword = user.password + "@";
+        if (passwordInput === correctPassword) {
+            setShowWholesalePrices(true);
+            setIsPasswordModalOpen(false);
+            setPasswordInput('');
+        } else {
+            alert('Senha incorreta!');
+        }
+    };
+
+    const getPrice = (price: number = 0) => {
+        if (showWholesalePrices) return price;
+        return price * (1 + markup / 100);
     };
 
     const handleCancelReservation = async (reservationId: string) => {
@@ -190,25 +225,42 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
 
                 <div className="flex items-center gap-3 w-full md:w-auto">
                     {activeTab === 'catalog' && (
-                        <div className="relative flex-1 md:w-64">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Buscar no catálogo..."
-                                className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none font-medium text-slate-900"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
+                        <>
+                            <div className="relative flex-1 md:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar no catálogo..."
+                                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none font-medium text-slate-900"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </div>
+                            <button 
+                                onClick={() => setIsMarkupModalOpen(true)}
+                                className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors text-slate-600 active:scale-95"
+                                title="Configurar Margem"
+                            >
+                                <Settings className="w-5 h-5" />
+                            </button>
+                            <button 
+                                onClick={handleToggleWholesalePrice}
+                                className={`p-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2 text-xs font-black uppercase ${showWholesalePrices ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'}`}
+                                title={showWholesalePrices ? "Esconder Custo" : "Ver Custo"}
+                            >
+                                {showWholesalePrices ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                <span className="hidden lg:inline">{showWholesalePrices ? "Custo" : "Venda"}</span>
+                            </button>
+                        </>
                     )}
                     
                     <button 
                         onClick={() => setIsCartOpen(true)}
-                        className="relative p-2.5 bg-white hover:bg-slate-50 rounded-xl border border-slate-100 transition-colors shadow-sm active:scale-95"
+                        className="relative p-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl border-none transition-all shadow-lg shadow-blue-500/30 active:scale-95"
                     >
-                        <ShoppingCart className="w-5 h-5 text-slate-600" />
+                        <ShoppingCart className="w-5 h-5 text-white" />
                         {cartCount > 0 && (
-                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white animate-in zoom-in duration-300">
+                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-white text-blue-600 text-[10px] font-black rounded-full flex items-center justify-center border-2 border-blue-600 animate-in zoom-in duration-300">
                                 {cartCount}
                             </span>
                         )}
@@ -314,9 +366,12 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
 
                                                         <div className="flex items-end justify-between gap-4">
                                                             <div>
-                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Valor Unitário</p>
-                                                                <p className="text-xl font-black text-slate-900 tracking-tighter italic">
-                                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.wholesalePrice || 0)}
+                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                                                                    {showWholesalePrices ? <Lock className="w-3 h-3 text-amber-500" /> : <Unlock className="w-3 h-3 text-blue-500" />}
+                                                                    {showWholesalePrices ? 'Preço de Custo' : `Venda (+${markup}%)`}
+                                                                </p>
+                                                                <p className={`text-xl font-black tracking-tighter italic ${showWholesalePrices ? 'text-amber-600' : 'text-slate-900'}`}>
+                                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0))}
                                                                 </p>
                                                             </div>
                                                             <div className="text-right">
@@ -495,7 +550,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h4 className="font-bold text-slate-900 text-sm truncate uppercase">{p.name}</h4>
-                                                <p className="text-xs font-black text-blue-600 mt-0.5">R$ {p.wholesalePrice?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                                <p className="text-xs font-black text-blue-600 mt-0.5">R$ {getPrice(p.wholesalePrice || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                                 
                                                 <div className="flex items-center gap-3 mt-3">
                                                     <button onClick={() => removeFromCart(id)} className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"><Minus className="w-4 h-4" /></button>
@@ -517,7 +572,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-[10px] text-slate-400 font-bold uppercase">Subtotal</p>
-                                                <p className="font-black text-slate-900 text-sm">R$ {((p.wholesalePrice || 0) * (qty as number)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                                <p className="font-black text-slate-900 text-sm">R$ {(getPrice(p.wholesalePrice || 0) * (qty as number)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                             </div>
                                         </div>
                                     );
@@ -615,9 +670,12 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
 
                                 <div className="p-8 bg-blue-50 border border-blue-100 rounded-[2.5rem] flex items-center justify-between gap-6">
                                     <div>
-                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Preço Atacado Especial</p>
-                                        <p className="text-3xl font-black text-blue-600 italic">
-                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedProduct.wholesalePrice || 0)}
+                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                            {showWholesalePrices ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                                            {showWholesalePrices ? 'Preço Atacado Especial' : 'Preço Sugerido Venda'}
+                                        </p>
+                                        <p className={`text-3xl font-black italic ${showWholesalePrices ? 'text-amber-600' : 'text-blue-600'}`}>
+                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(selectedProduct.wholesalePrice || 0))}
                                         </p>
                                     </div>
                                     <div className="text-right">
@@ -649,6 +707,65 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                         alt="Fullscreen" 
                         className="max-w-full max-h-full object-contain rounded-3xl animate-in zoom-in-95 duration-500"
                     />
+                </div>
+            )}
+
+            {/* Modal de Senha para Ver Custo */}
+            {isPasswordModalOpen && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+                    <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-in zoom-in duration-300 border border-white/20">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                                <Lock className="w-8 h-8 text-blue-600" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Acesso Restrito</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-widest">Digite a senha para exibir o custo</p>
+                            <p className="text-[9px] font-black text-blue-600 mt-1 uppercase tracking-tighter opacity-50">(Sua senha + @)</p>
+                        </div>
+                        <form onSubmit={handleVerifyPassword} className="space-y-4">
+                            <input 
+                                autoFocus
+                                type="password" 
+                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 font-black text-center text-lg"
+                                placeholder="••••••••"
+                                value={passwordInput}
+                                onChange={(e) => setPasswordInput(e.target.value)}
+                            />
+                            <div className="flex gap-2">
+                                <button type="button" onClick={() => { setIsPasswordModalOpen(false); setPasswordInput(''); }} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] hover:bg-slate-200 transition-all tracking-widest">Cancelar</button>
+                                <button type="submit" className="flex-2 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 tracking-widest px-8">Desbloquear</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Configuração de Margem */}
+            {isMarkupModalOpen && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+                    <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-in zoom-in duration-300 border border-white/20">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                                <Settings className="w-8 h-8 text-blue-600" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Margem de Lucro</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-widest">Defina sua margem de venda</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="relative">
+                                <input 
+                                    autoFocus
+                                    type="number" 
+                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 font-black text-center text-2xl pr-12"
+                                    placeholder="0"
+                                    value={markup}
+                                    onChange={(e) => setMarkup(Number(e.target.value))}
+                                />
+                                <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">%</span>
+                            </div>
+                            <button onClick={() => setIsMarkupModalOpen(false)} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 tracking-widest">Aplicar Margem</button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

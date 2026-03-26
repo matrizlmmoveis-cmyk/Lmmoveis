@@ -1778,6 +1778,7 @@ export const supabaseService = {
             name: data.name,
             role: 'LOGISTA',
             username: data.username,
+            password: data.password,
             active: data.active
         };
     }
