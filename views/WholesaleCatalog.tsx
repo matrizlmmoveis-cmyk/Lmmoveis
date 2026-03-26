@@ -1,0 +1,658 @@
+import React, { useState, useMemo } from 'react';
+import { Product, InventoryItem, WholesaleReservation, Store } from '../types.ts';
+import { ShoppingCart, Plus, Minus, CheckCircle, Package, Info, Search, ShoppingBag, X, Filter } from 'lucide-react';
+import { supabaseService } from '../services/supabaseService.ts';
+import { getDirectImageUrl } from '../utils/imageUtils.ts';
+
+interface WholesaleCatalogProps {
+    user: any;
+    products: Product[];
+    inventory: InventoryItem[];
+    stores: Store[];
+    refreshData: () => Promise<void>;
+}
+
+const FALLBACK_IMG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='60' fill='%23cbd5e1'%3E📦%3C/text%3E%3C/svg%3E";
+
+const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inventory, stores, refreshData }) => {
+    const [cart, setCart] = useState<Record<string, number>>({});
+    const [search, setSearch] = useState('');
+    const [isCartOpen, setIsCartOpen] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+    const [modalImage, setModalImage] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'catalog' | 'history'>('catalog');
+    const [reservations, setReservations] = useState<any[]>([]);
+    const [loadingReservations, setLoadingReservations] = useState(false);
+
+    // Fetch reservations when tab changes
+    const fetchReservations = async () => {
+        if (!user?.id) return;
+        setLoadingReservations(true);
+        try {
+            const data = await supabaseService.getWholesaleReservations(user.id);
+            setReservations(data);
+        } catch (err) {
+            console.error("Erro ao buscar reservas:", err);
+        } finally {
+            setLoadingReservations(false);
+        }
+    };
+
+    React.useEffect(() => {
+        if (activeTab === 'history') {
+            fetchReservations();
+        }
+    }, [activeTab]);
+
+    // Resetar modalImage quando o produto muda
+    useMemo(() => {
+        if (selectedProduct) setModalImage(selectedProduct.imageUrl || null);
+    }, [selectedProduct]);
+
+    // Filtrar produtos de atacado com estoque positivo (Real - 5)
+    const filteredProducts = useMemo(() => {
+        // Encontrar o ID do estoque do Norte dinamicamente
+        const norteWarehouseId = stores.find(s => 
+            s.type === 'CD' && s.name.toUpperCase().includes('NORTE')
+        )?.id || 'W-NORTE';
+
+        return products.filter(p => {
+            if (!p.isWholesale || !p.active) return false;
+            
+            const norteStock = (inventory || [])
+                .filter(i => i.productId === p.id && i.locationId === norteWarehouseId)
+                .reduce((acc: number, i: any) => acc + i.quantity, 0);
+            
+            const calculatedStock = norteStock - 5;
+            
+            if (calculatedStock <= 0) return false;
+
+            if (search) {
+                const s = search.toLowerCase();
+                return p.name.toLowerCase().includes(s) || (p.sku && p.sku.toLowerCase().includes(s));
+            }
+            return true;
+        }).map(p => {
+            const norteStock = (inventory || [])
+                .filter(i => i.productId === p.id && i.locationId === norteWarehouseId)
+                .reduce((acc: number, i: any) => acc + (i.quantity || 0), 0);
+            return { ...p, calculatedStock: norteStock - 5 };
+        });
+    }, [products, inventory, stores, search]);
+
+    // Agrupar por categoria
+    const groupedProducts = useMemo(() => {
+        const groups: Record<string, any[]> = {};
+        filteredProducts.forEach(p => {
+            const cat = p.category || 'Outros';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(p);
+        });
+        return groups;
+    }, [filteredProducts]);
+
+    const addToCart = (productId: string, max: number) => {
+        const current = cart[productId] || 0;
+        if (current < max) {
+            setCart({ ...cart, [productId]: current + 1 });
+        }
+    };
+
+    const removeFromCart = (productId: string) => {
+        const current = cart[productId] || 0;
+        if (current > 1) {
+            setCart({ ...cart, [productId]: current - 1 });
+        } else {
+            const newCart = { ...cart };
+            delete newCart[productId];
+            setCart(newCart);
+        }
+    };
+
+    const cartCount = (Object.values(cart) as number[]).reduce((acc: number, q: number) => acc + q, 0);
+    const cartTotal = (Object.entries(cart) as [string, number][]).reduce((acc: number, [id, qty]: [string, number]) => {
+        const p = products.find(prod => prod.id === id);
+        return acc + (p?.wholesalePrice || 0) * qty;
+    }, 0);
+
+    const handleConfirmReservation = async () => {
+        if (Object.keys(cart).length === 0) return;
+        setLoading(true);
+        try {
+            // Criar uma reserva para cada item do carrinho
+            for (const [productId, quantity] of Object.entries(cart) as [string, number][]) {
+                await supabaseService.createWholesaleReservation({
+                    wholesalerId: user.id,
+                    productId,
+                    quantity,
+                    status: 'PENDENTE'
+                });
+            }
+            setCart({});
+            setIsCartOpen(false);
+            setShowSuccess(true);
+            await refreshData();
+            setTimeout(() => setShowSuccess(false), 5000);
+        } catch (err) {
+            alert('Erro ao confirmar reserva.');
+        } finally {
+            setLoading(false);
+            refreshData();
+        }
+    };
+
+    const handleCancelReservation = async (reservationId: string) => {
+        if (!confirm('Deseja realmente cancelar esta reserva? O estoque será devolvido ao CD.')) return;
+        setLoadingReservations(true);
+        try {
+            await supabaseService.updateWholesaleReservationStatus(reservationId, 'CANCELADA', user.name);
+            await fetchReservations();
+            refreshData();
+        } catch (err) {
+            console.error("Erro ao cancelar reserva:", err);
+            alert("Erro ao cancelar reserva.");
+        } finally {
+            setLoadingReservations(false);
+        }
+    };
+
+    return (
+        <div className="min-h-full bg-slate-50 flex flex-col -m-8">
+            {/* Header com Abas */}
+            <div className="sticky top-0 z-30 bg-white shadow-sm border-b border-slate-100 px-4 md:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
+                        <ShoppingBag className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-lg font-black text-slate-900 tracking-tight uppercase">Catálogo de Atacado</h1>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{user?.name}</p>
+                    </div>
+                </div>
+
+                <div className="flex bg-slate-100 p-1 rounded-xl">
+                    <button 
+                        onClick={() => setActiveTab('catalog')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'catalog' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Produtos
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('history')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Minhas Reservas
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    {activeTab === 'catalog' && (
+                        <div className="relative flex-1 md:w-64">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Buscar no catálogo..."
+                                className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none font-medium text-slate-900"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                    )}
+                    
+                    <button 
+                        onClick={() => setIsCartOpen(true)}
+                        className="relative p-2.5 bg-white hover:bg-slate-50 rounded-xl border border-slate-100 transition-colors shadow-sm active:scale-95"
+                    >
+                        <ShoppingCart className="w-5 h-5 text-slate-600" />
+                        {cartCount > 0 && (
+                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white animate-in zoom-in duration-300">
+                                {cartCount}
+                            </span>
+                        )}
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 p-4 md:p-8">
+                {showSuccess && (
+                    <div className="bg-emerald-50 border-2 border-emerald-200 p-6 rounded-[2.5rem] flex items-center justify-between gap-6 animate-in slide-in-from-top-4 duration-500 shadow-xl shadow-emerald-500/10 mb-8">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-emerald-500 p-3 rounded-2xl"><CheckCircle className="w-6 h-6 text-white" /></div>
+                            <div>
+                                <h3 className="font-black text-emerald-900 text-lg">Reserva Confirmada!</h3>
+                                <p className="text-emerald-700 text-sm font-medium">Sua solicitação foi enviada para a expedição e o estoque já foi reservado.</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowSuccess(false)} className="p-2 hover:bg-emerald-100 rounded-full"><X className="w-5 h-5 text-emerald-600" /></button>
+                    </div>
+                )}
+
+                {activeTab === 'catalog' ? (
+                    <>
+                        {/* Categorias - Menu Superior */}
+                        <div className="flex flex-wrap gap-2 mb-8 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-white/20 sticky top-[80px] z-20 shadow-xl shadow-slate-200/50 overflow-x-auto no-scrollbar">
+                            {Object.keys(groupedProducts).length > 0 && (
+                                <div className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 mr-2">
+                                    <Filter className="w-3 h-3" /> Categorias
+                                </div>
+                            )}
+                            {Object.keys(groupedProducts).sort().map(cat => (
+                                <button 
+                                    key={cat} 
+                                    onClick={() => {
+                                        const el = document.getElementById(`cat-${cat}`);
+                                        if (el) {
+                                            const yOffset = -180; 
+                                            const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                                            window.scrollTo({ top: y, behavior: 'smooth' });
+                                        }
+                                    }}
+                                    className="px-4 py-2 bg-white hover:bg-blue-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm border border-slate-100 transition-all active:scale-95"
+                                >
+                                    {cat}
+                                </button>
+                            ))}
+                        </div>
+
+                        {Object.keys(groupedProducts).length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[2rem] border-2 border-dashed border-slate-200 shadow-sm">
+                                <div className="bg-slate-50 p-6 rounded-full mb-4">
+                                    <Package className="w-12 h-12 text-slate-300" />
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-400 uppercase tracking-widest">Nenhum produto encontrado</h3>
+                                <p className="text-slate-400 text-sm mt-1">Tente ajustar sua busca ou categoria</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-16">
+                                {(Object.entries(groupedProducts) as [string, (Product & { calculatedStock: number })[]][]).sort(([a], [b]) => a.localeCompare(b)).map(([category, catProducts]) => (
+                                    <div key={category} id={`cat-${category}`} className="scroll-mt-48">
+                                        <div className="flex items-center gap-4 mb-6">
+                                            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+                                            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] bg-slate-50 px-4">{category}</h2>
+                                            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                            {catProducts.map((product) => (
+                                                <div 
+                                                    key={product.id} 
+                                                    className="group bg-white rounded-3xl border border-slate-100 overflow-hidden hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 hover:-translate-y-1"
+                                                >
+                                                    <div 
+                                                        className="aspect-square relative overflow-hidden bg-slate-50 cursor-pointer"
+                                                        onClick={() => setSelectedProduct(product)}
+                                                    >
+                                                        <img
+                                                            src={getDirectImageUrl(product.imageUrl) || FALLBACK_IMG}
+                                                            alt={product.name}
+                                                            className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-700"
+                                                        />
+                                                        {product.calculatedStock <= 5 && (
+                                                            <div className="absolute top-4 left-4">
+                                                                <span className="bg-amber-500 text-white text-[9px] font-black px-3 py-1.5 rounded-full shadow-lg shadow-amber-500/20 uppercase tracking-widest animate-pulse">
+                                                                    Últimas Unidades
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                            <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                                                                <Search className="w-5 h-5 text-blue-600" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="p-6">
+                                                        <div className="mb-4">
+                                                            <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 min-h-[40px] leading-tight cursor-pointer uppercase" onClick={() => setSelectedProduct(product)}>
+                                                                {product.name}
+                                                            </h3>
+                                                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-1 tracking-tighter">{product.sku}</p>
+                                                        </div>
+
+                                                        <div className="flex items-end justify-between gap-4">
+                                                            <div>
+                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Valor Unitário</p>
+                                                                <p className="text-xl font-black text-slate-900 tracking-tighter italic">
+                                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.wholesalePrice || 0)}
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                                                                    Disponível
+                                                                </p>
+                                                                <p className="text-xs font-black text-slate-900">
+                                                                    <span className={product.calculatedStock > 10 ? 'text-emerald-500' : 'text-orange-500'}>{product.calculatedStock}</span> <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">UN</span>
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-6 flex items-center gap-2">
+                                                            {cart[product.id] ? (
+                                                                <div className="flex-1 flex items-center justify-between bg-slate-50 p-1 rounded-2xl border border-slate-100">
+                                                                    <button onClick={() => removeFromCart(product.id)} className="w-10 h-10 flex items-center justify-center bg-white hover:bg-slate-100 text-slate-600 rounded-xl shadow-sm transition-all active:scale-90">
+                                                                        <Minus className="w-4 h-4" />
+                                                                    </button>
+                                                                    <span className="font-black text-slate-900 text-sm">{cart[product.id]}</span>
+                                                                    <button 
+                                                                        onClick={() => addToCart(product.id, product.calculatedStock)} 
+                                                                        disabled={cart[product.id] >= product.calculatedStock}
+                                                                        className="w-10 h-10 flex items-center justify-center bg-white hover:bg-blue-50 text-blue-600 rounded-xl shadow-sm transition-all active:scale-90 disabled:opacity-50"
+                                                                    >
+                                                                        <Plus className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => addToCart(product.id, product.calculatedStock)}
+                                                                    className="flex-1 bg-slate-900 hover:bg-blue-600 text-white py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10 hover:shadow-blue-500/30"
+                                                                >
+                                                                    <Plus className="w-4 h-4" />
+                                                                    Reservar Unit.
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    /* Aba de Histórico */
+                    <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Minhas Reservas</h2>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Histórico completo de pedidos realizados</p>
+                            </div>
+                            <button 
+                                onClick={fetchReservations}
+                                className="p-2 hover:bg-slate-50 rounded-xl transition-colors text-slate-400 hover:text-blue-600"
+                                title="Atualizar Lista"
+                            >
+                                <CheckCircle className={`w-5 h-5 ${loadingReservations ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
+
+                        {loadingReservations ? (
+                            <div className="py-32 flex flex-col items-center justify-center">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Carregando histórico...</p>
+                            </div>
+                        ) : reservations.length === 0 ? (
+                            <div className="py-32 flex flex-col items-center justify-center">
+                                <div className="bg-slate-50 p-8 rounded-full mb-4 text-slate-200">
+                                    <Package className="w-16 h-16" />
+                                </div>
+                                <h3 className="text-lg font-bold text-slate-400 uppercase tracking-widest">Nenhuma reserva encontrada</h3>
+                                <p className="text-slate-400 text-sm mt-1">Suas reservas aparecerão aqui assim que forem confirmadas</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/50">
+                                            <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Data</th>
+                                            <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Produto</th>
+                                            <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Qtd</th>
+                                            <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Status</th>
+                                            <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {reservations.map((res) => (
+                                            <tr key={res.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                <td className="px-8 py-6">
+                                                    <p className="text-sm font-black text-slate-900">
+                                                        {new Date(res.createdAt).toLocaleDateString('pt-BR')}
+                                                    </p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                        {new Date(res.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200/50 overflow-hidden flex-shrink-0">
+                                                            <img 
+                                                                src={getDirectImageUrl(res.productImage) || FALLBACK_IMG} 
+                                                                alt={res.productName} 
+                                                                className="w-full h-full object-contain p-1"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-black text-slate-900 line-clamp-1 uppercase leading-tight italic">{res.productName}</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{res.productCategory}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-6 text-center">
+                                                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-900 text-white text-xs font-black">
+                                                        {res.quantity}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-6 text-center">
+                                                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${
+                                                        res.status === 'EFETIVADA' ? 'bg-emerald-100 text-emerald-600' :
+                                                        res.status === 'CANCELADA' ? 'bg-red-100 text-red-600' :
+                                                        'bg-blue-100 text-blue-600'
+                                                    }`}>
+                                                        {res.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-6 text-right">
+                                                    {res.status === 'PENDENTE' && (
+                                                        <button 
+                                                            onClick={() => handleCancelReservation(res.id)}
+                                                            className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-95"
+                                                            title="Cancelar Reserva"
+                                                        >
+                                                            <X className="w-5 h-5" />
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Cart Sidebar */}
+            {isCartOpen && (
+                <div className="fixed inset-0 z-[60] flex justify-end">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsCartOpen(false)} />
+                    <div className="relative w-full max-w-md bg-white h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
+                        <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                            <h2 className="text-xl font-black text-slate-900 flex items-center gap-3">
+                                <ShoppingBag className="w-6 h-6 text-blue-600" /> Minha Reserva
+                            </h2>
+                            <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X className="w-5 h-5 text-slate-400" /></button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                            {Object.keys(cart).length === 0 ? (
+                                <div className="text-center py-20">
+                                    <ShoppingBag className="w-16 h-16 text-slate-100 mx-auto mb-4" />
+                                    <p className="text-slate-400 font-bold text-sm">Seu carrinho está vazio.</p>
+                                </div>
+                            ) : (
+                                (Object.entries(cart) as [string, number][]).map(([id, qty]) => {
+                                    const p = products.find(prod => prod.id === id);
+                                    if (!p) return null;
+                                    return (
+                                        <div key={id} className="flex gap-4 p-4 bg-slate-50 rounded-3xl border border-slate-100 group relative">
+                                            <div className="w-16 h-16 bg-white rounded-2xl overflow-hidden border border-slate-100 shrink-0">
+                                                <img src={getDirectImageUrl(p.imageUrl)} className="w-full h-full object-cover" alt={p.name} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-bold text-slate-900 text-sm truncate uppercase">{p.name}</h4>
+                                                <p className="text-xs font-black text-blue-600 mt-0.5">R$ {p.wholesalePrice?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                                
+                                                <div className="flex items-center gap-3 mt-3">
+                                                    <button onClick={() => removeFromCart(id)} className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"><Minus className="w-4 h-4" /></button>
+                                                    <span className="font-black text-sm text-slate-900 min-w-[20px] text-center">{qty}</span>
+                                                    <button 
+                                                        onClick={() => {
+                                                            const norteWarehouseId = stores.find(s => 
+                                                                s.type === 'CD' && s.name.toUpperCase().includes('NORTE')
+                                                            )?.id || 'W-NORTE';
+
+                                                            const norteStock = (inventory || [])
+                                                                .filter(i => i.productId === p.id && i.locationId === norteWarehouseId)
+                                                                .reduce((acc: number, i: any) => acc + (i.quantity || 0), 0);
+                                                            addToCart(id, norteStock - 5);
+                                                        }} 
+                                                        className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-500 transition-colors"
+                                                    ><Plus className="w-4 h-4" /></button>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase">Subtotal</p>
+                                                <p className="font-black text-slate-900 text-sm">R$ {((p.wholesalePrice || 0) * (qty as number)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        {Object.keys(cart).length > 0 && (
+                            <div className="p-8 border-t border-slate-100 bg-slate-50/50">
+                                <div className="flex items-center justify-between mb-6">
+                                    <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Total da Reserva</p>
+                                    <p className="text-2xl font-black text-slate-900">R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                </div>
+                                <button
+                                    onClick={handleConfirmReservation}
+                                    disabled={loading}
+                                    className="w-full bg-blue-600 text-white py-5 rounded-3xl font-black uppercase text-sm shadow-2xl shadow-blue-600/30 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                                >
+                                    {loading ? <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : <Package className="w-5 h-5" />}
+                                    CONFIRMAR RESERVA
+                                </button>
+                                <p className="text-[10px] text-slate-400 text-center mt-4 font-medium uppercase tracking-tighter">
+                                    Ao confirmar, estes itens serão abatidos do estoque principal imediatamente.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+            {/* Modal de Detalhes do Produto */}
+            {selectedProduct && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setSelectedProduct(null)}></div>
+                    <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl relative overflow-hidden animate-in zoom-in duration-300 flex flex-col md:flex-row max-h-[90vh]">
+                        <button 
+                            onClick={() => setSelectedProduct(null)}
+                            className="absolute top-6 right-6 z-10 w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all hover:bg-slate-200"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+
+                        {/* Image Side */}
+                        <div className="w-full md:w-1/2 bg-slate-50 relative group">
+                            <img 
+                                src={getDirectImageUrl(modalImage || selectedProduct.imageUrl || '')} 
+                                alt={selectedProduct.name} 
+                                className="w-full h-full object-contain p-8 cursor-zoom-in group-hover:scale-105 transition-transform duration-500"
+                                onClick={() => setLightboxUrl(modalImage || selectedProduct.imageUrl || null)}
+                            />
+                            {(selectedProduct.imageUrl2 || selectedProduct.imageUrl) && (
+                                <div className="absolute bottom-6 left-6 right-6 flex gap-2">
+                                     <div 
+                                        onClick={() => setModalImage(selectedProduct.imageUrl || '')}
+                                        className={`w-20 h-20 rounded-2xl border-2 shadow-lg overflow-hidden cursor-pointer active:scale-95 transition-all ${modalImage === selectedProduct.imageUrl ? 'border-blue-500' : 'border-white opacity-70 hover:opacity-100'}`}
+                                    >
+                                        <img src={getDirectImageUrl(selectedProduct.imageUrl || '')} className="w-full h-full object-contain p-1" alt="" />
+                                     </div>
+                                     {selectedProduct.imageUrl2 && (
+                                        <div 
+                                            onClick={() => setModalImage(selectedProduct.imageUrl2 || '')}
+                                            className={`w-20 h-20 rounded-2xl border-2 shadow-lg overflow-hidden cursor-pointer active:scale-95 transition-all ${modalImage === selectedProduct.imageUrl2 ? 'border-blue-500' : 'border-white opacity-70 hover:opacity-100'}`}
+                                        >
+                                            <img src={getDirectImageUrl(selectedProduct.imageUrl2 || '')} className="w-full h-full object-contain p-1" alt="" />
+                                        </div>
+                                     )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Info Side */}
+                        <div className="w-full md:w-1/2 p-8 md:p-12 overflow-y-auto">
+                            <div className="space-y-8">
+                                <div>
+                                    <div className="inline-flex px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100 mb-4">
+                                        {selectedProduct.category}
+                                    </div>
+                                    <h2 className="text-3xl font-black text-slate-900 uppercase leading-tight italic">{selectedProduct.name}</h2>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">SKU: {selectedProduct.sku}</p>
+                                </div>
+
+                                {selectedProduct.description && (
+                                    <div className="space-y-4">
+                                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                            <Info className="w-4 h-4" /> Detalhes do Produto
+                                        </h3>
+                                        <div className="p-6 bg-slate-50 rounded-3xl text-slate-600 text-sm font-medium leading-relaxed uppercase border border-slate-100">
+                                            {selectedProduct.description}
+                                        </div>
+                                    </div>
+                                ) || (
+                                    <div className="p-6 bg-slate-50 rounded-3xl text-slate-400 text-xs font-bold uppercase text-center border border-dashed border-slate-200">
+                                        Nenhuma descrição disponível
+                                    </div>
+                                )}
+
+                                <div className="p-8 bg-blue-50 border border-blue-100 rounded-[2.5rem] flex items-center justify-between gap-6">
+                                    <div>
+                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Preço Atacado Especial</p>
+                                        <p className="text-3xl font-black text-blue-600 italic">
+                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedProduct.wholesalePrice || 0)}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Disponibilidade</p>
+                                        <p className="text-xl font-black text-slate-900 uppercase">
+                                            {filteredProducts.find(p => p.id === selectedProduct.id)?.calculatedStock || 0} UN
+                                        </p>
+                                        <p className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-widest mt-1">
+                                            Disponível
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Lightbox Fullscreen */}
+            {lightboxUrl && (
+                <div 
+                    className="fixed inset-0 z-[200] bg-slate-950/95 backdrop-blur-3xl flex items-center justify-center p-4 animate-in fade-in duration-300 pointer-events-auto"
+                    onClick={() => setLightboxUrl(null)}
+                >
+                    <button className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors">
+                        <X className="w-12 h-12" />
+                    </button>
+                    <img 
+                        src={getDirectImageUrl(lightboxUrl)} 
+                        alt="Fullscreen" 
+                        className="max-w-full max-h-full object-contain rounded-3xl animate-in zoom-in-95 duration-500"
+                    />
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default WholesaleCatalog;

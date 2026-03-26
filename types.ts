@@ -23,7 +23,7 @@ export interface Romaneio {
   status: 'ATIVO' | 'CONCLUIDO';
 }
 
-export type UserRole = 'ADMIN' | 'MOTORISTA' | 'MONTADOR' | 'CONFERENTE' | 'VENDEDOR' | 'GERENTE' | 'SUPERVISOR';
+export type UserRole = 'ADMIN' | 'MOTORISTA' | 'MONTADOR' | 'CONFERENTE' | 'VENDEDOR' | 'GERENTE' | 'SUPERVISOR' | 'LOGISTA';
 
 export interface Employee {
   id: string;
@@ -83,6 +83,8 @@ export interface Product {
   unidade?: string;
   images?: ProductImage[];
   active?: boolean;
+  isWholesale?: boolean;
+  wholesalePrice?: number;
 }
 
 export interface Customer {
@@ -167,4 +169,25 @@ export interface InventoryMovement {
   reason: 'VENDA' | 'DEVOLUCAO' | 'AJUSTE' | 'COMPRA' | 'CANCELAMENTO';
   createdAt: string;
   createdBy: string;
+}
+export interface WholesaleAccount {
+  id: string;
+  name: string;
+  username: string;
+  password?: string;
+  active: boolean;
+  createdAt?: string;
+}
+
+export interface WholesaleReservation {
+  id?: string;
+  wholesalerId: string;
+  productId: string;
+  quantity: number;
+  status: 'PENDENTE' | 'EFETIVADA' | 'CANCELADA';
+  createdAt?: string;
+  dispatchedAt?: string;
+  dispatchedBy?: string;
+  wholesalerName?: string;
+  productName?: string;
 }

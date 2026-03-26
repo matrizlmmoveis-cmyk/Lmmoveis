@@ -267,6 +267,18 @@ const ProductModal: React.FC<ProductModalProps> = ({
                                             </label>
                                         </div>
                                     )}
+                                    {(user?.role === 'ADMIN' || user?.username === 'Master') && (
+                                        <div className="pt-2 flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                                            <div>
+                                                <p className="text-xs font-black text-slate-900 uppercase">Produto para Atacado</p>
+                                                <p className="text-[10px] font-medium text-slate-500">Exibir no catálogo de logistas</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" className="sr-only peer" checked={editForm.isWholesale === true} onChange={e => setEditForm(prev => ({ ...prev, isWholesale: e.target.checked }))} />
+                                                <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                            </label>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -348,6 +360,21 @@ const ProductModal: React.FC<ProductModalProps> = ({
                                 <p className="text-2xl font-black text-red-700 italic">
                                     {(user?.role === 'ADMIN' || user?.username === 'Master') ? formatCurrencyBRL(product.costPrice || 0) : '*****'}
                                 </p>
+                            )}
+                        </div>
+                        <div className="p-5 bg-slate-50 border border-slate-100 rounded-[2rem] space-y-1">
+                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <Package className="w-3 h-3 text-blue-400" /> Preço Atacado
+                            </div>
+                            {isEditMode ? (
+                                <input
+                                    type="text"
+                                    className="w-full bg-transparent text-xl font-black text-slate-900 outline-none"
+                                    value={formatCurrencyBRL(editForm.wholesalePrice || 0)}
+                                    onChange={e => handleCurrencyChange(e, (num) => setEditForm({ ...editForm, wholesalePrice: num }))}
+                                />
+                            ) : (
+                                <p className="text-2xl font-black text-slate-900 italic">{formatCurrencyBRL(product.wholesalePrice || 0)}</p>
                             )}
                         </div>
                     </div>

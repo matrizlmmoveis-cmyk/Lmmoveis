@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabase.ts';
 import { CheckCircle, XCircle, Package, RefreshCw, Search, AlertTriangle, ChevronDown, ChevronUp, Clock, FileText } from 'lucide-react';
-import { Sale, Product, Employee, Customer, Store } from '../types.ts';
+import { Sale, Product, Employee, Customer, Store, WholesaleReservation } from '../types.ts';
+import { supabaseService } from '../services/supabaseService.ts';
 import SaleReceipt from './SaleReceipt.tsx';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
 
@@ -48,7 +49,8 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
     const [stats, setStats] = useState({ pendente: 0, separado: 0, indisponivel: 0 });
     const [filterStore, setFilterStore] = useState('Todos');
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-    const [activeTab, setActiveTab] = useState<'SEPARACAO' | 'DEVOLUCOES'>('SEPARACAO');
+    const [activeTab, setActiveTab] = useState<'SEPARACAO' | 'DEVOLUCOES' | 'ATACADO'>('SEPARACAO');
+    const [wholesaleReservations, setWholesaleReservations] = useState<WholesaleReservation[]>([]);
     const [devolutionItems, setDevolutionItems] = useState<any[]>([]);
     const [devReturnModal, setDevReturnModal] = useState<{ itemId: string; productName: string; qty: number; locationId: string } | null>(null);
 
@@ -127,9 +129,19 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
         }
     }, []);
 
+    const loadWholesale = useCallback(async () => {
+        try {
+            const data = await supabaseService.getWholesaleReservations();
+            setWholesaleReservations(data.filter(r => r.status === 'PENDENTE'));
+        } catch (err) {
+            console.error('Erro ao carregar atacado:', err);
+        }
+    }, []);
+
     useEffect(() => {
         loadItems();
         loadDevolutions();
+        loadWholesale();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -246,6 +258,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
             {/* Tabs */}
             <div className="flex gap-2 p-1.5 bg-slate-200/50 rounded-2xl">
                 <button onClick={() => setActiveTab('SEPARACAO')} className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'SEPARACAO' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}>📦 Separação ({stats.pendente} pendentes)</button>
+                <button onClick={() => setActiveTab('ATACADO')} className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'ATACADO' ? 'bg-white text-blue-700 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}>🏢 Atacado ({wholesaleReservations.length})</button>
                 <button onClick={() => setActiveTab('DEVOLUCOES')} className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'DEVOLUCOES' ? 'bg-white text-red-700 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}>↩️ Devoluções ({devolutionItems.length})</button>
             </div>
 
@@ -277,7 +290,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                 />
             </div>
 
-            {/* Lista existente de separação OU listagem de devoluções */}
+            {/* Renderizar abas condicionalmente */}
             {activeTab === 'SEPARACAO' ? (
                 loading ? (
                     <div className="flex items-center justify-center p-20">
@@ -307,7 +320,6 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                                             const isProcessing = processingId === item.id;
                                             return (
                                                 <div key={item.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 flex flex-col gap-4 hover:shadow-md transition-shadow relative overflow-hidden group">
-                                                    {/* Background icon decoration */}
                                                     <Package className="absolute -right-4 -bottom-4 w-24 h-24 text-slate-50 opacity-[0.03] group-hover:scale-110 transition-transform" />
 
                                                     <div className="flex-1 min-w-0">
@@ -366,6 +378,66 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                         })}
                     </div>
                 )
+            ) : activeTab === 'ATACADO' ? (
+                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden animate-in fade-in duration-500">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-100">
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Lojista</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Produto</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Qtd</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50 text-sm">
+                                {wholesaleReservations.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-6 py-20 text-center italic text-slate-400">Nenhuma reserva de atacado pendente.</td>
+                                    </tr>
+                                ) : (
+                                    wholesaleReservations.map(res => (
+                                        <tr key={res.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-6 py-4 text-xs font-bold text-slate-500">{new Date(res.createdAt!).toLocaleDateString()}</td>
+                                            <td className="px-6 py-4 font-black text-slate-900">{res.wholesalerName}</td>
+                                            <td className="px-6 py-4 font-medium text-slate-600">{res.productName}</td>
+                                            <td className="px-6 py-4 font-black text-blue-600 text-center">{res.quantity}</td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (confirm('Confirmar saída deste item para atacado?')) {
+                                                                await supabaseService.updateWholesaleReservationStatus(res.id, 'EFETIVADA', user?.name);
+                                                                showToast('✅ Saída de atacado confirmada!');
+                                                                loadWholesale();
+                                                            }
+                                                        }}
+                                                        className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-all"
+                                                    >
+                                                        Dar Saída
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (confirm('Deseja realmente cancelar esta reserva? O estoque será devolvido automaticamente.')) {
+                                                                await supabaseService.updateWholesaleReservationStatus(res.id, 'CANCELADA', user?.name);
+                                                                showToast('✖️ Reserva cancelada e estoque devolvido.');
+                                                                loadWholesale();
+                                                            }
+                                                        }}
+                                                        className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase hover:bg-red-100 transition-all border border-red-100"
+                                                    >
+                                                        Cancelar
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             ) : (
                 /* DEVOLUÇÕES TAB */
                 devolutionItems.length === 0 ? (

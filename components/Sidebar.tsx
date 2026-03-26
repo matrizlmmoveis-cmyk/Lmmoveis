@@ -18,7 +18,8 @@ import {
   PackageCheck,
   ClipboardCheck,
   DollarSign,
-  FileText
+  FileText,
+  ShoppingBag
 } from 'lucide-react';
 import { UserRole } from '../types.ts';
 
@@ -47,6 +48,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, role, onLo
     { id: 'assembly', label: 'Minha Rota', icon: Wrench, roles: ['ADMIN', 'MONTADOR'] },
     { id: 'reports', label: 'Relatórios', icon: BarChart3, roles: ['ADMIN', 'SUPERVISOR', 'MASTER', 'GERENTE'] },
     { id: 'nfe', label: 'Notas Fiscais', icon: FileText, roles: ['ADMIN', 'MASTER', 'GERENTE'] },
+    { id: 'wholesale-management', label: 'Gestão Atacado', icon: Grid, roles: ['ADMIN'] },
+    { id: 'wholesale-catalog', label: 'Catálogo Atacado', icon: ShoppingBag, roles: ['LOGISTA'] },
   ];
 
   const menuItems = allItems.filter(item => item.roles.includes(role));

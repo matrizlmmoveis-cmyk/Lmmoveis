@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer, Romaneio, OrderStatus, Supplier, InventoryMovement } from '../types';
+import { Sale, Product, ProductImage, InventoryItem, Store, Employee, Customer, Romaneio, OrderStatus, Supplier, InventoryMovement, WholesaleAccount, WholesaleReservation } from '../types';
 
 // ─── Cache localStorage com TTL ───────────────────────────────────────────────
 const CACHE_TTL: Record<string, number> = {
@@ -165,7 +165,9 @@ export const supabaseService = {
                     ncm: p.ncm,
                     cfop: p.cfop,
                     unidade: p.unidade,
-                    active: typeof p.active !== 'undefined' ? p.active : true
+                    active: typeof p.active !== 'undefined' ? p.active : true,
+                    isWholesale: p.is_wholesale,
+                    wholesalePrice: p.wholesale_price
                 }));
                 allItems = allItems.concat(mapped as Product[]);
                 page++;
@@ -229,6 +231,8 @@ export const supabaseService = {
         if (updates.cfop !== undefined) payload.cfop = updates.cfop;
         if (updates.unidade !== undefined) payload.unidade = updates.unidade;
         if (updates.active !== undefined) payload.active = updates.active;
+        if (updates.isWholesale !== undefined) payload.is_wholesale = updates.isWholesale;
+        if (updates.wholesalePrice !== undefined) payload.wholesale_price = updates.wholesalePrice;
         const { error } = await supabase.from('products').update(payload).eq('id', id);
         if (error) throw error;
         cacheInvalidate('products');
@@ -251,7 +255,9 @@ export const supabaseService = {
             ncm: product.ncm || null,
             cfop: product.cfop || null,
             unidade: product.unidade || null,
-            active: typeof product.active !== 'undefined' ? product.active : true
+            active: typeof product.active !== 'undefined' ? product.active : true,
+            is_wholesale: product.isWholesale || false,
+            wholesale_price: product.wholesalePrice || 0
         };
         const { error } = await supabase.from('products').insert(payload);
         if (error) throw error;
@@ -1605,6 +1611,176 @@ export const supabaseService = {
             nfeId: item.nfe_id
         }));
     },
+
+    // --- WHOLESALE (ATACADO) ---
+    async getWholesaleAccounts() {
+        const { data, error } = await supabase.from('wholesale_accounts').select('*').order('name');
+        if (error) throw error;
+        return (data || []).map((w: any) => ({
+            id: w.id,
+            name: w.name,
+            username: w.username,
+            active: w.active,
+            createdAt: w.created_at
+        })) as WholesaleAccount[];
+    },
+
+    async createWholesaleAccount(account: Partial<WholesaleAccount>) {
+        const { error } = await supabase.from('wholesale_accounts').insert({
+            name: account.name,
+            username: account.username,
+            password: account.password,
+            active: true
+        });
+        if (error) throw error;
+        return true;
+    },
+
+    async updateWholesaleAccount(account: WholesaleAccount) {
+        const payload: any = {
+            name: account.name,
+            username: account.username,
+            active: account.active
+        };
+        if (account.password) payload.password = account.password;
+        const { error } = await supabase.from('wholesale_accounts').update(payload).eq('id', account.id);
+        if (error) throw error;
+        return true;
+    },
+
+    async getWholesaleReservations(wholesalerId?: string) {
+        let query = supabase
+            .from('wholesale_reservations')
+            .select(`
+                *,
+                wholesale_accounts(name),
+                products(name, category, image_url)
+            `);
+        
+        if (wholesalerId) {
+            query = query.eq('wholesaler_id', wholesalerId);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return (data || []).map((r: any) => ({
+            id: r.id,
+            wholesalerId: r.wholesaler_id,
+            productId: r.product_id,
+            productName: r.products?.name || 'N/D',
+            productCategory: r.products?.category || 'N/D',
+            productImage: r.products?.image_url,
+            quantity: r.quantity,
+            status: r.status,
+            createdAt: r.created_at,
+            dispatchedAt: r.dispatched_at,
+            dispatchedBy: r.dispatched_by,
+            locationId: r.location_id,
+            wholesalerName: r.wholesale_accounts?.name || 'N/D'
+        })) as (WholesaleReservation & { productName: string; productCategory: string; productImage?: string; wholesalerName: string })[];
+    },
+
+    async createWholesaleReservation(res: Partial<WholesaleReservation>) {
+        // Encontrar ID do CD Norte dinamicamente para evitar erro de ID não existente
+        const { data: storeData } = await supabase.from('stores').select('id').ilike('name', '%Norte%').eq('type', 'CD').limit(1).single();
+        const norteId = storeData?.id || 'W-NORTE';
+
+        const { data, error } = await supabase
+            .from('wholesale_reservations')
+            .insert({
+                wholesaler_id: res.wholesalerId,
+                product_id: res.productId,
+                quantity: res.quantity,
+                status: 'PENDENTE',
+                location_id: norteId
+            })
+            .select()
+            .single();
+        if (error) throw error;
+
+        // Abater o estoque real do CD Norte na tabela inventory
+        const { data: invData } = await supabase
+            .from('inventory')
+            .select('quantity')
+            .eq('product_id', res.productId)
+            .eq('location_id', norteId)
+            .maybeSingle();
+        
+        const currentQty = invData?.quantity || 0;
+        await this.updateInventory(res.productId!, norteId, currentQty - res.quantity!);
+
+        await this.logInventoryMovement({
+            productId: res.productId!,
+            locationId: norteId,
+            quantity: res.quantity!,
+            type: 'SAIDA',
+            referenceId: `RES-${data.id}`,
+            reason: 'VENDA',
+            createdBy: 'SISTEMA_ATACADO'
+        });
+
+        return true;
+    },
+
+    async updateWholesaleReservationStatus(id: string, status: 'EFETIVADA' | 'CANCELADA', dispatchedBy?: string) {
+        const updates: any = { status };
+        if (status === 'EFETIVADA') {
+            updates.dispatched_at = new Date().toISOString();
+            updates.dispatched_by = dispatchedBy;
+        }
+
+        const { error } = await supabase.from('wholesale_reservations').update(updates).eq('id', id);
+        if (error) throw error;
+
+        if (status === 'CANCELADA') {
+            const { data: resData } = await supabase.from('wholesale_reservations').select('*').eq('id', id).single();
+            if (resData) {
+                const norteId = resData.location_id || 'W-NORTE';
+                
+                // Devolver o estoque ao CD Norte na tabela inventory
+                const { data: invData } = await supabase
+                    .from('inventory')
+                    .select('quantity')
+                    .eq('product_id', resData.product_id)
+                    .eq('location_id', norteId)
+                    .maybeSingle();
+                
+                const currentQty = invData?.quantity || 0;
+                await this.updateInventory(resData.product_id, norteId, currentQty + resData.quantity);
+
+                await this.logInventoryMovement({
+                    productId: resData.product_id,
+                    locationId: norteId,
+                    quantity: resData.quantity,
+                    type: 'ENTRADA',
+                    referenceId: `RES-${id}`,
+                    reason: 'CANCELAMENTO',
+                    createdBy: dispatchedBy || 'SISTEMA_ATACADO'
+                });
+            }
+        }
+        return true;
+    },
+
+
+    async signInWholesale(user: string, pass: string) {
+        const { data, error } = await supabase
+            .from('wholesale_accounts')
+            .select('*')
+            .eq('username', user)
+            .eq('password', pass)
+            .eq('active', true)
+            .single();
+        if (error || !data) return null;
+        return {
+            id: data.id,
+            name: data.name,
+            role: 'LOGISTA',
+            username: data.username,
+            active: data.active
+        };
+    }
 };
 
 

@@ -18,6 +18,8 @@ import Expedicao from './views/Expedicao.tsx';
 import Tarefas from './views/Tarefas.tsx';
 import ReceiptSettlement from './views/ReceiptSettlement.tsx';
 import NFeManagement from './views/NFeManagement.tsx';
+import WholesaleManagement from './views/WholesaleManagement.tsx';
+import WholesaleCatalog from './views/WholesaleCatalog.tsx';
 import { Bell, Search, User, Lock, Store as StoreIcon, AlertCircle, X, Menu, Loader2, LogOut } from 'lucide-react';
 import { Employee, UserRole, Sale, InventoryItem, Store, Product, Customer, Supplier } from './types.ts';
 import { CartProvider } from './components/CartContext.tsx';
@@ -165,13 +167,14 @@ const App: React.FC = () => {
     else if (employee.role === 'CONFERENTE') setActiveView('expedicao');
     else if (employee.role === 'SUPERVISOR') setActiveView('tarefas');
     else if (employee.role === 'VENDEDOR') setActiveView('sales');
+    else if (employee.role === 'LOGISTA') setActiveView('wholesale-catalog');
     else setActiveView('dashboard');
   };
 
   // Redirecionar usuários de campo/vendas que caem no dashboard por padrão (ex: ao atualizar F5)
   useEffect(() => {
     if (user && activeView === 'dashboard') {
-      const fieldRoles = ['MOTORISTA', 'MONTADOR', 'CONFERENTE', 'VENDEDOR'];
+      const fieldRoles = ['MOTORISTA', 'MONTADOR', 'CONFERENTE', 'VENDEDOR', 'LOGISTA'];
       if (fieldRoles.includes(user.role)) {
         redirectByRole(user as Employee);
       }
@@ -239,7 +242,16 @@ const App: React.FC = () => {
           setShowLogin(false);
           redirectByRole(employee);
         } else {
-          setError('Usuário ou senha incorretos.');
+          // 4. Última tentativa: Login de Atacado
+          const wholesaleUser = await supabaseService.signInWholesale(loginForm.user, loginForm.pass);
+          if (wholesaleUser) {
+            setUser(wholesaleUser as any);
+            localStorage.setItem('lm_user', JSON.stringify(wholesaleUser));
+            setShowLogin(false);
+            setActiveView('wholesale-catalog');
+          } else {
+            setError('Usuário ou senha incorretos.');
+          }
         }
       }
     } catch (err: any) {
@@ -289,6 +301,8 @@ const App: React.FC = () => {
       case 'settlement': return <ReceiptSettlement sales={sales} setSales={setSales} employees={employees} stores={stores} products={products} customers={customers} />;
       case 'reports': return <Reports user={user} sales={sales} stores={stores} products={products} employees={employees} refreshData={initData} />;
       case 'nfe': return <NFeManagement sales={sales} products={products} stores={stores} refreshData={initData} />;
+      case 'wholesale-management': return <WholesaleManagement user={user!} refreshData={initData} />;
+      case 'wholesale-catalog': return <WholesaleCatalog user={user!} products={products} inventory={inventory} stores={stores} refreshData={initData} />;
       default: return <Dashboard user={user!} sales={sales} stores={stores} />;
     }
   };
