@@ -41,10 +41,15 @@ const ProductModal: React.FC<ProductModalProps> = ({
     const [isLoadingMovements, setIsLoadingMovements] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
+    const [isManualCategory, setIsManualCategory] = useState(false);
 
     useEffect(() => {
         if (product) {
             setEditForm({ ...product });
+            // Detectar se a categoria é personalizada
+            const isCustom = product.category && !CATEGORIES.includes(product.category);
+            setIsManualCategory(!!isCustom);
+            
             if (!isCreationMode) {
                 loadMovements(product.id);
             }
@@ -203,13 +208,43 @@ const ProductModal: React.FC<ProductModalProps> = ({
                                         </div>
                                         <div>
                                             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Categoria</label>
-                                            <select
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-black uppercase text-sm focus:border-blue-500 outline-none transition-all"
-                                                value={editForm.category}
-                                                onChange={e => setEditForm({ ...editForm, category: e.target.value })}
-                                            >
-                                                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                            </select>
+                                            {!isManualCategory ? (
+                                                <select
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase text-sm focus:border-blue-500 outline-none transition-all text-slate-700"
+                                                    value={editForm.category || ''}
+                                                    onChange={e => {
+                                                        if (e.target.value === 'ADD_NEW') {
+                                                            setIsManualCategory(true);
+                                                            setEditForm({ ...editForm, category: '' });
+                                                        } else {
+                                                            setEditForm({ ...editForm, category: e.target.value });
+                                                        }
+                                                    }}
+                                                >
+                                                    <option value="">Selecione...</option>
+                                                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                                    <option value="ADD_NEW" className="text-blue-600 font-black">+ ADICIONAR NOVA...</option>
+                                                </select>
+                                            ) : (
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        autoFocus
+                                                        type="text"
+                                                        className="flex-1 px-4 py-3 bg-white border-2 border-blue-500 rounded-xl font-bold uppercase text-sm outline-none shadow-sm"
+                                                        value={editForm.category || ''}
+                                                        onChange={e => setEditForm({ ...editForm, category: e.target.value })}
+                                                        placeholder="Digite a nova categoria..."
+                                                    />
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => setIsManualCategory(false)}
+                                                        className="px-4 py-3 bg-slate-100 text-slate-400 hover:text-slate-600 rounded-xl transition-all"
+                                                        title="Voltar para lista"
+                                                    >
+                                                        <RefreshCw className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -10,7 +10,7 @@ export const STORES: Store[] = [
 ];
 
 
-export const CATEGORIES = ['Quarto', 'Sala', 'Cozinha', 'Banheiro', 'Escritório', 'Outros'];
+export const CATEGORIES = ['Camas', 'Sofás', 'Colchões', 'Racks e Painéis', 'Mesas e Cadeiras', 'Salas de Jantar', 'Cozinhas', 'Guarda-Roupas', 'Armários', 'Poltronas', 'Estantes', 'Escritório', 'Banheiro', 'Complementos', 'Outros'];
 
 export const EMPLOYEES: Employee[] = [
   { id: 'E1', name: 'Marcos Silva', role: 'MOTORISTA', username: 'marcos', password: '123', active: true },
