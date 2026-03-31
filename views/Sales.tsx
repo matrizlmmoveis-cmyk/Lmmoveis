@@ -37,7 +37,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0 });
   const [currentSaleToPrint, setCurrentSaleToPrint] = useState<Sale | null>(null);
-  const isShowroomPeriod = new Date() <= new Date('2026-03-30T23:59:59');
+  const isSpecialRulePeriod = new Date() <= new Date('2026-06-30T23:59:59');
   const [romaneios, setRomaneios] = useState<Romaneio[]>([]);
   const [selectedRomaneioHistory, setSelectedRomaneioHistory] = useState<Sale | null>(null);
   const [storeFilter, setStoreFilter] = useState('all');
@@ -573,12 +573,12 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                             <Plus className="w-4 h-4" />
                           </button>
                         )}
-                        {isShowroomPeriod && (
+                        {isSpecialRulePeriod && (
                           <button onClick={() => handleAddItem(p, true)} title="Venda Mostruário" className="w-7 h-7 bg-amber-500 hover:bg-amber-600 text-white rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95 font-black text-xs">
                             M
                           </button>
                         )}
-                        {!hasStock && (
+                        {(!hasStock || isSpecialRulePeriod) && (
                           <button onClick={() => handleAddItem(p, false, true)} title="Venda Encomenda" className="w-7 h-7 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95 font-black text-xs">
                             E
                           </button>
@@ -618,8 +618,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           <span className="text-[9px] text-slate-400 font-bold">%</span>
                           <select className="flex-1 min-w-[130px] px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold outline-none" value={item.locationId} onChange={e => setNewSale({ ...newSale, items: newSale.items?.map(i => (i.productId === item.productId && i.locationId === item.locationId) ? { ...i, locationId: e.target.value } : i) })}>
                             {itemStocks.map(s => { const sn = stores.find(st => st.id === s.locationId)?.name || s.locationId; return <option key={s.locationId} value={s.locationId}>{sn} (Saldo: {s.quantity})</option>; })}
-                            {(itemStocks.length === 0 || item.locationId === 'ST-MOSTRUARIO' || isShowroomPeriod) && <option value="ST-MOSTRUARIO">Mostruário (Avulso)</option>}
-                            {(itemStocks.length === 0 || item.locationId === 'ST-ENCOMENDA') && <option value="ST-ENCOMENDA">Encomenda (Avulso)</option>}
+                            {(itemStocks.length === 0 || item.locationId === 'ST-MOSTRUARIO' || isSpecialRulePeriod) && <option value="ST-MOSTRUARIO">Mostruário (Avulso)</option>}
+                            {(itemStocks.length === 0 || item.locationId === 'ST-ENCOMENDA' || isSpecialRulePeriod) && <option value="ST-ENCOMENDA">Encomenda (Avulso)</option>}
                           </select>
                           <label className="flex items-center gap-1 cursor-pointer shrink-0">
                             <input type="checkbox" className="w-3.5 h-3.5 rounded" checked={item.assemblyRequired} onChange={e => setNewSale({ ...newSale, items: newSale.items?.map(i => i.productId === item.productId ? { ...i, assemblyRequired: e.target.checked } : i) })} />
