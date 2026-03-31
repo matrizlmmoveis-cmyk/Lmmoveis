@@ -975,7 +975,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                         <button onClick={() => setSelectedSale(sale)} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-black uppercase"><Eye className="w-4 h-4" /> Ver</button>
                         {/* Botão Retirada — cliente retira na loja sem precisar de entrega */}
                         {(user?.role === 'GERENTE' || isAdminOrSupervisor) &&
-                          sale.status === OrderStatus.PENDING && (
+                          (sale.status === OrderStatus.PENDING || sale.status === OrderStatus.AWAITING_LOAD) && (
                             <button
                               onClick={async () => {
                                 if (!window.confirm(`Confirmar RETIRADA da venda #${sale.id}? O cliente está retirando o produto na loja.`)) return;
