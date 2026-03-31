@@ -14,6 +14,9 @@ interface WholesaleCatalogProps {
 
 const FALLBACK_IMG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='60' fill='%23cbd5e1'%3E📦%3C/text%3E%3C/svg%3E";
 
+const normalizeId = (id: string) => id.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+
 const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inventory, stores, refreshData }) => {
     const [cart, setCart] = useState<Record<string, number>>({});
     const [search, setSearch] = useState('');
@@ -176,9 +179,10 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     };
 
     return (
-        <div className="min-h-full bg-slate-50 flex flex-col -m-8">
+        <div className="min-h-full bg-slate-50 flex flex-col -m-4 md:-m-8">
             {/* Header com Abas */}
-            <div className="sticky top-0 z-30 bg-white shadow-sm border-b border-slate-100 px-4 md:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="sticky top-0 z-30 bg-white shadow-sm border-b border-slate-100 px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
+
                 <div className="flex items-center gap-4">
                     <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
                         <ShoppingBag className="w-5 h-5 text-white" />
@@ -249,7 +253,8 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 </div>
             </div>
 
-            <div className="flex-1 p-4 md:p-8">
+            <div className="flex-1 p-2 md:p-8">
+
                 {showSuccess && (
                     <div className="bg-emerald-50 border-2 border-emerald-200 p-6 rounded-[2.5rem] flex items-center justify-between gap-6 animate-in slide-in-from-top-4 duration-500 shadow-xl shadow-emerald-500/10 mb-8">
                         <div className="flex items-center gap-4">
@@ -266,29 +271,28 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 {activeTab === 'catalog' ? (
                     <>
                         {/* Categorias - Menu Superior */}
-                        <div className="flex flex-wrap gap-2 mb-8 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-white/20 sticky top-[80px] z-20 shadow-xl shadow-slate-200/50 overflow-x-auto no-scrollbar">
+                        <div className="flex flex-wrap gap-2 mb-4 md:mb-8 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-white/20 sticky top-[130px] md:top-[80px] z-20 shadow-xl shadow-slate-200/50 overflow-x-auto no-scrollbar">
                             {Object.keys(groupedProducts).length > 0 && (
-                                <div className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 mr-2">
-                                    <Filter className="w-3 h-3" /> Categorias
+                                <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 mr-1 md:mr-2 shrink-0">
+                                    <Filter className="w-3 h-3" /> <span className="hidden xs:inline">Categorias</span>
                                 </div>
                             )}
                             {Object.keys(groupedProducts).sort().map(cat => (
                                 <button 
                                     key={cat} 
                                     onClick={() => {
-                                        const el = document.getElementById(`cat-${cat}`);
+                                        const el = document.getElementById(`cat-${normalizeId(cat)}`);
                                         if (el) {
-                                            const yOffset = -180; 
-                                            const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
-                                            window.scrollTo({ top: y, behavior: 'smooth' });
+                                            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                         }
                                     }}
-                                    className="px-4 py-2 bg-white hover:bg-blue-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm border border-slate-100 transition-all active:scale-95"
+                                    className="px-3 md:px-4 py-2 bg-white hover:bg-blue-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm border border-slate-100 transition-all active:scale-95 whitespace-nowrap"
                                 >
                                     {cat}
                                 </button>
                             ))}
                         </div>
+
 
                         {Object.keys(groupedProducts).length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[2rem] border-2 border-dashed border-slate-200 shadow-sm">
@@ -301,19 +305,20 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                         ) : (
                             <div className="space-y-16">
                                 {(Object.entries(groupedProducts) as [string, (Product & { calculatedStock: number })[]][]).sort(([a], [b]) => a.localeCompare(b)).map(([category, catProducts]) => (
-                                    <div key={category} id={`cat-${category}`} className="scroll-mt-48">
-                                        <div className="flex items-center gap-4 mb-6">
-                                            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-                                            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] bg-slate-50 px-4">{category}</h2>
-                                            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-                                        </div>
+                                <div key={category} id={`cat-${normalizeId(category)}`} className="scroll-mt-48 md:scroll-mt-48">
+                                    <div className="flex items-center gap-4 mb-4 md:mb-6">
+                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+                                        <h2 className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.3em] bg-slate-50 px-2 md:px-4 text-center">{category}</h2>
+                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+                                    </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                            {catProducts.map((product) => (
-                                                <div 
-                                                    key={product.id} 
-                                                    className="group bg-white rounded-3xl border border-slate-100 overflow-hidden hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 hover:-translate-y-1"
-                                                >
+                                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
+                                        {catProducts.map((product) => (
+                                            <div 
+                                                key={product.id} 
+                                                className="group bg-white rounded-2xl md:rounded-3xl border border-slate-100 overflow-hidden hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 md:hover:-translate-y-1"
+                                            >
+
                                                     <div 
                                                         className="aspect-square relative overflow-hidden bg-slate-50 cursor-pointer"
                                                         onClick={() => setSelectedProduct(product)}
@@ -337,59 +342,61 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                         </div>
                                                     </div>
 
-                                                    <div className="p-6">
-                                                        <div className="mb-4">
-                                                            <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 min-h-[40px] leading-tight cursor-pointer uppercase" onClick={() => setSelectedProduct(product)}>
-                                                                {product.name}
-                                                            </h3>
-                                                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-1 tracking-tighter">{product.sku}</p>
-                                                        </div>
+                                                <div className="p-3 md:p-6">
+                                                    <div className="mb-2 md:mb-4">
+                                                        <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 h-8 md:h-10 md:min-h-[40px] leading-tight cursor-pointer uppercase text-[10px] md:text-sm" onClick={() => setSelectedProduct(product)}>
+                                                            {product.name}
+                                                        </h3>
+                                                        <p className="text-[8px] md:text-[10px] font-black text-slate-300 uppercase tracking-widest mt-0.5 md:mt-1 tracking-tighter">{product.sku}</p>
+                                                    </div>
 
-                                                        <div className="flex items-end justify-between gap-4">
-                                                            <div>
-                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 flex items-center gap-1">
-                                                                    {showWholesalePrices ? <Lock className="w-3 h-3 text-amber-500" /> : <Unlock className="w-3 h-3 text-blue-500" />}
-                                                                    {showWholesalePrices ? 'Custo' : 'Venda'}
-                                                                </p>
-                                                                <p className={`text-xl font-black tracking-tighter italic ${showWholesalePrices ? 'text-amber-600' : 'text-slate-900'}`}>
-                                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0))}
-                                                                </p>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                                                                    Disponível
-                                                                </p>
-                                                                <p className="text-xs font-black text-slate-900">
-                                                                    <span className={product.calculatedStock > 10 ? 'text-emerald-500' : 'text-orange-500'}>{product.calculatedStock}</span> <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">UN</span>
-                                                                </p>
-                                                            </div>
+                                                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-1 md:gap-4">
+                                                        <div>
+                                                            <p className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                                                                {showWholesalePrices ? <Lock className="w-2.5 h-2.5 md:w-3 md:h-3 text-amber-500" /> : <Unlock className="w-2.5 h-2.5 md:w-3 md:h-3 text-blue-500" />}
+                                                                {showWholesalePrices ? 'Custo' : 'Venda'}
+                                                            </p>
+                                                            <p className={`text-sm md:text-xl font-black tracking-tighter italic ${showWholesalePrices ? 'text-amber-600' : 'text-slate-900'}`}>
+                                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0))}
+                                                            </p>
                                                         </div>
+                                                        <div className="md:text-right flex md:block items-center justify-between">
+                                                            <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest md:mb-1">
+                                                                Estoque
+                                                            </p>
+                                                            <p className="text-[10px] md:text-xs font-black text-slate-900">
+                                                                <span className={product.calculatedStock > 10 ? 'text-emerald-500' : 'text-orange-500'}>{product.calculatedStock}</span> <span className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase ml-0.5">UN</span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
 
-                                                        <div className="mt-6 flex items-center gap-2">
-                                                            {cart[product.id] ? (
-                                                                <div className="flex-1 flex items-center justify-between bg-slate-50 p-1 rounded-2xl border border-slate-100">
-                                                                    <button onClick={() => removeFromCart(product.id)} className="w-10 h-10 flex items-center justify-center bg-white hover:bg-slate-100 text-slate-600 rounded-xl shadow-sm transition-all active:scale-90">
-                                                                        <Minus className="w-4 h-4" />
-                                                                    </button>
-                                                                    <span className="font-black text-slate-900 text-sm">{cart[product.id]}</span>
-                                                                    <button 
-                                                                        onClick={() => addToCart(product.id, product.calculatedStock)} 
-                                                                        disabled={cart[product.id] >= product.calculatedStock}
-                                                                        className="w-10 h-10 flex items-center justify-center bg-white hover:bg-blue-50 text-blue-600 rounded-xl shadow-sm transition-all active:scale-90 disabled:opacity-50"
-                                                                    >
-                                                                        <Plus className="w-4 h-4" />
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => addToCart(product.id, product.calculatedStock)}
-                                                                    className="flex-1 bg-slate-900 hover:bg-blue-600 text-white py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10 hover:shadow-blue-500/30"
-                                                                >
-                                                                    <Plus className="w-4 h-4" />
-                                                                    Reservar Unit.
+
+                                                    <div className="mt-3 md:mt-6 flex items-center gap-2">
+                                                        {cart[product.id] ? (
+                                                            <div className="flex-1 flex items-center justify-between bg-slate-50 p-1 rounded-xl md:rounded-2xl border border-slate-100">
+                                                                <button onClick={() => removeFromCart(product.id)} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center bg-white hover:bg-slate-100 text-slate-600 rounded-lg md:rounded-xl shadow-sm transition-all active:scale-90">
+                                                                    <X className="w-3 h-3 md:w-4 md:h-4 text-red-400" />
                                                                 </button>
-                                                            )}
-                                                        </div>
+                                                                <span className="font-black text-slate-900 text-xs md:text-sm">{cart[product.id]}</span>
+                                                                <button 
+                                                                    onClick={() => addToCart(product.id, product.calculatedStock)} 
+                                                                    disabled={cart[product.id] >= product.calculatedStock}
+                                                                    className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center bg-white hover:bg-blue-50 text-blue-600 rounded-lg md:rounded-xl shadow-sm transition-all active:scale-90 disabled:opacity-50"
+                                                                >
+                                                                    <Plus className="w-3 h-3 md:w-4 md:h-4" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => addToCart(product.id, product.calculatedStock)}
+                                                                className="flex-1 bg-slate-900 hover:bg-blue-600 text-white py-2.5 md:py-3.5 rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1.5 md:gap-2 shadow-xl shadow-slate-900/10 hover:shadow-blue-500/30"
+                                                            >
+                                                                <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                                                Reservar
+                                                            </button>
+                                                        )}
+                                                    </div>
+
                                                     </div>
                                                 </div>
                                             ))}

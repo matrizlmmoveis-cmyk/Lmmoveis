@@ -83,6 +83,16 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
 
       await supabaseService.updateInventory(adjustForm.productId, adjustForm.locationId, newQty, storeType);
 
+      // NOVO: Registrar movimentação no histórico
+      await supabaseService.logInventoryMovement({
+        productId: adjustForm.productId,
+        locationId: adjustForm.locationId,
+        quantity: adjustForm.quantity,
+        type: adjustForm.type === 'IN' ? 'ENTRADA' : 'SAIDA',
+        reason: adjustForm.reason.toUpperCase(),
+        createdBy: user?.name || 'Sistema'
+      });
+
       // Update local state
       let newInventory = [...inventory];
       if (currentItem) {
@@ -93,6 +103,9 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
       setInventory(newInventory);
       setIsAdjustModalOpen(false);
       setAdjustForm({ productId: '', locationId: '', type: 'IN', quantity: 1, reason: '' });
+      
+      // Opcional: Recarregar dados para garantir sincronia com os logs
+      refreshData();
 
     } catch (err) {
       console.error("Erro ao ajustar estoque", err);
