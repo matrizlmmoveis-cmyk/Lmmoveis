@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import Sidebar from './components/Sidebar.tsx';
 import Dashboard from './views/Dashboard.tsx';
 import { STORES } from './constants.tsx';
@@ -25,6 +25,38 @@ import { Employee, UserRole, Sale, InventoryItem, Store, Product, Customer, Supp
 import { CartProvider } from './components/CartContext.tsx';
 import { supabaseService } from './services/supabaseService.ts';
 import { supabase } from './services/supabase.ts';
+class ErrorBoundary extends React.Component<any, any> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-10 bg-red-50 text-red-700 min-h-screen">
+          <h1 className="text-2xl font-bold mb-4">Ocorreu um erro no sistema</h1>
+          <div className="p-4 bg-white border border-red-200 rounded-xl overflow-auto max-w-full">
+            <p className="font-mono text-sm">{this.state.error?.toString() || 'Erro desconhecido'}</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors"
+          >
+            Recarregar Página
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 
 const App: React.FC = () => {
   const [user, setUser] = useState<Employee | { id: 'admin', name: 'Lucas', role: 'ADMIN', storeId?: string } | null>(null);
@@ -54,9 +86,6 @@ const App: React.FC = () => {
       try {
         const parsed = JSON.parse(savedUser);
         setUser(parsed);
-        if (parsed.username !== 'Master') {
-          // Se for um usuário normal, o onAuthStateChange cuidará da re-validação
-        }
       } catch (e) {
         console.error("Erro ao restaurar usuário:", e);
       }
@@ -407,7 +436,9 @@ const App: React.FC = () => {
           </div>
         </header>
         <section className="flex-1 overflow-y-auto p-3 md:p-8 bg-slate-50/50">
-          <div className="max-w-7xl mx-auto h-full">{renderView()}</div>
+          <ErrorBoundary>
+            <div className="max-w-7xl mx-auto h-full">{renderView()}</div>
+          </ErrorBoundary>
         </section>
       </main>
     </div>

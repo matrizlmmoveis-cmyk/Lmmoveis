@@ -9,7 +9,7 @@ interface WholesaleCatalogProps {
     products: Product[];
     inventory: InventoryItem[];
     stores: Store[];
-    refreshData: () => Promise<void>;
+    refreshData: (scope?: string | boolean) => Promise<void>;
 }
 
 const FALLBACK_IMG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='60' fill='%23cbd5e1'%3E📦%3C/text%3E%3C/svg%3E";
@@ -58,8 +58,13 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
         }
     }, [activeTab]);
 
-    // Resetar modalImage quando o produto muda
-    useMemo(() => {
+    const getPrice = (price: number = 0) => {
+        if (showWholesalePrices) return price;
+        return price * (1 + markup / 100);
+    };
+
+    // Resetar modalImage quando o produto muda (corrigido: useMemo não deve ser usado para side-effects)
+    React.useEffect(() => {
         if (selectedProduct) setModalImage(selectedProduct.imageUrl || null);
     }, [selectedProduct]);
 
@@ -67,7 +72,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     const filteredProducts = useMemo(() => {
         // Encontrar o ID do estoque do Norte dinamicamente
         const norteWarehouseId = stores.find(s => 
-            s.type === 'CD' && s.name.toUpperCase().includes('NORTE')
+            s.type === 'CD' && s?.name?.toUpperCase().includes('NORTE')
         )?.id || 'W-NORTE';
 
         return products.filter(p => {
@@ -105,28 +110,45 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     }, [filteredProducts]);
 
     const addToCart = (productId: string, max: number) => {
-        const current = cart[productId] || 0;
-        if (current < max) {
-            setCart({ ...cart, [productId]: current + 1 });
+        try {
+            const current = cart[productId] || 0;
+            if (current < (max || 0)) {
+                setCart(prev => ({ ...prev, [productId]: current + 1 }));
+            }
+        } catch (err: any) {
+            console.error("Erro ao adicionar ao carrinho:", err);
         }
     };
 
     const removeFromCart = (productId: string) => {
-        const current = cart[productId] || 0;
-        if (current > 1) {
-            setCart({ ...cart, [productId]: current - 1 });
-        } else {
-            const newCart = { ...cart };
-            delete newCart[productId];
-            setCart(newCart);
+        try {
+            const current = cart[productId] || 0;
+            if (current > 1) {
+                setCart(prev => ({ ...prev, [productId]: current - 1 }));
+            } else {
+                setCart(prev => {
+                    const newCart = { ...prev };
+                    delete newCart[productId];
+                    return newCart;
+                });
+            }
+        } catch (err) {
+            console.error("Erro ao remover do carrinho:", err);
         }
     };
 
-    const cartCount = (Object.values(cart) as number[]).reduce((acc: number, q: number) => acc + q, 0);
-    const cartTotal = (Object.entries(cart) as [string, number][]).reduce((acc: number, [id, qty]: [string, number]) => {
-        const p = products.find(prod => prod.id === id);
-        return acc + getPrice(p?.wholesalePrice || 0) * qty;
-    }, 0);
+    const cartCount = useMemo(() => {
+        return Object.values(cart || {}).reduce((acc: number, q: number) => acc + (Number(q) || 0), 0);
+    }, [cart]);
+
+    const cartTotal = useMemo(() => {
+        if (!Array.isArray(products)) return 0;
+        return Object.entries(cart || {}).reduce((acc: number, [id, qty]: [string, number]) => {
+            const p = products.find(prod => prod?.id === id);
+            if (!p) return acc;
+            return acc + getPrice(p?.wholesalePrice || 0) * (Number(qty) || 0);
+        }, 0);
+    }, [cart, products, showWholesalePrices, markup]);
 
     const handleConfirmReservation = async () => {
         if (Object.keys(cart).length === 0) return;
@@ -144,23 +166,18 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             setCart({});
             setIsCartOpen(false);
             setShowSuccess(true);
-            await refreshData();
+            await refreshData('inventory');
+            await fetchReservations();
             setTimeout(() => setShowSuccess(false), 5000);
         } catch (err) {
             alert('Erro ao confirmar reserva.');
         } finally {
             setLoading(false);
-            refreshData();
         }
     };
 
     const handleToggleWholesalePrice = () => {
         setShowWholesalePrices(!showWholesalePrices);
-    };
-
-    const getPrice = (price: number = 0) => {
-        if (showWholesalePrices) return price;
-        return price * (1 + markup / 100);
     };
 
     const handleCancelReservation = async (reservationId: string) => {
@@ -169,7 +186,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
         try {
             await supabaseService.updateWholesaleReservationStatus(reservationId, 'CANCELADA', user.name);
             await fetchReservations();
-            refreshData();
+            refreshData('inventory');
         } catch (err) {
             console.error("Erro ao cancelar reserva:", err);
             alert("Erro ao cancelar reserva.");
@@ -528,8 +545,8 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                     <p className="text-slate-400 font-bold text-sm">Seu carrinho está vazio.</p>
                                 </div>
                             ) : (
-                                (Object.entries(cart) as [string, number][]).map(([id, qty]) => {
-                                    const p = products.find(prod => prod.id === id);
+                                (Object.entries(cart || {}) as [string, number][]).map(([id, qty]) => {
+                                    const p = Array.isArray(products) ? products.find(prod => prod?.id === id) : null;
                                     if (!p) return null;
                                     return (
                                         <div key={id} className="flex gap-4 p-4 bg-slate-50 rounded-3xl border border-slate-100 group relative">
@@ -546,7 +563,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                     <button 
                                                         onClick={() => {
                                                             const norteWarehouseId = stores.find(s => 
-                                                                s.type === 'CD' && s.name.toUpperCase().includes('NORTE')
+                                                                s.type === 'CD' && s?.name?.toUpperCase().includes('NORTE')
                                                             )?.id || 'W-NORTE';
 
                                                             const norteStock = (inventory || [])
