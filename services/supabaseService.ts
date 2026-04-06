@@ -167,7 +167,8 @@ export const supabaseService = {
                     unidade: p.unidade,
                     active: typeof p.active !== 'undefined' ? p.active : true,
                     isWholesale: p.is_wholesale,
-                    wholesalePrice: p.wholesale_price
+                    wholesalePrice: p.wholesale_price,
+                    productCode: p.product_code
                 }));
                 allItems = allItems.concat(mapped as Product[]);
                 page++;
@@ -233,6 +234,7 @@ export const supabaseService = {
         if (updates.active !== undefined) payload.active = updates.active;
         if (updates.isWholesale !== undefined) payload.is_wholesale = updates.isWholesale;
         if (updates.wholesalePrice !== undefined) payload.wholesale_price = updates.wholesalePrice;
+        if (updates.productCode !== undefined) payload.product_code = updates.productCode;
         const { error } = await supabase.from('products').update(payload).eq('id', id);
         if (error) throw error;
         cacheInvalidate('products');
@@ -257,7 +259,8 @@ export const supabaseService = {
             unidade: product.unidade || null,
             active: typeof product.active !== 'undefined' ? product.active : true,
             is_wholesale: product.isWholesale || false,
-            wholesale_price: product.wholesalePrice || 0
+            wholesale_price: product.wholesalePrice || 0,
+            product_code: product.productCode || undefined
         };
         const { error } = await supabase.from('products').insert(payload);
         if (error) throw error;

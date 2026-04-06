@@ -207,7 +207,18 @@ const ProductModal: React.FC<ProductModalProps> = ({
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Categoria</label>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Código NF-e (Numeral)</label>
+                                            <input
+                                                type="number"
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm focus:border-blue-500 outline-none transition-all"
+                                                value={editForm.productCode || ''}
+                                                placeholder={isCreationMode ? '(Automático)' : 'Ex: 100'}
+                                                onChange={e => setEditForm({ ...editForm, productCode: parseInt(e.target.value) || undefined })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Categoria</label>
                                             {!isManualCategory ? (
                                                 <select
                                                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase text-sm focus:border-blue-500 outline-none transition-all text-slate-700"
@@ -246,7 +257,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Link Imagem 1</label>
@@ -331,6 +341,11 @@ const ProductModal: React.FC<ProductModalProps> = ({
                                             <div className="inline-flex px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-200">
                                                 Fornecedor: {getSupplierName(product.supplierId)}
                                             </div>
+                                            {product.productCode && (
+                                                <div className="inline-flex px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                                                    Cód. NF-e: {product.productCode}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     {product.description && (

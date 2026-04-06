@@ -81,7 +81,8 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, product
           unit: prod?.unidade || 'UN',
           qty: item.quantity,
           unitValue: item.price,
-          totalValue: item.price * item.quantity * (1 - (item.discount || 0) / 100)
+          totalValue: item.price * item.quantity * (1 - (item.discount || 0) / 100),
+          code: prod?.productCode?.toString() || prod?.id || '0'
         };
       });
 

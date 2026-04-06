@@ -85,6 +85,7 @@ export interface Product {
   active?: boolean;
   isWholesale?: boolean;
   wholesalePrice?: number;
+  productCode?: number;
 }
 
 export interface Customer {

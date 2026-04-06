@@ -33,4 +33,5 @@ export interface NFeItem {
     qty: number;
     unitValue: number;
     totalValue: number;
+    code?: string;
 }
