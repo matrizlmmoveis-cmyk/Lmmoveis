@@ -137,7 +137,7 @@ export const supabaseService = {
     // PRODUCTS
     async getProducts(bypassCache = false) {
         if (!bypassCache) {
-            const cached = cacheGet<Product[]>('products');
+            const cached = cacheGet<Product[]>('products_v4');
             if (cached) return cached;
         }
         let allItems: Product[] = [];
@@ -177,7 +177,7 @@ export const supabaseService = {
                 hasMore = false;
             }
         }
-        cacheSet('products', allItems);
+        cacheSet('products_v4', allItems);
         return allItems;
     },
 
