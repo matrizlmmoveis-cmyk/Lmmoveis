@@ -409,7 +409,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                                                         onClick={async () => {
                                                             if (confirm('Confirmar saída deste item para atacado?')) {
                                                                 try {
-                                                                    await supabaseService.updateWholesaleReservationStatus(res.id, 'EFETIVADA', user?.name);
+                                                                    await supabaseService.updateWholesaleReservationStatus(res.id, 'EFETIVADA', user?.id);
                                                                     showToast('✅ Saída de atacado confirmada!');
                                                                     loadWholesale();
                                                                 } catch (err: any) {
@@ -426,7 +426,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                                                         onClick={async () => {
                                                             if (confirm('Deseja realmente cancelar esta reserva? O estoque será devolvido automaticamente.')) {
                                                                 try {
-                                                                    await supabaseService.updateWholesaleReservationStatus(res.id, 'CANCELADA', user?.name);
+                                                                    await supabaseService.updateWholesaleReservationStatus(res.id, 'CANCELADA', user?.id);
                                                                     showToast('✖️ Reserva cancelada e estoque devolvido.');
                                                                     loadWholesale();
                                                                 } catch (err: any) {
