@@ -408,9 +408,14 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                                                     <button
                                                         onClick={async () => {
                                                             if (confirm('Confirmar saída deste item para atacado?')) {
-                                                                await supabaseService.updateWholesaleReservationStatus(res.id, 'EFETIVADA', user?.name);
-                                                                showToast('✅ Saída de atacado confirmada!');
-                                                                loadWholesale();
+                                                                try {
+                                                                    await supabaseService.updateWholesaleReservationStatus(res.id, 'EFETIVADA', user?.name);
+                                                                    showToast('✅ Saída de atacado confirmada!');
+                                                                    loadWholesale();
+                                                                } catch (err: any) {
+                                                                    console.error('Erro na baixa de atacado:', err);
+                                                                    showToast('❌ Erro na baixa: ' + (err.message || 'Verifique sua conexão'), 'error');
+                                                                }
                                                             }
                                                         }}
                                                         className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-all"
@@ -420,9 +425,14 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                                                     <button
                                                         onClick={async () => {
                                                             if (confirm('Deseja realmente cancelar esta reserva? O estoque será devolvido automaticamente.')) {
-                                                                await supabaseService.updateWholesaleReservationStatus(res.id, 'CANCELADA', user?.name);
-                                                                showToast('✖️ Reserva cancelada e estoque devolvido.');
-                                                                loadWholesale();
+                                                                try {
+                                                                    await supabaseService.updateWholesaleReservationStatus(res.id, 'CANCELADA', user?.name);
+                                                                    showToast('✖️ Reserva cancelada e estoque devolvido.');
+                                                                    loadWholesale();
+                                                                } catch (err: any) {
+                                                                    console.error('Erro ao cancelar atacado:', err);
+                                                                    showToast('❌ Erro ao cancelar reserva.', 'error');
+                                                                }
                                                             }
                                                         }}
                                                         className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase hover:bg-red-100 transition-all border border-red-100"

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabaseService } from '../services/supabaseService';
 import { Sale, Payment, Employee, Store, Product, Customer } from '../types';
-import { CheckCircle2, DollarSign, Clock, HelpCircle, User, MapPin, X, FileText, Calendar } from 'lucide-react';
+import { CheckCircle2, DollarSign, Clock, HelpCircle, User, MapPin, X, FileText, Calendar, ShoppingBag, Package } from 'lucide-react';
 import SaleReceipt from './SaleReceipt';
 
 interface ReceiptSettlementProps {
@@ -14,8 +14,29 @@ interface ReceiptSettlementProps {
 }
 
 const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, employees, stores, products, customers }) => {
-    const [activeTab, setActiveTab] = useState<'AGUARDANDO' | 'CONFERIDOS'>('AGUARDANDO');
+    const [activeTab, setActiveTab] = useState<'AGUARDANDO' | 'CONFERIDOS' | 'ATACADO'>('AGUARDANDO');
     const [selectedSaleForReceipt, setSelectedSaleForReceipt] = useState<Sale | null>(null);
+    const [wholesaleReservations, setWholesaleReservations] = useState<any[]>([]);
+    const [loadingWholesale, setLoadingWholesale] = useState(false);
+
+    const loadWholesale = async () => {
+        setLoadingWholesale(true);
+        try {
+            const data = await supabaseService.getWholesaleReservations();
+            // Filtrar apenas EFETIVADAS (saíram do CD) e que ainda não foram pagas
+            setWholesaleReservations(data.filter(r => r.status === 'EFETIVADA'));
+        } catch (err) {
+            console.error("Erro ao carregar atacado para acerto:", err);
+        } finally {
+            setLoadingWholesale(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'ATACADO') {
+            loadWholesale();
+        }
+    }, [activeTab]);
 
     // Find all 'Entrega' payments
     const deliveryPayments = sales.flatMap(sale =>
@@ -59,6 +80,16 @@ const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, 
         } catch (e) {
             console.error(e);
             alert('Erro ao confirmar pagamento.');
+        }
+    };
+    const handleConfirmarAtacado = async (res: any) => {
+        try {
+            await supabaseService.confirmWholesalePayment(res.id, 'Financeiro');
+            setWholesaleReservations(prev => prev.filter(r => r.id !== res.id));
+            alert('Pagamento de ATACADO confirmado!');
+        } catch (e) {
+            console.error(e);
+            alert('Erro ao confirmar pagamento de atacado.');
         }
     };
 
@@ -153,6 +184,50 @@ const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, 
         </div>
     );
 
+    const renderWholesaleCard = (res: any) => (
+        <div key={res.id} className="p-5 rounded-2xl border mb-4 font-bold bg-blue-50/50 border-blue-200 shadow-sm transition-all hover:bg-blue-50">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex-1 space-y-3">
+                    <div className="flex justify-between items-start">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Reserva Atacado</span>
+                            <span className="text-xl text-slate-900 tracking-tight">{res.wholesalerName}</span>
+                            <span className="text-xs text-slate-500 uppercase flex items-center gap-1 mt-1">
+                                <Package className="w-3 h-3" /> {res.productName} ({res.quantity} un)
+                            </span>
+                        </div>
+                        <div className="text-right">
+                            <span className="text-lg text-blue-700 block">R$ {(res.wholesalePrice * res.quantity).toFixed(2)}</span>
+                            <span className="text-[10px] uppercase px-2 py-0.5 rounded-full inline-block mt-1 bg-blue-100 text-blue-700">
+                                Aguardando Pagamento
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4 text-xs text-slate-600">
+                        <div className="flex items-center gap-1.5 bg-white/50 px-3 py-1.5 rounded-lg border border-blue-100">
+                            <Calendar className="w-4 h-4 text-slate-400" />
+                            <span className="uppercase">Saída: {res.dispatchedAt ? new Date(res.dispatchedAt).toLocaleDateString() : 'N/D'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-white/50 px-3 py-1.5 rounded-lg border border-blue-100">
+                            <User className="w-4 h-4 text-slate-400" />
+                            <span className="uppercase">Conf: {res.dispatchedBy || 'Sist.'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 md:border-l md:pl-6 shrink-0 w-full md:w-auto">
+                    <button
+                        onClick={() => handleConfirmarAtacado(res)}
+                        className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 active:scale-95"
+                    >
+                        <DollarSign className="w-4 h-4" /> Receber Atacado
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     const groupedData = groupSettlementsByStore(activeTab === 'AGUARDANDO' ? pendingSettlements : completedSettlements);
 
     return (
@@ -173,16 +248,25 @@ const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, 
             <div className="flex gap-2 p-1.5 bg-slate-200/50 rounded-2xl">
                 <button
                     onClick={() => setActiveTab('AGUARDANDO')}
-                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-black uppercase tracking-wider transition-all duration-200 ${activeTab === 'AGUARDANDO'
+                    className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 ${activeTab === 'AGUARDANDO'
                         ? 'bg-white text-slate-900 shadow-md ring-1 ring-slate-900/5 scale-[1.02]'
                         : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                         }`}
                 >
-                    Aguardando Acerto ({pendingSettlements.length})
+                    Entregadores ({pendingSettlements.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab('ATACADO')}
+                    className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 ${activeTab === 'ATACADO'
+                        ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-900/5 scale-[1.02]'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                        }`}
+                >
+                    Atacado ({wholesaleReservations.length})
                 </button>
                 <button
                     onClick={() => setActiveTab('CONFERIDOS')}
-                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-black uppercase tracking-wider transition-all duration-200 ${activeTab === 'CONFERIDOS'
+                    className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 ${activeTab === 'CONFERIDOS'
                         ? 'bg-white text-emerald-600 shadow-md ring-1 ring-slate-900/5 scale-[1.02]'
                         : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                         }`}
@@ -192,11 +276,31 @@ const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, 
             </div>
 
             <div className="space-y-8">
-                {Object.keys(groupedData).length === 0 ? (
+                {activeTab === 'ATACADO' ? (
+                    loadingWholesale ? (
+                        <div className="flex flex-col items-center justify-center py-20">
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Carregando atacado...</p>
+                        </div>
+                    ) : wholesaleReservations.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500 font-bold uppercase text-sm italic">Nenhuma reserva de atacado pendente de acerto.</div>
+                    ) : (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                             <div className="flex items-center gap-3 px-2 mb-6">
+                                <div className="h-[1px] flex-1 bg-slate-200"></div>
+                                <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                                    <ShoppingBag className="w-3 h-3" /> Cobranças Localizadas ({wholesaleReservations.length})
+                                </h2>
+                                <div className="h-[1px] flex-1 bg-slate-200"></div>
+                            </div>
+                            {wholesaleReservations.map(res => renderWholesaleCard(res))}
+                        </div>
+                    )
+                ) : Object.keys(groupedData).length === 0 ? (
                     <div className="text-center py-12 text-slate-500 font-bold uppercase text-sm">Nenhum acerto nesta aba.</div>
                 ) : (
                     Object.entries(groupedData).map(([storeName, items]) => (
-                        <div key={storeName} className="space-y-4">
+                        <div key={storeName} className="space-y-4 animate-in fade-in duration-300">
                             <div className="flex items-center gap-3 px-2">
                                 <div className="h-[1px] flex-1 bg-slate-200"></div>
                                 <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">

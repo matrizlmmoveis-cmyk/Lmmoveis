@@ -113,6 +113,8 @@ const WholesaleManagement: React.FC<WholesaleManagementProps> = ({ user, refresh
                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Lojista</th>
                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Produto</th>
                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Qtd</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Valor Unit.</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total</th>
                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
                             </tr>
                         </thead>
@@ -123,6 +125,12 @@ const WholesaleManagement: React.FC<WholesaleManagementProps> = ({ user, refresh
                                     <td className="px-6 py-4 text-sm font-black text-slate-900">{res.wholesalerName}</td>
                                     <td className="px-6 py-4 text-sm font-medium text-slate-600">{res.productName}</td>
                                     <td className="px-6 py-4 text-sm font-black text-blue-600 text-center">{res.quantity}</td>
+                                    <td className="px-6 py-4 text-xs font-bold text-slate-600 text-right">
+                                        {(res as any).wholesalePrice?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm font-black text-slate-900 text-right">
+                                        {((res as any).wholesalePrice * res.quantity).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="flex justify-center">
                                             <span className={`text-[10px] font-black px-3 py-1 rounded-full ${res.status === 'EFETIVADA' ? 'bg-emerald-50 text-emerald-600' : res.status === 'CANCELADA' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>

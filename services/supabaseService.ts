@@ -1657,7 +1657,7 @@ export const supabaseService = {
             .select(`
                 *,
                 wholesale_accounts(name),
-                products(name, category, image_url)
+                products(name, category, image_url, wholesale_price)
             `);
         
         if (wholesalerId) {
@@ -1674,14 +1674,16 @@ export const supabaseService = {
             productName: r.products?.name || 'N/D',
             productCategory: r.products?.category || 'N/D',
             productImage: r.products?.image_url,
+            wholesalePrice: r.products?.wholesale_price || 0,
             quantity: r.quantity,
             status: r.status,
+            paymentStatus: r.payment_status || 'PENDENTE',
             createdAt: r.created_at,
             dispatchedAt: r.dispatched_at,
             dispatchedBy: r.dispatched_by,
             locationId: r.location_id,
             wholesalerName: r.wholesale_accounts?.name || 'N/D'
-        })) as (WholesaleReservation & { productName: string; productCategory: string; productImage?: string; wholesalerName: string })[];
+        })) as (WholesaleReservation & { productName: string; productCategory: string; productImage?: string; wholesalerName: string; wholesalePrice: number; paymentStatus: string })[];
     },
 
     async createWholesaleReservation(res: Partial<WholesaleReservation>) {
@@ -1734,7 +1736,10 @@ export const supabaseService = {
         }
 
         const { error } = await supabase.from('wholesale_reservations').update(updates).eq('id', id);
-        if (error) throw error;
+        if (error) {
+            console.error(`[updateWholesaleReservationStatus] Erro ao atualizar reserva ${id}:`, error);
+            throw error;
+        }
 
         if (status === 'CANCELADA') {
             const { data: resData } = await supabase.from('wholesale_reservations').select('*').eq('id', id).single();
@@ -1762,6 +1767,23 @@ export const supabaseService = {
                     createdBy: dispatchedBy || 'SISTEMA_ATACADO'
                 });
             }
+        }
+        return true;
+    },
+
+    async confirmWholesalePayment(id: string, paidBy: string) {
+        const { error } = await supabase
+            .from('wholesale_reservations')
+            .update({
+                payment_status: 'PAGO',
+                paid_at: new Date().toISOString(),
+                paid_by: paidBy
+            })
+            .eq('id', id);
+        
+        if (error) {
+            console.error(`[confirmWholesalePayment] Erro ao confirmar pagamento ${id}:`, error);
+            throw error;
         }
         return true;
     },
