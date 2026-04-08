@@ -409,6 +409,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                                                         onClick={async () => {
                                                             if (confirm('Confirmar saída deste item para atacado?')) {
                                                                 try {
+                                                                    console.log('Tentando baixar atacado. User:', user);
                                                                     await supabaseService.updateWholesaleReservationStatus(res.id, 'EFETIVADA', user?.id);
                                                                     showToast('✅ Saída de atacado confirmada!');
                                                                     loadWholesale();
