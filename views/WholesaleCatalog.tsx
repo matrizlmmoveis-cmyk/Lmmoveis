@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Product, InventoryItem, WholesaleReservation, Store } from '../types.ts';
-import { ShoppingCart, Plus, Minus, CheckCircle, Package, Info, Search, ShoppingBag, X, Filter, Settings, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, CheckCircle, Package, Info, Search, ShoppingBag, X, Filter, Settings, Eye, EyeOff, Lock, Unlock, Share2 } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService.ts';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
 
@@ -32,11 +32,15 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     const [markup, setMarkup] = useState<number>(() => Number(localStorage.getItem('wholesale_markup')) || 0);
     const [showWholesalePrices, setShowWholesalePrices] = useState(false);
     const [isMarkupModalOpen, setIsMarkupModalOpen] = useState(false);
+    const [showInstallments, setShowInstallments] = useState<boolean>(() => localStorage.getItem('wholesale_show_installments') === 'true');
+    const [installmentCount, setInstallmentCount] = useState<number>(() => Number(localStorage.getItem('wholesale_installments')) || 10);
 
-    // Persistir margem
+    // Persistir configurações
     React.useEffect(() => {
         localStorage.setItem('wholesale_markup', markup.toString());
-    }, [markup]);
+        localStorage.setItem('wholesale_show_installments', showInstallments.toString());
+        localStorage.setItem('wholesale_installments', installmentCount.toString());
+    }, [markup, showInstallments, installmentCount]);
 
     // Fetch reservations when tab changes
     const fetchReservations = async () => {
@@ -194,6 +198,29 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             setLoadingReservations(false);
         }
     };
+    const handleShareWhatsApp = (product: Product) => {
+        const price = getPrice(product.wholesalePrice || 0);
+        const formattedPrice = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
+        
+        let text = `*${product.name}*\n`;
+        text += `💰 Valor: *${formattedPrice}*\n`;
+        
+        if (showInstallments && installmentCount > 1) {
+            const instValue = price / installmentCount;
+            const formattedInst = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(instValue);
+            text += `💳 Ou *${installmentCount}x de ${formattedInst}*\n`;
+        }
+        
+        text += `\n📦 Confira no nosso catálogo!`;
+        
+        const imageUrl = getDirectImageUrl(product.imageUrl);
+        if (imageUrl) {
+            text += `\n\n🖼️ Foto: ${imageUrl}`;
+        }
+
+        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+    };
 
     return (
         <div className="min-h-full bg-slate-50 flex flex-col -m-4 md:-m-8">
@@ -250,8 +277,8 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                 className={`p-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2 text-xs font-black uppercase ${showWholesalePrices ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'}`}
                                 title={showWholesalePrices ? "Esconder Custo" : "Ver Custo"}
                             >
-                                {showWholesalePrices ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                <span className="hidden lg:inline">{showWholesalePrices ? "Custo" : "Venda"}</span>
+                                {showWholesalePrices ? <EyeOff className="w-5 h-5 md:w-4 md:h-4" /> : <Eye className="w-5 h-5 md:w-4 md:h-4" />}
+                                <span className="hidden sm:inline">{showWholesalePrices ? "Custo" : "Venda"}</span>
                             </button>
                         </>
                     )}
@@ -288,7 +315,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 {activeTab === 'catalog' ? (
                     <>
                         {/* Categorias - Menu Superior */}
-                        <div className="flex flex-wrap gap-2 mb-4 md:mb-8 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-white/20 sticky top-[130px] md:top-[80px] z-20 shadow-xl shadow-slate-200/50 overflow-x-auto no-scrollbar">
+                        <div className="flex flex-wrap md:flex-nowrap gap-2 mb-4 md:mb-8 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-white/20 sticky top-[64px] z-20 shadow-xl shadow-slate-200/50 overflow-x-auto no-scrollbar">
                             {Object.keys(groupedProducts).length > 0 && (
                                 <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 mr-1 md:mr-2 shrink-0">
                                     <Filter className="w-3 h-3" /> <span className="hidden xs:inline">Categorias</span>
@@ -300,7 +327,10 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                     onClick={() => {
                                         const el = document.getElementById(`cat-${normalizeId(cat)}`);
                                         if (el) {
-                                            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                            const headerOffset = 130;
+                                            const elementPosition = el.getBoundingClientRect().top;
+                                            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                                            window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
                                         }
                                     }}
                                     className="px-3 md:px-4 py-2 bg-white hover:bg-blue-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm border border-slate-100 transition-all active:scale-95 whitespace-nowrap"
@@ -352,10 +382,16 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                                 </span>
                                                             </div>
                                                         )}
-                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                            <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                                                                <Search className="w-5 h-5 text-blue-600" />
+                                                        <div className="absolute inset-x-0 bottom-0 p-3 flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <div className="bg-white/90 backdrop-blur-md p-2 rounded-xl shadow-xl transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                                                                <Search className="w-4 h-4 text-blue-600" />
                                                             </div>
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(product); }}
+                                                                className="bg-emerald-500 p-2 rounded-xl shadow-xl text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500 delay-75 active:scale-95"
+                                                            >
+                                                                <Share2 className="w-4 h-4" />
+                                                            </button>
                                                         </div>
                                                     </div>
 
@@ -376,6 +412,11 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                             <p className={`text-sm md:text-xl font-black tracking-tighter italic ${showWholesalePrices ? 'text-amber-600' : 'text-slate-900'}`}>
                                                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0))}
                                                             </p>
+                                                            {showInstallments && !showWholesalePrices && (
+                                                                <p className="text-[9px] md:text-[11px] font-bold text-slate-500 mt-0.5">
+                                                                    Ou {installmentCount}x de <span className="text-blue-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0) / installmentCount)}</span>
+                                                                </p>
+                                                            )}
                                                         </div>
                                                         <div className="md:text-right flex md:block items-center justify-between">
                                                             <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest md:mb-1">
@@ -682,15 +723,25 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                         <p className={`text-3xl font-black italic ${showWholesalePrices ? 'text-amber-600' : 'text-blue-600'}`}>
                                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(selectedProduct.wholesalePrice || 0))}
                                         </p>
+                                        {showInstallments && !showWholesalePrices && (
+                                            <p className="text-sm font-bold text-slate-500 mt-1">
+                                                Ou {installmentCount}x de <span className="text-blue-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(selectedProduct.wholesalePrice || 0) / installmentCount)}</span> sem juros
+                                            </p>
+                                        )}
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Disponibilidade</p>
-                                        <p className="text-xl font-black text-slate-900 uppercase">
-                                            {filteredProducts.find(p => p.id === selectedProduct.id)?.calculatedStock || 0} UN
-                                        </p>
-                                        <p className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-widest mt-1">
-                                            Disponível
-                                        </p>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <button 
+                                            onClick={() => handleShareWhatsApp(selectedProduct)}
+                                            className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-100 transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                                        >
+                                            <Share2 className="w-4 h-4" /> Compartilhar
+                                        </button>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Disponibilidade</p>
+                                            <p className="text-xl font-black text-slate-900 uppercase">
+                                                {filteredProducts.find(p => p.id === selectedProduct.id)?.calculatedStock || 0} UN
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -726,19 +777,54 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                             <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Margem de Lucro</h3>
                             <p className="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-widest">Defina sua margem de venda</p>
                         </div>
-                        <div className="space-y-4">
-                            <div className="relative">
-                                <input 
-                                    autoFocus
-                                    type="number" 
-                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 font-black text-center text-2xl pr-12"
-                                    placeholder="0"
-                                    value={markup}
-                                    onChange={(e) => setMarkup(Number(e.target.value))}
-                                />
-                                <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">%</span>
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Margem de Lucro (%)</label>
+                                <div className="relative">
+                                    <input 
+                                        type="number" 
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 font-black text-center text-2xl pr-12"
+                                        placeholder="0"
+                                        value={markup}
+                                        onChange={(e) => setMarkup(Number(e.target.value))}
+                                    />
+                                    <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">%</span>
+                                </div>
                             </div>
-                            <button onClick={() => setIsMarkupModalOpen(false)} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 tracking-widest">Aplicar Margem</button>
+
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                                <label className="flex items-center justify-between cursor-pointer group">
+                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Exibir Parcelado</span>
+                                    <div className="relative inline-flex items-center">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer" 
+                                            checked={showInstallments}
+                                            onChange={() => setShowInstallments(!showInstallments)}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </div>
+                                </label>
+
+                                {showInstallments && (
+                                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Qtd. Parcelas</label>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {[6, 10, 12, 18].map(n => (
+                                                <button 
+                                                    key={n}
+                                                    onClick={() => setInstallmentCount(n)}
+                                                    className={`py-2 rounded-xl text-xs font-black transition-all ${installmentCount === n ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-white text-slate-400 hover:bg-slate-100'}`}
+                                                >
+                                                    {n}x
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button onClick={() => setIsMarkupModalOpen(false)} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 tracking-widest">Salvar Configurações</button>
                         </div>
                     </div>
                 </div>
