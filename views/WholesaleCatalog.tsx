@@ -427,23 +427,27 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                             alt={product.name}
                                                             className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-700"
                                                         />
+                                                        
+                                                        {/* Share Button (Mobile - Fixed / Desktop - Overlay) */}
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(product); }}
+                                                            className="absolute top-2 right-2 md:top-4 md:right-4 bg-emerald-500 p-2 md:p-3 rounded-xl shadow-lg shadow-emerald-500/30 text-white active:scale-95 z-10 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300"
+                                                            title="Compartilhar"
+                                                        >
+                                                            <Share2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                                        </button>
+
                                                         {product.calculatedStock <= 3 && (
-                                                            <div className="absolute top-4 left-4">
-                                                                <span className="bg-amber-500 text-white text-[9px] font-black px-3 py-1.5 rounded-full shadow-lg shadow-amber-500/20 uppercase tracking-widest animate-pulse">
-                                                                    Últimas Unidades
+                                                            <div className="absolute top-2 left-2 md:top-4 md:left-4">
+                                                                <span className="bg-amber-500 text-white text-[8px] md:text-[9px] font-black px-2 md:px-3 py-1 md:py-1.5 rounded-full shadow-lg shadow-amber-500/20 uppercase tracking-widest animate-pulse">
+                                                                    Últimas
                                                                 </span>
                                                             </div>
                                                         )}
-                                                        <div className="absolute inset-x-0 bottom-0 p-3 flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="absolute inset-x-0 bottom-0 p-3 hidden md:flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <div className="bg-white/90 backdrop-blur-md p-2 rounded-xl shadow-xl transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
                                                                 <Search className="w-4 h-4 text-blue-600" />
                                                             </div>
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(product); }}
-                                                                className="bg-emerald-500 p-2 rounded-xl shadow-xl text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500 delay-75 active:scale-95"
-                                                            >
-                                                                <Share2 className="w-4 h-4" />
-                                                            </button>
                                                         </div>
                                                     </div>
 
@@ -704,36 +708,36 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             )}
             {/* Modal de Detalhes do Produto */}
             {selectedProduct && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 md:p-4">
                     <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setSelectedProduct(null)}></div>
-                    <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl relative overflow-hidden animate-in zoom-in duration-300 flex flex-col md:flex-row max-h-[90vh]">
+                    <div className="bg-white w-full max-w-4xl rounded-3xl md:rounded-[3rem] shadow-2xl relative overflow-hidden animate-in zoom-in duration-300 flex flex-col md:flex-row max-h-[95vh] md:max-h-[90vh]">
                         <button 
                             onClick={() => setSelectedProduct(null)}
-                            className="absolute top-6 right-6 z-10 w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all hover:bg-slate-200"
+                            className="absolute top-4 right-4 md:top-6 md:right-6 z-10 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/90 backdrop-blur-md md:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all shadow-lg"
                         >
-                            <X className="w-6 h-6" />
+                            <X className="w-5 h-5 md:w-6 md:h-6" />
                         </button>
 
                         {/* Image Side */}
-                        <div className="w-full md:w-1/2 bg-slate-50 relative group">
+                        <div className="w-full md:w-1/2 h-[40vh] md:h-auto bg-slate-50 relative group overflow-hidden shrink-0">
                             <img 
                                 src={getDirectImageUrl(modalImage || selectedProduct.imageUrl || '')} 
                                 alt={selectedProduct.name} 
-                                className="w-full h-full object-contain p-8 cursor-zoom-in group-hover:scale-105 transition-transform duration-500"
+                                className="w-full h-full object-contain p-6 md:p-8 cursor-zoom-in group-hover:scale-105 transition-transform duration-500"
                                 onClick={() => setLightboxUrl(modalImage || selectedProduct.imageUrl || null)}
                             />
                             {(selectedProduct.imageUrl2 || selectedProduct.imageUrl) && (
-                                <div className="absolute bottom-6 left-6 right-6 flex gap-2">
+                                <div className="absolute bottom-4 left-4 right-4 flex gap-2 overflow-x-auto no-scrollbar pb-2">
                                      <div 
                                         onClick={() => setModalImage(selectedProduct.imageUrl || '')}
-                                        className={`w-20 h-20 rounded-2xl border-2 shadow-lg overflow-hidden cursor-pointer active:scale-95 transition-all ${modalImage === selectedProduct.imageUrl ? 'border-blue-500' : 'border-white opacity-70 hover:opacity-100'}`}
+                                        className={`w-14 h-14 md:w-20 md:h-20 shrink-0 rounded-xl md:rounded-2xl border-2 shadow-lg overflow-hidden cursor-pointer active:scale-95 transition-all ${modalImage === selectedProduct.imageUrl ? 'border-blue-500' : 'border-white opacity-70 hover:opacity-100'}`}
                                     >
                                         <img src={getDirectImageUrl(selectedProduct.imageUrl || '')} className="w-full h-full object-contain p-1" alt="" />
                                      </div>
                                      {selectedProduct.imageUrl2 && (
                                         <div 
                                             onClick={() => setModalImage(selectedProduct.imageUrl2 || '')}
-                                            className={`w-20 h-20 rounded-2xl border-2 shadow-lg overflow-hidden cursor-pointer active:scale-95 transition-all ${modalImage === selectedProduct.imageUrl2 ? 'border-blue-500' : 'border-white opacity-70 hover:opacity-100'}`}
+                                            className={`w-14 h-14 md:w-20 md:h-20 shrink-0 rounded-xl md:rounded-2xl border-2 shadow-lg overflow-hidden cursor-pointer active:scale-95 transition-all ${modalImage === selectedProduct.imageUrl2 ? 'border-blue-500' : 'border-white opacity-70 hover:opacity-100'}`}
                                         >
                                             <img src={getDirectImageUrl(selectedProduct.imageUrl2 || '')} className="w-full h-full object-contain p-1" alt="" />
                                         </div>
@@ -743,22 +747,22 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                         </div>
 
                         {/* Info Side */}
-                        <div className="w-full md:w-1/2 p-8 md:p-12 overflow-y-auto">
-                            <div className="space-y-8">
+                        <div className="w-full md:w-1/2 p-6 md:p-12 overflow-y-auto">
+                            <div className="space-y-6 md:space-y-8">
                                 <div>
-                                    <div className="inline-flex px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100 mb-4">
+                                    <div className="inline-flex px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border border-blue-100 mb-3 md:mb-4">
                                         {selectedProduct.category}
                                     </div>
-                                    <h2 className="text-3xl font-black text-slate-900 uppercase leading-tight italic">{selectedProduct.name}</h2>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">SKU: {selectedProduct.sku}</p>
+                                    <h2 className="text-xl md:text-3xl font-black text-slate-900 uppercase leading-tight italic">{selectedProduct.name}</h2>
+                                    <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1 md:mt-2">SKU: {selectedProduct.sku}</p>
                                 </div>
 
                                 {selectedProduct.description && (
-                                    <div className="space-y-4">
-                                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <div className="space-y-3 md:space-y-4">
+                                        <h3 className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                             <Info className="w-4 h-4" /> Detalhes do Produto
                                         </h3>
-                                        <div className="p-6 bg-slate-50 rounded-3xl text-slate-600 text-sm font-medium leading-relaxed uppercase border border-slate-100">
+                                        <div className="p-4 md:p-6 bg-slate-50 rounded-2xl md:rounded-3xl text-slate-600 text-xs md:text-sm font-medium leading-relaxed uppercase border border-slate-100">
                                             {selectedProduct.description}
                                         </div>
                                     </div>
@@ -768,33 +772,33 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                     </div>
                                 )}
 
-                                <div className="p-8 bg-blue-50 border border-blue-100 rounded-[2.5rem] flex items-center justify-between gap-6">
+                                <div className="p-6 md:p-8 bg-blue-50 border border-blue-100 rounded-3xl md:rounded-[2.5rem] flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-6">
                                     <div>
                                         <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1">
                                             {showWholesalePrices ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                                             {showWholesalePrices ? 'Custo' : 'Venda'}
                                         </p>
                                         {(showTotalPrice || showWholesalePrices) && (
-                                            <p className={`text-3xl font-black italic ${showWholesalePrices ? 'text-amber-600' : 'text-blue-600'}`}>
+                                            <p className={`text-2xl md:text-3xl font-black italic ${showWholesalePrices ? 'text-amber-600' : 'text-blue-600'}`}>
                                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(selectedProduct.wholesalePrice || 0))}
                                             </p>
                                         )}
                                         {showInstallments && !showWholesalePrices && (
-                                            <p className={`font-bold text-slate-500 mt-1 ${!showTotalPrice ? 'text-3xl font-black italic text-blue-600' : 'text-sm'}`}>
-                                                {!showTotalPrice ? '' : 'Ou '} {installmentCount}x de <span className={!showTotalPrice ? 'text-blue-600' : 'text-blue-600'}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(selectedProduct.wholesalePrice || 0) / installmentCount)}</span> {!showTotalPrice ? '' : 'sem juros'}
+                                            <p className={`font-bold text-slate-500 mt-1 ${!showTotalPrice ? 'text-2xl md:text-3xl font-black italic text-blue-600' : 'text-[10px] md:text-sm'}`}>
+                                                {!showTotalPrice ? '' : 'Ou '} {installmentCount}x de <span className="text-blue-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(selectedProduct.wholesalePrice || 0) / installmentCount)}</span> {!showTotalPrice ? '' : ''}
                                             </p>
                                         )}
                                     </div>
-                                    <div className="flex flex-col items-end gap-2">
+                                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
                                         <button 
                                             onClick={() => handleShareWhatsApp(selectedProduct)}
-                                            className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-100 transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                                            className="px-4 py-2.5 md:p-3 bg-emerald-50 text-emerald-600 rounded-xl md:rounded-2xl hover:bg-emerald-100 transition-colors flex items-center gap-2 text-[9px] md:text-[10px] font-black uppercase tracking-widest shrink-0"
                                         >
-                                            <Share2 className="w-4 h-4" /> Compartilhar
+                                            <Share2 className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="sm:hidden lg:inline">Compartilhar</span>
                                         </button>
                                         <div className="text-right">
-                                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Disponibilidade</p>
-                                            <p className="text-xl font-black text-slate-900 uppercase">
+                                            <p className="text-[8px] md:text-[10px] font-black text-blue-400 uppercase tracking-widest">Disponível</p>
+                                            <p className="text-sm md:text-xl font-black text-slate-900 uppercase">
                                                 {filteredProducts.find(p => p.id === selectedProduct.id)?.calculatedStock || 0} UN
                                             </p>
                                         </div>
