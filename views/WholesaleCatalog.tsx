@@ -218,6 +218,30 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
         ctx.closePath();
     };
 
+    // Helper para quebrar texto no Canvas
+    const wrapText = (ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number): number => {
+        const words = text.split(' ');
+        let line = '';
+        let currentY = y;
+        let lineCount = 0;
+
+        for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            const testWidth = metrics.width;
+            if (testWidth > maxWidth && n > 0) {
+                ctx.fillText(line, x, currentY);
+                line = words[n] + ' ';
+                currentY += lineHeight;
+                lineCount++;
+            } else {
+                line = testLine;
+            }
+        }
+        ctx.fillText(line, x, currentY);
+        return currentY + lineHeight;
+    };
+
     const handleShareWhatsApp = async (product: Product) => {
         setSharingLoading(product.id);
         try {
@@ -231,39 +255,54 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             const ctx = canvas.getContext('2d');
             if (!ctx) return;
 
-            // Configuração do Card (1080x1350 para um visual de panfleto)
+            // Configuração do Card (1080x1550 para acomodar descrição)
             canvas.width = 1080;
-            canvas.height = 1350;
+            canvas.height = 1550;
 
             // 1. Fundo (Gradiente Suave)
-            const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
+            const gradient = ctx.createLinearGradient(0, 0, 1080, 1550);
             gradient.addColorStop(0, '#f8fafc');
             gradient.addColorStop(1, '#f1f5f9');
             ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 1080, 1350);
+            ctx.fillRect(0, 0, 1080, 1550);
 
             // 2. Carregar Imagem do Produto (Via Proxy para evitar CORS)
             const img = new Image();
             img.crossOrigin = "anonymous";
-            let imageUrl = getDirectImageUrl(product.imageUrl) || FALLBACK_IMG;
+            let rawUrl = getDirectImageUrl(product.imageUrl) || FALLBACK_IMG;
             
-            // Usar proxy weserv.nl para garantir que conseguimos desenhar no canvas (bypass CORS)
-            if (imageUrl && !imageUrl.startsWith('data:')) {
-                imageUrl = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl)}&w=1000`;
+            // Reforço no Proxy (Tentativa de bypass mais agressiva)
+            let imageUrl = rawUrl;
+            if (rawUrl && !rawUrl.startsWith('data:')) {
+                // Adicionando um timestamp para evitar cache e garantir headers CORS
+                const timestamp = new Date().getTime();
+                imageUrl = `https://images.weserv.nl/?url=${encodeURIComponent(rawUrl)}&w=1200&t=${timestamp}`;
             }
 
             let imageLoaded = false;
             try {
                 await new Promise((resolve, reject) => {
-                    const timeout = setTimeout(() => reject(new Error("Timeout")), 8000);
+                    const timeout = setTimeout(() => reject(new Error("Timeout")), 10000);
                     img.onload = () => { clearTimeout(timeout); resolve(true); };
-                    img.onerror = () => { clearTimeout(timeout); reject(new Error("Proxy/Load Error")); };
+                    img.onerror = () => { clearTimeout(timeout); reject(new Error("Proxy Error")); };
                     img.src = imageUrl;
                 });
                 imageLoaded = true;
             } catch (imgErr) {
-                console.warn("Falha ao carregar imagem via proxy:", imgErr);
-                imageLoaded = false;
+                console.warn("Falha no primeiro proxy, tentando segundo...", imgErr);
+                // Segunda tentativa com outro proxy se necessário
+                try {
+                    const proxy2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`;
+                    await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => reject(new Error("Timeout")), 10000);
+                        img.onload = () => { clearTimeout(timeout); resolve(true); };
+                        img.onerror = reject;
+                        img.src = proxy2;
+                    });
+                    imageLoaded = true;
+                } catch (e2) {
+                    imageLoaded = false;
+                }
             }
 
             // 3. Desenhar Imagem ou Fallback
@@ -273,7 +312,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             const canvasCenterX = 540;
 
             // Fundo Branco para a área da imagem
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.05)';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
             ctx.shadowBlur = 40;
             ctx.shadowOffsetY = 20;
             ctx.fillStyle = '#ffffff';
@@ -289,55 +328,66 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 drawHeight *= ratio;
                 ctx.drawImage(img, (1080 - drawWidth) / 2, padding + (imgMaxHeight - drawHeight) / 2, drawWidth, drawHeight);
             } else {
-                // Desenhar um ícone de fallback elegante se a imagem falhar
-                ctx.fillStyle = '#f1f5f9';
-                ctx.font = '200px serif';
+                ctx.fillStyle = '#f8fafc';
+                ctx.fillRect((1080 - imgMaxWidth) / 2, padding, imgMaxWidth, imgMaxHeight);
+                ctx.fillStyle = '#cbd5e1';
+                ctx.font = '120px serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('📦', canvasCenterX, padding + imgMaxHeight / 2 + 60);
-                
+                ctx.fillText('🖼️', canvasCenterX, padding + imgMaxHeight / 2);
                 ctx.font = '700 30px sans-serif';
-                ctx.fillStyle = '#94a3b8';
-                ctx.fillText('IMAGEM PROTEGIDA PELO DRIVE', canvasCenterX, padding + imgMaxHeight / 2 + 150);
+                ctx.fillText('FOTO EM CARREGAMENTO...', canvasCenterX, padding + imgMaxHeight / 2 + 80);
             }
 
             // 4. Textos (Rodapé)
-            const textY = 1040;
+            let nextY = 1050;
             ctx.textAlign = 'center';
             
             // Categoria
-            ctx.font = '900 28px sans-serif';
+            ctx.font = '900 30px sans-serif';
             ctx.fillStyle = '#3b82f6';
-            ctx.fillText((product.category || 'PRODUTO').toUpperCase(), 540, textY);
+            ctx.fillText((product.category || 'PRODUTO').toUpperCase(), canvasCenterX, nextY);
+            nextY += 70;
 
-            // Nome do Produto
-            ctx.font = '900 64px sans-serif';
+            // Nome do Produto (COM WRAP)
+            ctx.font = '900 68px sans-serif';
             ctx.fillStyle = '#0f172a';
-            ctx.fillText(product.name.toUpperCase(), 540, textY + 80);
+            nextY = wrapText(ctx, product.name.toUpperCase(), canvasCenterX, nextY, 900, 75);
+            nextY += 10;
+
+            // Descrição (COM WRAP)
+            if (product.description) {
+                ctx.font = '500 34px sans-serif';
+                ctx.fillStyle = '#64748b';
+                nextY = wrapText(ctx, product.description, canvasCenterX, nextY, 850, 45);
+                nextY += 20;
+            }
 
             // Preço Total
             if (showTotalPrice) {
-                ctx.font = '900 110px sans-serif';
+                ctx.font = '900 115px sans-serif';
                 ctx.fillStyle = '#2563eb';
-                ctx.fillText(formattedPrice, 540, textY + 210);
+                ctx.fillText(formattedPrice, canvasCenterX, nextY + 100);
+                nextY += 110;
             }
 
             // Parcelamento
             if (showInstallments && installmentCount > 1) {
-                const pY = showTotalPrice ? textY + 280 : textY + 210;
-                ctx.font = '700 44px sans-serif';
-                ctx.fillStyle = '#64748b';
-                ctx.fillText(`${installmentCount}x de ${formattedInst}`, 540, pY);
+                ctx.font = '700 50px sans-serif';
+                ctx.fillStyle = '#1e293b';
+                ctx.fillText(`${installmentCount}x de ${formattedInst}`, canvasCenterX, nextY + 40);
+                nextY += 60;
             }
 
-            // Marca
-            ctx.font = '700 32px sans-serif';
-            ctx.fillStyle = '#cbd5e1';
-            ctx.fillText('CATÁLOGO DE ATACADO • LM MÓVEIS', 540, 1300);
+            // Marca (Sempre no fundo)
+            ctx.font = '800 32px sans-serif';
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText('CATÁLOGO DE ATACADO • LM MÓVEIS', canvasCenterX, 1500);
 
             // 5. Compartilhar
             canvas.toBlob(async (blob) => {
                 if (!blob) return;
-                const file = new File([blob], `${product.name.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
+                const fileName = `${product.name.substring(0, 20).replace(/\s+/g, '_')}_${new Date().getTime()}.png`;
+                const file = new File([blob], fileName, { type: 'image/png' });
                 
                 if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({
@@ -348,7 +398,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 } else {
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
-                    link.download = `${product.name}.png`;
+                    link.download = fileName;
                     link.click();
                 }
             }, 'image/png');
