@@ -242,22 +242,27 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, 1080, 1350);
 
-            // 2. Carregar Imagem do Produto
+            // 2. Carregar Imagem do Produto (Via Proxy para evitar CORS)
             const img = new Image();
             img.crossOrigin = "anonymous";
-            const imageUrl = getDirectImageUrl(product.imageUrl) || FALLBACK_IMG;
+            let imageUrl = getDirectImageUrl(product.imageUrl) || FALLBACK_IMG;
             
+            // Usar proxy weserv.nl para garantir que conseguimos desenhar no canvas (bypass CORS)
+            if (imageUrl && !imageUrl.startsWith('data:')) {
+                imageUrl = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl)}&w=1000`;
+            }
+
             let imageLoaded = false;
             try {
                 await new Promise((resolve, reject) => {
-                    const timeout = setTimeout(() => reject(new Error("Timeout")), 5000);
+                    const timeout = setTimeout(() => reject(new Error("Timeout")), 8000);
                     img.onload = () => { clearTimeout(timeout); resolve(true); };
-                    img.onerror = () => { clearTimeout(timeout); reject(new Error("CORS/Load Error")); };
+                    img.onerror = () => { clearTimeout(timeout); reject(new Error("Proxy/Load Error")); };
                     img.src = imageUrl;
                 });
                 imageLoaded = true;
             } catch (imgErr) {
-                console.warn("Falha ao carregar imagem para o card (provavelmente CORS):", imgErr);
+                console.warn("Falha ao carregar imagem via proxy:", imgErr);
                 imageLoaded = false;
             }
 
