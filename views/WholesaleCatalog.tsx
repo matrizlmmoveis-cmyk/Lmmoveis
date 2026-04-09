@@ -247,35 +247,53 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             img.crossOrigin = "anonymous";
             const imageUrl = getDirectImageUrl(product.imageUrl) || FALLBACK_IMG;
             
-            await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = reject;
-                img.src = imageUrl;
-            });
+            let imageLoaded = false;
+            try {
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error("Timeout")), 5000);
+                    img.onload = () => { clearTimeout(timeout); resolve(true); };
+                    img.onerror = () => { clearTimeout(timeout); reject(new Error("CORS/Load Error")); };
+                    img.src = imageUrl;
+                });
+                imageLoaded = true;
+            } catch (imgErr) {
+                console.warn("Falha ao carregar imagem para o card (provavelmente CORS):", imgErr);
+                imageLoaded = false;
+            }
 
-            // 3. Desenhar Imagem (Centralizada no topo)
+            // 3. Desenhar Imagem ou Fallback
             const padding = 80;
             const imgMaxHeight = 850;
             const imgMaxWidth = 920;
-            
-            let drawWidth = img.width;
-            let drawHeight = img.height;
-            const ratio = Math.min(imgMaxWidth / drawWidth, imgMaxHeight / drawHeight);
-            drawWidth *= ratio;
-            drawHeight *= ratio;
+            const canvasCenterX = 540;
 
-            // Sombra leve para a imagem
+            // Fundo Branco para a área da imagem
             ctx.shadowColor = 'rgba(0, 0, 0, 0.05)';
             ctx.shadowBlur = 40;
             ctx.shadowOffsetY = 20;
-
-            // Fundo Branco para a Imagem
             ctx.fillStyle = '#ffffff';
             roundRect(ctx, (1080 - imgMaxWidth) / 2 - 20, padding - 20, imgMaxWidth + 40, imgMaxHeight + 40, 60);
             ctx.fill();
-            
             ctx.shadowColor = 'transparent';
-            ctx.drawImage(img, (1080 - drawWidth) / 2, padding + (imgMaxHeight - drawHeight) / 2, drawWidth, drawHeight);
+
+            if (imageLoaded) {
+                let drawWidth = img.width;
+                let drawHeight = img.height;
+                const ratio = Math.min(imgMaxWidth / drawWidth, imgMaxHeight / drawHeight);
+                drawWidth *= ratio;
+                drawHeight *= ratio;
+                ctx.drawImage(img, (1080 - drawWidth) / 2, padding + (imgMaxHeight - drawHeight) / 2, drawWidth, drawHeight);
+            } else {
+                // Desenhar um ícone de fallback elegante se a imagem falhar
+                ctx.fillStyle = '#f1f5f9';
+                ctx.font = '200px serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('📦', canvasCenterX, padding + imgMaxHeight / 2 + 60);
+                
+                ctx.font = '700 30px sans-serif';
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillText('IMAGEM PROTEGIDA PELO DRIVE', canvasCenterX, padding + imgMaxHeight / 2 + 150);
+            }
 
             // 4. Textos (Rodapé)
             const textY = 1040;
