@@ -36,6 +36,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     const [installmentCount, setInstallmentCount] = useState<number>(() => Number(localStorage.getItem('wholesale_installments')) || 10);
     const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
     const [showTotalPrice, setShowTotalPrice] = useState<boolean>(() => localStorage.getItem('wholesale_show_total_price') !== 'false');
+    const [sharingLoading, setSharingLoading] = useState<string | null>(null);
 
     // Persistir configurações
     React.useEffect(() => {
@@ -201,28 +202,140 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             setLoadingReservations(false);
         }
     };
-    const handleShareWhatsApp = (product: Product) => {
-        const price = getPrice(product.wholesalePrice || 0);
-        const formattedPrice = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
-        
-        let text = `*${product.name}*\n`;
-        text += `💰 Valor: *${formattedPrice}*\n`;
-        
-        if (showInstallments && installmentCount > 1) {
+
+    // Helper para desenhar retângulos arredondados no canvas
+    const roundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+    };
+
+    const handleShareWhatsApp = async (product: Product) => {
+        setSharingLoading(product.id);
+        try {
+            const price = getPrice(product.wholesalePrice || 0);
+            const formattedPrice = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
             const instValue = price / installmentCount;
             const formattedInst = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(instValue);
-            text += `💳 Ou *${installmentCount}x de ${formattedInst}*\n`;
-        }
-        
-        text += `\n📦 Confira no nosso catálogo!`;
-        
-        const imageUrl = getDirectImageUrl(product.imageUrl);
-        if (imageUrl) {
-            text += `\n\n🖼️ Foto: ${imageUrl}`;
-        }
 
-        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
+            // Criar Canvas
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            // Configuração do Card (1080x1350 para um visual de panfleto)
+            canvas.width = 1080;
+            canvas.height = 1350;
+
+            // 1. Fundo (Gradiente Suave)
+            const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
+            gradient.addColorStop(0, '#f8fafc');
+            gradient.addColorStop(1, '#f1f5f9');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 1080, 1350);
+
+            // 2. Carregar Imagem do Produto
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            const imageUrl = getDirectImageUrl(product.imageUrl) || FALLBACK_IMG;
+            
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = imageUrl;
+            });
+
+            // 3. Desenhar Imagem (Centralizada no topo)
+            const padding = 80;
+            const imgMaxHeight = 850;
+            const imgMaxWidth = 920;
+            
+            let drawWidth = img.width;
+            let drawHeight = img.height;
+            const ratio = Math.min(imgMaxWidth / drawWidth, imgMaxHeight / drawHeight);
+            drawWidth *= ratio;
+            drawHeight *= ratio;
+
+            // Sombra leve para a imagem
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.05)';
+            ctx.shadowBlur = 40;
+            ctx.shadowOffsetY = 20;
+
+            // Fundo Branco para a Imagem
+            ctx.fillStyle = '#ffffff';
+            roundRect(ctx, (1080 - imgMaxWidth) / 2 - 20, padding - 20, imgMaxWidth + 40, imgMaxHeight + 40, 60);
+            ctx.fill();
+            
+            ctx.shadowColor = 'transparent';
+            ctx.drawImage(img, (1080 - drawWidth) / 2, padding + (imgMaxHeight - drawHeight) / 2, drawWidth, drawHeight);
+
+            // 4. Textos (Rodapé)
+            const textY = 1040;
+            ctx.textAlign = 'center';
+            
+            // Categoria
+            ctx.font = '900 28px sans-serif';
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillText((product.category || 'PRODUTO').toUpperCase(), 540, textY);
+
+            // Nome do Produto
+            ctx.font = '900 64px sans-serif';
+            ctx.fillStyle = '#0f172a';
+            ctx.fillText(product.name.toUpperCase(), 540, textY + 80);
+
+            // Preço Total
+            if (showTotalPrice) {
+                ctx.font = '900 110px sans-serif';
+                ctx.fillStyle = '#2563eb';
+                ctx.fillText(formattedPrice, 540, textY + 210);
+            }
+
+            // Parcelamento
+            if (showInstallments && installmentCount > 1) {
+                const pY = showTotalPrice ? textY + 280 : textY + 210;
+                ctx.font = '700 44px sans-serif';
+                ctx.fillStyle = '#64748b';
+                ctx.fillText(`${installmentCount}x de ${formattedInst}`, 540, pY);
+            }
+
+            // Marca
+            ctx.font = '700 32px sans-serif';
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillText('CATÁLOGO DE ATACADO • LM MÓVEIS', 540, 1300);
+
+            // 5. Compartilhar
+            canvas.toBlob(async (blob) => {
+                if (!blob) return;
+                const file = new File([blob], `${product.name.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
+                
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: product.name,
+                        text: `Confira este produto: ${product.name}`
+                    });
+                } else {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `${product.name}.png`;
+                    link.click();
+                }
+            }, 'image/png');
+
+        } catch (err) {
+            console.error("Erro ao gerar imagem:", err);
+            alert("Erro ao gerar imagem. Verifique se a foto do produto está disponível.");
+        } finally {
+            setSharingLoading(null);
+        }
     };
 
     return (
@@ -431,10 +544,15 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                         {/* Share Button (Mobile - Fixed / Desktop - Overlay) */}
                                                         <button 
                                                             onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(product); }}
-                                                            className="absolute top-2 right-2 md:top-4 md:right-4 bg-emerald-500 p-2 md:p-3 rounded-xl shadow-lg shadow-emerald-500/30 text-white active:scale-95 z-10 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300"
+                                                            disabled={sharingLoading === product.id}
+                                                            className="absolute top-2 right-2 md:top-4 md:right-4 bg-emerald-500 p-2 md:p-3 rounded-xl shadow-lg shadow-emerald-500/30 text-white active:scale-95 z-10 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300 disabled:opacity-50"
                                                             title="Compartilhar"
                                                         >
-                                                            <Share2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                                            {sharingLoading === product.id ? (
+                                                                <div className="w-3.5 h-3.5 md:w-4 md:h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                                                            ) : (
+                                                                <Share2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                                            )}
                                                         </button>
 
                                                         {product.calculatedStock <= 3 && (
@@ -792,9 +910,15 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                     <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
                                         <button 
                                             onClick={() => handleShareWhatsApp(selectedProduct)}
-                                            className="px-4 py-2.5 md:p-3 bg-emerald-50 text-emerald-600 rounded-xl md:rounded-2xl hover:bg-emerald-100 transition-colors flex items-center gap-2 text-[9px] md:text-[10px] font-black uppercase tracking-widest shrink-0"
+                                            disabled={sharingLoading === selectedProduct.id}
+                                            className="px-4 py-2.5 md:p-3 bg-emerald-50 text-emerald-600 rounded-xl md:rounded-2xl hover:bg-emerald-100 transition-colors flex items-center gap-2 text-[9px] md:text-[10px] font-black uppercase tracking-widest shrink-0 disabled:opacity-50"
                                         >
-                                            <Share2 className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="sm:hidden lg:inline">Compartilhar</span>
+                                            {sharingLoading === selectedProduct.id ? (
+                                                <div className="w-3.5 h-3.5 md:w-4 md:h-4 border-2 border-emerald-600/50 border-t-emerald-600 rounded-full animate-spin" />
+                                            ) : (
+                                                <Share2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                            )} 
+                                            <span className="sm:hidden lg:inline">Compartilhar Imagem</span>
                                         </button>
                                         <div className="text-right">
                                             <p className="text-[8px] md:text-[10px] font-black text-blue-400 uppercase tracking-widest">Disponível</p>
