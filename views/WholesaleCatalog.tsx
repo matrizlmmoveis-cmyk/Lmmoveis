@@ -34,13 +34,16 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     const [isMarkupModalOpen, setIsMarkupModalOpen] = useState(false);
     const [showInstallments, setShowInstallments] = useState<boolean>(() => localStorage.getItem('wholesale_show_installments') === 'true');
     const [installmentCount, setInstallmentCount] = useState<number>(() => Number(localStorage.getItem('wholesale_installments')) || 10);
+    const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+    const [showTotalPrice, setShowTotalPrice] = useState<boolean>(() => localStorage.getItem('wholesale_show_total_price') !== 'false');
 
     // Persistir configurações
     React.useEffect(() => {
         localStorage.setItem('wholesale_markup', markup.toString());
         localStorage.setItem('wholesale_show_installments', showInstallments.toString());
         localStorage.setItem('wholesale_installments', installmentCount.toString());
-    }, [markup, showInstallments, installmentCount]);
+        localStorage.setItem('wholesale_show_total_price', showTotalPrice.toString());
+    }, [markup, showInstallments, installmentCount, showTotalPrice]);
 
     // Fetch reservations when tab changes
     const fetchReservations = async () => {
@@ -314,31 +317,80 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
 
                 {activeTab === 'catalog' ? (
                     <>
-                        {/* Categorias - Menu Superior */}
-                        <div className="flex flex-wrap md:flex-nowrap gap-2 mb-4 md:mb-8 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-white/20 sticky top-[64px] z-20 shadow-xl shadow-slate-200/50 overflow-x-auto no-scrollbar">
-                            {Object.keys(groupedProducts).length > 0 && (
-                                <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 mr-1 md:mr-2 shrink-0">
-                                    <Filter className="w-3 h-3" /> <span className="hidden xs:inline">Categorias</span>
-                                </div>
-                            )}
-                            {Object.keys(groupedProducts).sort().map(cat => (
-                                <button 
-                                    key={cat} 
-                                    onClick={() => {
-                                        const el = document.getElementById(`cat-${normalizeId(cat)}`);
-                                        if (el) {
-                                            const headerOffset = 130;
-                                            const elementPosition = el.getBoundingClientRect().top;
-                                            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-                                            window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                                        }
-                                    }}
-                                    className="px-3 md:px-4 py-2 bg-white hover:bg-blue-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm border border-slate-100 transition-all active:scale-95 whitespace-nowrap"
-                                >
-                                    {cat}
-                                </button>
-                            ))}
+                        {/* Categorias - Menu Superior (Desktop) e Hambúrguer (Mobile) */}
+                        <div className="flex items-center gap-2 mb-4 md:mb-8 sticky top-[64px] z-20">
+                            {/* Botão Mobile - Menu Hambúrguer */}
+                            <button 
+                                onClick={() => setIsCategoryMenuOpen(true)}
+                                className="md:hidden flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-95"
+                            >
+                                <Filter className="w-4 h-4" />
+                                Categorias
+                            </button>
+
+                            {/* Categorias (Desktop - Barra Lateral) */}
+                            <div className="hidden md:flex flex-nowrap gap-2 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-white/20 shadow-xl shadow-slate-200/50 overflow-x-auto no-scrollbar flex-1">
+                                {Object.keys(groupedProducts).length > 0 && (
+                                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 mr-2 shrink-0">
+                                        <Filter className="w-3 h-3" /> <span>Categorias</span>
+                                    </div>
+                                )}
+                                {Object.keys(groupedProducts).sort().map(cat => (
+                                    <button 
+                                        key={cat} 
+                                        onClick={() => {
+                                            const el = document.getElementById(`cat-${normalizeId(cat)}`);
+                                            if (el) {
+                                                const headerOffset = 130;
+                                                const elementPosition = el.getBoundingClientRect().top;
+                                                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                                                window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                                            }
+                                        }}
+                                        className="px-4 py-2 bg-white hover:bg-blue-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm border border-slate-100 transition-all active:scale-95 whitespace-nowrap"
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
+
+                        {/* Modal/Menu de Categorias Mobile */}
+                        {isCategoryMenuOpen && (
+                            <div className="fixed inset-0 z-[100] md:hidden">
+                                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsCategoryMenuOpen(false)} />
+                                <div className="absolute bottom-0 left-0 right-0 max-h-[70vh] bg-white rounded-t-[2.5rem] p-8 shadow-2xl animate-in slide-in-from-bottom duration-300 flex flex-col">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                                            <Filter className="w-4 h-4 text-blue-600" /> Selecione uma Categoria
+                                        </h3>
+                                        <button onClick={() => setIsCategoryMenuOpen(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                                            <X className="w-5 h-5 text-slate-400" />
+                                        </button>
+                                    </div>
+                                    <div className="overflow-y-auto space-y-2 pb-8">
+                                        {Object.keys(groupedProducts).sort().map(cat => (
+                                            <button 
+                                                key={cat} 
+                                                onClick={() => {
+                                                    const el = document.getElementById(`cat-${normalizeId(cat)}`);
+                                                    if (el) {
+                                                        const headerOffset = 130;
+                                                        const elementPosition = el.getBoundingClientRect().top;
+                                                        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                                                        window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                                                    }
+                                                    setIsCategoryMenuOpen(false);
+                                                }}
+                                                className="w-full text-left px-6 py-4 bg-slate-50 hover:bg-blue-50 hover:text-blue-600 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-600 transition-all active:scale-95 border border-slate-100"
+                                            >
+                                                {cat}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
 
                         {Object.keys(groupedProducts).length === 0 ? (
@@ -409,12 +461,14 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                                 {showWholesalePrices ? <Lock className="w-2.5 h-2.5 md:w-3 md:h-3 text-amber-500" /> : <Unlock className="w-2.5 h-2.5 md:w-3 md:h-3 text-blue-500" />}
                                                                 {showWholesalePrices ? 'Custo' : 'Venda'}
                                                             </p>
-                                                            <p className={`text-sm md:text-xl font-black tracking-tighter italic ${showWholesalePrices ? 'text-amber-600' : 'text-slate-900'}`}>
-                                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0))}
-                                                            </p>
+                                                            {(showTotalPrice || showWholesalePrices) && (
+                                                                <p className={`text-sm md:text-xl font-black tracking-tighter italic ${showWholesalePrices ? 'text-amber-600' : 'text-slate-900'}`}>
+                                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0))}
+                                                                </p>
+                                                            )}
                                                             {showInstallments && !showWholesalePrices && (
-                                                                <p className="text-[9px] md:text-[11px] font-bold text-slate-500 mt-0.5">
-                                                                    Ou {installmentCount}x de <span className="text-blue-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0) / installmentCount)}</span>
+                                                                <p className={`font-bold text-slate-500 mt-0.5 ${!showTotalPrice ? 'text-sm md:text-xl font-black italic text-slate-900' : 'text-[9px] md:text-[11px]'}`}>
+                                                                    {!showTotalPrice ? '' : 'Ou '} {installmentCount}x de <span className="text-blue-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0) / installmentCount)}</span>
                                                                 </p>
                                                             )}
                                                         </div>
@@ -720,12 +774,14 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                             {showWholesalePrices ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                                             {showWholesalePrices ? 'Custo' : 'Venda'}
                                         </p>
-                                        <p className={`text-3xl font-black italic ${showWholesalePrices ? 'text-amber-600' : 'text-blue-600'}`}>
-                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(selectedProduct.wholesalePrice || 0))}
-                                        </p>
+                                        {(showTotalPrice || showWholesalePrices) && (
+                                            <p className={`text-3xl font-black italic ${showWholesalePrices ? 'text-amber-600' : 'text-blue-600'}`}>
+                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(selectedProduct.wholesalePrice || 0))}
+                                            </p>
+                                        )}
                                         {showInstallments && !showWholesalePrices && (
-                                            <p className="text-sm font-bold text-slate-500 mt-1">
-                                                Ou {installmentCount}x de <span className="text-blue-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(selectedProduct.wholesalePrice || 0) / installmentCount)}</span> sem juros
+                                            <p className={`font-bold text-slate-500 mt-1 ${!showTotalPrice ? 'text-3xl font-black italic text-blue-600' : 'text-sm'}`}>
+                                                {!showTotalPrice ? '' : 'Ou '} {installmentCount}x de <span className={!showTotalPrice ? 'text-blue-600' : 'text-blue-600'}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(selectedProduct.wholesalePrice || 0) / installmentCount)}</span> {!showTotalPrice ? '' : 'sem juros'}
                                             </p>
                                         )}
                                     </div>
@@ -793,6 +849,19 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                             </div>
 
                             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                                <label className="flex items-center justify-between cursor-pointer group">
+                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Exibir Preço Total</span>
+                                    <div className="relative inline-flex items-center">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer" 
+                                            checked={showTotalPrice}
+                                            onChange={() => setShowTotalPrice(!showTotalPrice)}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </div>
+                                </label>
+
                                 <label className="flex items-center justify-between cursor-pointer group">
                                     <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Exibir Parcelado</span>
                                     <div className="relative inline-flex items-center">
