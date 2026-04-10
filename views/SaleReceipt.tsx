@@ -56,18 +56,39 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, product
         cep: settings.issuer.cep || '00000000'
       };
 
-      // 4. Preparar Destinatário
+      // 4. Preparar Destinatário (Tratar endereço JSON se necessário)
+      let street = customer.address || '';
+      let number = customer.number || 'S/N';
+      let neighborhood = customer.neighborhood || '';
+      let city = customer.city || '';
+      let state = customer.state || '';
+      let cep = customer.zipCode || '';
+
+      if (customer.address?.startsWith('{')) {
+        try {
+          const addrObj = JSON.parse(customer.address);
+          street = addrObj.street || street;
+          number = addrObj.number || number;
+          neighborhood = addrObj.neighborhood || neighborhood;
+          city = addrObj.city || city;
+          state = addrObj.state || state;
+          cep = addrObj.cep || addrObj.zipCode || cep;
+        } catch (e) {
+          console.warn("Falha ao parsear endereço JSON:", e);
+        }
+      }
+
       const dest: NFeDest = {
         name: customer.name,
         document: customer.document,
         type: customer.type === 'PJ' ? 'CNPJ' : 'CPF',
         email: customer.email,
-        street: customer.address,
-        number: customer.number || 'S/N',
-        neighborhood: customer.neighborhood,
-        city: customer.city,
-        state: customer.state,
-        cep: customer.zipCode,
+        street: street,
+        number: number,
+        neighborhood: neighborhood,
+        city: city,
+        state: state,
+        cep: cep,
         ibge: settings.issuer.ibge || '3304557' // Na falta, usa o mesmo da cidade do emitente (simplificado)
       };
 
