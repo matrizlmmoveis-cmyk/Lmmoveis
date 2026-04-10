@@ -22,7 +22,7 @@
     "rewrites": [
         {
             "source": "/api/nfemail/(.*)",
-            "destination": "http://api.nfemail.com.br/api/$1"
+            "destination": "https://api.nfemail.com.br/api/$1"
         },
         {
             "source": "/(.*)",

@@ -39,11 +39,11 @@ export const nfEmailService = {
             throw new Error("Credenciais do NFEmail não configuradas.");
         }
 
-        const postData = "=" + encodeURIComponent(txtContent);
+        const postData = new URLSearchParams({ "": txtContent }).toString();
         const authHeader = 'Basic ' + btoa(`${this.config.cnpj}:${this.config.apiKey}`);
 
         try {
-            const apiUrl = '/api/nfemail/ArquivoTXT';
+            const apiUrl = '/api/nfemail/ArquivoTXT/';
 
             const response = await fetch(apiUrl, {
                 method: "POST",
