@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
         proxy: {
           '/api/nfemail': {
-            target: 'https://api.nfemail.com.br/api',
+            target: 'http://api.nfemail.com.br/api',
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api\/nfemail/, ''),
           },

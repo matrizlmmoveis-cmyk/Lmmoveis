@@ -55,10 +55,12 @@ export const nfEmailService = {
             });
 
             const responseText = await response.text();
-            console.log("NFEmail Raw Response:", responseText);
+            console.log(`NFEmail [${response.status}] Raw Response:`, responseText);
 
             if (!response.ok) {
-                throw new Error(`Erro API NFEmail (${response.status}): ${responseText}`);
+                const allow = response.headers.get('Allow');
+                const errorMsg = `Erro API NFEmail (${response.status}): ${responseText || 'Sem mensagem'}${allow ? ' - Métodos Permitidos: ' + allow : ''}`;
+                throw new Error(errorMsg);
             }
 
             try {
