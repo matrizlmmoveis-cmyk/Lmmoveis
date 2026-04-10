@@ -64,8 +64,9 @@ export class SEFAZTxtGenerator {
             const totalItem = item.totalValue;
             
             lines.push(`H|${nItem}||`);
-            // I - Detalhes do Produto
-            lines.push(`I|${item.code || 'SEM GTIN'}|SEM GTIN|${this.formatField(item.description, 120)}|${item.ncm}||${item.cfop}|${item.unit}|${this.formatField(item.qty, undefined, 4)}|${this.formatField(item.unitValue, undefined, 10)}|${this.formatField(totalItem)}|SEM GTIN||${item.unit}|${this.formatField(item.qty, undefined, 4)}|${this.formatField(item.unitValue, undefined, 10)}|||||1|||||||`);
+            // I - Detalhes do Produto (Layout 4.0: 28 campos no total)
+            // I|cProd|cEAN|xProd|NCM|NVE|CEST|indEscala|CNPJFab|cBenef|EXTIPI|CFOP|uCom|qCom|vUnCom|vProd|cEANTrib|uTrib|qTrib|vUnTrib|vFrete|vSeg|vDesc|vOutro|indTot|xPed|nItemPed|nFCI|
+            lines.push(`I|${item.code || 'SEM GTIN'}|SEM GTIN|${this.formatField(item.description, 120)}|${item.ncm}|||||||${item.cfop}|${item.unit}|${this.formatField(item.qty, undefined, 4)}|${this.formatField(item.unitValue, undefined, 10)}|${this.formatField(totalItem)}|SEM GTIN|${item.unit}|${this.formatField(item.qty, undefined, 4)}|${this.formatField(item.unitValue, undefined, 10)}|||||1||||`);
 
             lines.push(`M||`);
             
@@ -102,13 +103,15 @@ export class SEFAZTxtGenerator {
             }
         });
 
-        // W - Totais
+        // W - Totais (Layout 4.0: W02 com 21 a 24 campos dependendo do FCP)
         const total = items.reduce((acc, it) => acc + it.totalValue, 0);
         lines.push(`W|`);
         if (taxRegime === 1) {
-            lines.push(`W02|0.00|0.00|0.00|0.00|0.00|0.00|0.00|0.00|${this.formatField(total)}|0.00|0.00|0.00|0.00|0.00|0.00|0.00|0.00|0.00|${this.formatField(total)}|0.00|`);
+            // Simples Nacional (vBC ST, vST, etc zerados)
+            lines.push(`W02|0.00|0.00|0.00|0.00|0.00|0.00|0.00|0.00|0.00|0.00|0.00|${this.formatField(total)}|0.00|0.00|0.00|0.00|0.00|0.00|0.00|0.00|0.00|${this.formatField(total)}|0.00|`);
         } else {
-            lines.push(`W02|${this.formatField(totalVBC)}|${this.formatField(totalVICMS)}|0.00|0.00|0.00|0.00|0.00|0.00|${this.formatField(total)}|0.00|0.00|0.00|${this.formatField(totalVPIS)}|${this.formatField(totalVCOFINS)}|0.00|0.00|0.00|0.00|${this.formatField(total)}|0.00|`);
+            // Lucro Real com totais calculados
+            lines.push(`W02|${this.formatField(totalVBC)}|${this.formatField(totalVICMS)}|0.00|0.00|0.00|0.00|0.00|0.00|0.00|0.00|0.00|${this.formatField(total)}|0.00|0.00|0.00|0.00|0.00|0.00|${this.formatField(totalVPIS)}|${this.formatField(totalVCOFINS)}|0.00|${this.formatField(total)}|0.00|`);
         }
 
         // YA - Pagamento (Sem Pagamento)
