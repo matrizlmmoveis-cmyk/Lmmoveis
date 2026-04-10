@@ -65,7 +65,7 @@ export class SEFAZTxtGenerator {
             
             lines.push(`H|${nItem}||`);
             // I - Detalhes do Produto
-            lines.push(`I|${item.code || 'SEM GTIN'}|SEM GTIN|${this.formatField(item.description, 120)}|${item.ncm}||${item.cfop}|${item.unit}|${this.formatField(item.qty, undefined, 4)}|${this.formatField(item.unitValue, undefined, 10)}|${this.formatField(totalItem)}|SEM GTIN||${item.unit}|${this.formatField(item.qty, undefined, 4)}|${this.formatField(item.unitValue, undefined, 10)}|||||1|||||||`);
+            lines.push(`I|${nItem}|${item.code || 'SEM GTIN'}|SEM GTIN|${this.formatField(item.description, 120)}|${item.ncm}||${item.cfop}|${item.unit}|${this.formatField(item.qty, undefined, 4)}|${this.formatField(item.unitValue, undefined, 10)}|${this.formatField(totalItem)}|SEM GTIN||${item.unit}|${this.formatField(item.qty, undefined, 4)}|${this.formatField(item.unitValue, undefined, 10)}|||||1|||||||`);
 
             lines.push(`M||`);
             
