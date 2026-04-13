@@ -673,6 +673,7 @@ export const supabaseService = {
         if (updates.assignedAssemblerId !== undefined) payload.assigned_assembler_id = updates.assignedAssemblerId;
         if (updates.status !== undefined) payload.status = updates.status;
         if (updates.sellerId !== undefined) payload.seller_id = updates.sellerId;
+        if (updates.deliveryObs !== undefined) payload.delivery_obs = updates.deliveryObs;
 
         const { error } = await supabase
             .from('sales')
@@ -1378,7 +1379,9 @@ export const supabaseService = {
         await supabase.from('sales').update({ 
             total: newTotal, 
             status: prevStatus,
-            assembly_required: assemblyRequired 
+            assembly_required: assemblyRequired,
+            delivery_obs: proposed.deliveryObs,
+            seller_id: proposed.sellerId || proposed.seller_id,
         }).eq('id', params.saleId);
 
         // Close the task
