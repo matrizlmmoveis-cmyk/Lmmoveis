@@ -473,12 +473,19 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
 
   if (selectedSale) {
     return <SaleReceipt
+      user={user}
       sale={selectedSale}
       onBack={() => setSelectedSale(null)}
       stores={stores}
       products={products}
       employees={employees}
       customers={customers}
+      onSaleUpdate={(id, updates) => {
+        setSales(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+        if (selectedSale?.id === id) {
+          setSelectedSale({ ...selectedSale, ...updates });
+        }
+      }}
     />;
   }
 
@@ -1422,6 +1429,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 return (
                   <div key={id} className="w-full max-w-[800px] bg-white shadow-xl rounded-2xl overflow-hidden mb-12 last:mb-0">
                     <SaleReceipt
+                      user={user}
                       sale={sale}
                       stores={stores}
                       products={products}
@@ -1439,6 +1447,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
               {currentSaleToPrint && (
                 <div id="pdf-render-target" className="bg-white p-4">
                   <SaleReceipt
+                    user={user}
                     sale={currentSaleToPrint}
                     stores={stores}
                     products={products}

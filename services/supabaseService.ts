@@ -672,6 +672,7 @@ export const supabaseService = {
         if (updates.assignedDriverId !== undefined) payload.assigned_driver_id = updates.assignedDriverId;
         if (updates.assignedAssemblerId !== undefined) payload.assigned_assembler_id = updates.assignedAssemblerId;
         if (updates.status !== undefined) payload.status = updates.status;
+        if (updates.sellerId !== undefined) payload.seller_id = updates.sellerId;
 
         const { error } = await supabase
             .from('sales')

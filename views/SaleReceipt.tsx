@@ -7,6 +7,7 @@ import { NFeIssuer, NFeDest, NFeItem } from '../services/nfe/types';
 import { supabaseService } from '../services/supabaseService';
 
 interface SaleReceiptProps {
+  user?: any;
   sale: Sale;
   onBack: () => void;
   stores: Store[];
@@ -14,15 +15,45 @@ interface SaleReceiptProps {
   employees: Employee[];
   customers: Customer[];
   hideControls?: boolean;
+  onSaleUpdate?: (saleId: string, updates: Partial<Sale>) => void;
 }
 
-const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, products, employees, customers, hideControls }) => {
+const SaleReceipt: React.FC<SaleReceiptProps> = ({ user, sale, onBack, stores, products, employees, customers, hideControls, onSaleUpdate }) => {
   const [isEmitting, setIsEmitting] = React.useState(false);
   const [nfeStatus, setNfeStatus] = React.useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = React.useState('');
+  const [isEditingSeller, setIsEditingSeller] = React.useState(false);
+  const [newSellerId, setNewSellerId] = React.useState(sale.sellerId);
+  const [isUpdatingSeller, setIsUpdatingSeller] = React.useState(false);
+
+  const isAdminOrSupervisor = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master';
+  const isManagerOfStore = user?.role === 'GERENTE' && user?.storeId === sale.storeId;
+  const canEditSeller = !hideControls && (isAdminOrSupervisor || isManagerOfStore);
 
   const store = stores.find(s => s.id === sale.storeId);
-  const seller = employees.find(s => s.id === sale.sellerId);
+  const seller = employees.find(s => s.id === (isEditingSeller ? newSellerId : sale.sellerId));
+
+  const handleUpdateSeller = async () => {
+    if (!newSellerId || newSellerId === sale.sellerId) {
+      setIsEditingSeller(false);
+      return;
+    }
+
+    setIsUpdatingSeller(true);
+    try {
+      await supabaseService.updateSale(sale.id, { sellerId: newSellerId });
+      if (onSaleUpdate) {
+        onSaleUpdate(sale.id, { sellerId: newSellerId });
+      }
+      setIsEditingSeller(false);
+      alert('Vendedor alterado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao alterar vendedor:', err);
+      alert('Erro ao alterar vendedor.');
+    } finally {
+      setIsUpdatingSeller(false);
+    }
+  };
 
   const handlePrint = () => {
     window.print();
@@ -346,7 +377,48 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ sale, onBack, stores, product
           {sale.customerReference && <p><strong>Referencia:</strong> {sale.customerReference}</p>}
           <div className="flex gap-8 flex-wrap">
             {sale.customerEmail && <p><strong>Email:</strong> {sale.customerEmail}</p>}
-            <p><strong>Vendedor:</strong> {seller?.name || '—'}</p>
+            <div className="flex items-center gap-2">
+              <p><strong>Vendedor:</strong></p>
+              {isEditingSeller ? (
+                <div className="flex items-center gap-2 no-print">
+                  <select
+                    value={newSellerId}
+                    onChange={(e) => setNewSellerId(e.target.value)}
+                    className="p-1 border border-black rounded text-[10px] font-bold outline-none"
+                  >
+                    <option value="">Selecionar</option>
+                    {employees.filter(e => e.role === 'VENDEDOR' || e.role === 'GERENTE').map(e => (
+                      <option key={e.id} value={e.id}>{e.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleUpdateSeller}
+                    disabled={isUpdatingSeller}
+                    className="bg-emerald-600 text-white px-2 py-1 rounded text-[10px] font-black uppercase shadow-sm"
+                  >
+                    {isUpdatingSeller ? '...' : 'Salvar'}
+                  </button>
+                  <button
+                    onClick={() => setIsEditingSeller(false)}
+                    className="bg-slate-200 text-slate-600 px-2 py-1 rounded text-[10px] font-black uppercase"
+                  >
+                    X
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span>{seller?.name || '—'}</span>
+                  {canEditSeller && (
+                    <button
+                      onClick={() => setIsEditingSeller(true)}
+                      className="no-print text-[10px] text-blue-600 font-black uppercase hover:underline"
+                    >
+                      [Alterar]
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           {sale.deliveryObs && (
             <p className="pt-1"><strong>OBS:</strong> {sale.deliveryObs}</p>
