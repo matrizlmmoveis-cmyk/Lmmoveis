@@ -175,8 +175,11 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     refreshData('sales', startDate, endDate);
   }, [startDate, endDate]);
 
-  const handleAddItem = (product: Product, isMostruario: boolean = false, isEncomenda: boolean = false) => {
-    const locId = isMostruario ? 'ST-MOSTRUARIO' : (isEncomenda ? 'ST-ENCOMENDA' : (inventory.find(i => i.productId === product.id && i.locationId === newSale.storeId && i.quantity > 0)?.locationId || inventory.find(i => i.productId === product.id && i.quantity > 0)?.locationId || newSale.storeId || stores[0]?.id || ''));
+  const handleAddItem = (product: Product, isMostruario: boolean = false, isEncomenda: boolean = false, forcedLocationId?: string) => {
+    const norteStore = stores.find(s => s.type === 'CD' && s.name.toLowerCase().includes('norte'));
+    const norteId = norteStore?.id || 'W-NORTE';
+
+    const locId = forcedLocationId || (isMostruario ? 'ST-MOSTRUARIO' : (isEncomenda ? 'ST-ENCOMENDA' : (inventory.find(i => i.productId === product.id && i.locationId === newSale.storeId && i.quantity > 0)?.locationId || inventory.find(i => i.productId === product.id && i.locationId === norteId && i.quantity > 0)?.locationId || inventory.find(i => i.productId === product.id && i.quantity > 0)?.locationId || newSale.storeId || norteId || '')));
 
     const existing = newSale.items?.find(i => i.productId === product.id && i.locationId === (isMostruario ? 'ST-MOSTRUARIO' : (isEncomenda ? 'ST-ENCOMENDA' : i.locationId)));
     if (existing) {
@@ -560,26 +563,53 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
               <div className="relative mb-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" placeholder="Buscar produto..." className="w-full pl-10 pr-4 py-3 bg-slate-50 rounded-2xl text-sm" value={productSearch} onChange={e => setProductSearch(e.target.value)} /></div>
               <div className="grid grid-cols-1 gap-1.5 max-h-80 overflow-y-auto pr-1">
                 {products.filter(p => p.active !== false && (p.name.toLowerCase().includes(productSearch.toLowerCase()) || (p.sku || '').toLowerCase().includes(productSearch.toLowerCase()))).map(p => {
+                  const norteStore = stores.find(s => s.type === 'CD' && s.name.toLowerCase().includes('norte'));
+                  const norteId = norteStore?.id;
+                  const norteStock = inventory.find(i => i.productId === p.id && i.locationId === norteId)?.quantity || 0;
+                  const lojaStock = inventory.find(i => i.productId === p.id && i.locationId === user.storeId)?.quantity || 0;
                   const totalStock = inventory.filter(i => i.productId === p.id).reduce((acc: number, i) => acc + (i.quantity || 0), 0);
                   const hasStock = totalStock > 0;
+
                   return (
                     <div key={p.id} className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all ${hasStock ? 'bg-slate-50 border-slate-100 hover:border-blue-100 hover:bg-blue-50' : 'bg-slate-50/50 border-slate-100 opacity-60'}`}>
                       <div className="w-8 h-8 bg-white rounded-lg overflow-hidden border shrink-0">
                         <img src={getDirectImageUrl(p.imageUrl || p.images?.[0]?.url)} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[9px] font-black uppercase truncate text-slate-800">{p.name}</p>
-                        <p className="text-blue-600 font-bold text-[10px]">R$ {p.price.toFixed(2)}</p>
+                        <p className="font-black uppercase truncate text-slate-800" style={{ fontSize: '9px' }}>{p.name}</p>
+                        <p className="text-blue-600 font-bold" style={{ fontSize: '10px' }}>R$ {p.price.toFixed(2)}</p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${hasStock ? 'text-emerald-700 bg-emerald-50 border border-emerald-100' : 'text-red-500 bg-red-50 border border-red-100'}`}>
-                          {totalStock}
-                        </span>
-                        {hasStock && (
-                          <button onClick={() => handleAddItem(p, false)} title="Venda Normal" className="w-7 h-7 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95">
-                            <Plus className="w-4 h-4" />
-                          </button>
+                        {/* CD NORTE */}
+                        {norteStock > 0 && (
+                          <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-100">
+                            <span className="text-[8px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md">
+                              {norteStock}
+                            </span>
+                            <button onClick={() => handleAddItem(p, false, false, norteId)} title="Adicionar do CD Norte" className="w-7 h-7 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center justify-center transition-all shadow-sm active:scale-95">
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
                         )}
+
+                        {/* LOJA ATUAL (Se diferente do Norte e tiver saldo) */}
+                        {lojaStock > 0 && user.storeId !== norteId && (
+                          <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-100">
+                            <span className="text-[8px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md">
+                              {lojaStock} LOJA
+                            </span>
+                            <button onClick={() => handleAddItem(p, false, false, user.storeId)} title="Adicionar da Loja" className="w-7 h-7 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-all shadow-sm active:scale-95">
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+
+                        {!norteStock && !lojaStock && hasStock && (
+                          <span className="text-[8px] font-black uppercase px-2 py-1 rounded-lg text-slate-400 bg-slate-100 border border-slate-200">
+                            EXTERNO: {totalStock}
+                          </span>
+                        )}
+
                         {isSpecialRulePeriod && (
                           <button onClick={() => handleAddItem(p, true)} title="Venda Mostruário" className="w-7 h-7 bg-amber-500 hover:bg-amber-600 text-white rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95 font-black text-xs">
                             M
@@ -624,9 +654,27 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           <input type="number" min="0" max="100" step="any" className="w-12 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold" value={item.discount === 0 ? '' : item.discount} placeholder="0" onChange={e => handleDiscountChange(item.productId, e.target.value === '' ? 0 : parseFloat(e.target.value))} />
                           <span className="text-[9px] text-slate-400 font-bold">%</span>
                           <select className="flex-1 min-w-[130px] px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold outline-none" value={item.locationId} onChange={e => setNewSale({ ...newSale, items: newSale.items?.map(i => (i.productId === item.productId && i.locationId === item.locationId) ? { ...i, locationId: e.target.value } : i) })}>
-                            {itemStocks.map(s => { const sn = stores.find(st => st.id === s.locationId)?.name || s.locationId; return <option key={s.locationId} value={s.locationId}>{sn} (Saldo: {s.quantity})</option>; })}
-                            {(itemStocks.length === 0 || item.locationId === 'ST-MOSTRUARIO' || isSpecialRulePeriod) && <option value="ST-MOSTRUARIO">Mostruário (Avulso)</option>}
-                            {(itemStocks.length === 0 || item.locationId === 'ST-ENCOMENDA' || isSpecialRulePeriod) && <option value="ST-ENCOMENDA">Encomenda (Avulso)</option>}
+                            {(() => {
+                              const norteStore = stores.find(s => s.type === 'CD' && s.name.toLowerCase().includes('norte'));
+                              const norteId = norteStore?.id;
+                              const isControlledUnit = employees.some(e => e.storeId === newSale.storeId && e.role === 'GERENTE' && e.active);
+
+                              let filteredStocks = itemStocks;
+                              if (isControlledUnit) {
+                                filteredStocks = itemStocks.filter(s => s.locationId === newSale.storeId || s.locationId === norteId);
+                              }
+
+                              return (
+                                <>
+                                  {filteredStocks.map(s => {
+                                    const sn = stores.find(st => st.id === s.locationId)?.name || s.locationId;
+                                    return <option key={s.locationId} value={s.locationId}>{sn} (Saldo: {s.quantity})</option>;
+                                  })}
+                                  {(filteredStocks.length === 0 || item.locationId === 'ST-MOSTRUARIO' || isSpecialRulePeriod) && <option value="ST-MOSTRUARIO">Mostruário (Avulso)</option>}
+                                  {(filteredStocks.length === 0 || item.locationId === 'ST-ENCOMENDA' || isSpecialRulePeriod) && <option value="ST-ENCOMENDA">Encomenda (Avulso)</option>}
+                                </>
+                              );
+                            })()}
                           </select>
                           <label className="flex items-center gap-1 cursor-pointer shrink-0">
                             <input type="checkbox" className="w-3.5 h-3.5 rounded" checked={item.assemblyRequired} onChange={e => setNewSale({ ...newSale, items: newSale.items?.map(i => i.productId === item.productId ? { ...i, assemblyRequired: e.target.checked } : i) })} />

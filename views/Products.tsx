@@ -241,9 +241,16 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                                         </div>
                                     </td>
                                     <td className="px-6 py-3 text-center">
-                                        <div className={`inline-flex px-2 py-1 rounded-lg border font-black text-xs ${(getTotalStock(product.id) as number) > 0 ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-red-50 border-red-100 text-red-600'}`}>
-                                            {getTotalStock(product.id)}
-                                        </div>
+                                        {(() => {
+                                            const norteStore = stores.find(s => s.type === 'CD' && s.name.toLowerCase().includes('norte'));
+                                            const norteId = norteStore?.id || '';
+                                            const norteStock = getStockForStore(product.id, norteId);
+                                            return (
+                                                <div className={`inline-flex px-2 py-1 rounded-lg border font-black text-xs ${norteStock > 0 ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-red-50 border-red-100 text-red-600'}`}>
+                                                    {norteStock}
+                                                </div>
+                                            );
+                                        })()}
                                     </td>
                                     <td className="px-6 py-3 text-right">
                                         <p className="text-sm font-black text-slate-900">R$ {(product.price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>

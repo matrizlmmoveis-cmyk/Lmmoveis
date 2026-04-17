@@ -20,6 +20,7 @@ import ReceiptSettlement from './views/ReceiptSettlement.tsx';
 import NFeManagement from './views/NFeManagement.tsx';
 import WholesaleManagement from './views/WholesaleManagement.tsx';
 import WholesaleCatalog from './views/WholesaleCatalog.tsx';
+import StockTransfer from './views/StockTransfer.tsx';
 import { Bell, Search, User, Lock, Store as StoreIcon, AlertCircle, X, Menu, Loader2, LogOut } from 'lucide-react';
 import { Employee, UserRole, Sale, InventoryItem, Store, Product, Customer, Supplier } from './types.ts';
 import { CartProvider } from './components/CartContext.tsx';
@@ -332,6 +333,7 @@ const App: React.FC = () => {
       case 'nfe': return <NFeManagement sales={sales} products={products} stores={stores} refreshData={initData} />;
       case 'wholesale-management': return <WholesaleManagement user={user!} refreshData={initData} />;
       case 'wholesale-catalog': return <WholesaleCatalog user={user!} products={products} inventory={inventory} stores={stores} refreshData={initData} />;
+      case 'transfer': return <StockTransfer user={user} products={products} inventory={inventory} stores={stores} employees={employees} refreshData={initData} />;
       default: return <Dashboard user={user!} sales={sales} stores={stores} />;
     }
   };

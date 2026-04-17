@@ -554,6 +554,61 @@ export const supabaseService = {
         return true;
     },
 
+    async executeStockTransfer(originStoreId: string, destStoreId: string, items: { productId: string, quantity: number }[], userName: string) {
+        for (const item of items) {
+            // 1. Buscar saldos atuais
+            const { data: invData } = await supabase
+                .from('inventory')
+                .select('location_id, quantity, type')
+                .eq('product_id', item.productId)
+                .in('location_id', [originStoreId, destStoreId]);
+
+            const originInv = invData?.find(i => i.location_id === originStoreId);
+            const destInv = invData?.find(i => i.location_id === destStoreId);
+
+            const originQty = originInv?.quantity || 0;
+            const destQty = destInv?.quantity || 0;
+            
+            // Buscar tipo da loja de destino se ela não tiver estoque ainda
+            let finalDestType = destInv?.type;
+            if (!finalDestType) {
+                const { data: storeData } = await supabase.from('stores').select('type').eq('id', destStoreId).single();
+                finalDestType = storeData?.type || 'STORE_STOCK';
+            }
+
+            const originType = originInv?.type || 'STORE_STOCK';
+
+            // 2. Atualizar estoque origem
+            await this.updateInventory(item.productId, originStoreId, originQty - item.quantity, originType);
+            
+            // 3. Atualizar estoque destino
+            await this.updateInventory(item.productId, destStoreId, destQty + item.quantity, finalDestType);
+
+            // 4. Logar movimentações
+            const refId = `TRF-${Date.now()}`;
+            await this.logInventoryMovement({
+                productId: item.productId,
+                locationId: originStoreId,
+                quantity: item.quantity,
+                type: 'SAIDA',
+                referenceId: refId,
+                reason: 'TRANSFERENCIA',
+                createdBy: userName
+            });
+
+            await this.logInventoryMovement({
+                productId: item.productId,
+                locationId: destStoreId,
+                quantity: item.quantity,
+                type: 'ENTRADA',
+                referenceId: refId,
+                reason: 'TRANSFERENCIA',
+                createdBy: userName
+            });
+        }
+        return true;
+    },
+
     async logInventoryMovement(movement: Partial<InventoryMovement>) {
         const payload = {
             product_id: movement.productId,

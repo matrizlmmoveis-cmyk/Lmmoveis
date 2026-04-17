@@ -19,7 +19,8 @@ import {
   ClipboardCheck,
   DollarSign,
   FileText,
-  ShoppingBag
+  ShoppingBag,
+  ArrowLeftRight
 } from 'lucide-react';
 import { UserRole } from '../types.ts';
 
@@ -37,6 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, role, onLo
     { id: 'products', label: 'Produtos', icon: Box, roles: ['ADMIN', 'VENDEDOR', 'GERENTE', 'SUPERVISOR', 'MASTER'] },
     { id: 'sales', label: 'Vendas', icon: ShoppingCart, roles: ['ADMIN', 'VENDEDOR', 'GERENTE', 'SUPERVISOR', 'MASTER'] },
     { id: 'inventory', label: 'Estoque', icon: Package, roles: ['ADMIN', 'CONFERENTE'] },
+    { id: 'transfer', label: 'Transferência', icon: ArrowLeftRight, roles: ['ADMIN', 'MASTER', 'GERENTE'] },
     { id: 'expedicao', label: 'Expedição', icon: PackageCheck, roles: ['ADMIN', 'CONFERENTE'] },
     { id: 'tarefas', label: 'Tarefas/Avisos', icon: ClipboardCheck, roles: ['ADMIN', 'SUPERVISOR', 'MASTER', 'GERENTE', 'VENDEDOR'] },
     { id: 'settlement', label: 'Acerto Entregas', icon: DollarSign, roles: ['ADMIN', 'SUPERVISOR', 'MASTER'] },

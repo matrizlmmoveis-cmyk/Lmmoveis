@@ -235,25 +235,49 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
 
                 {user && (
                   <div className="pt-3 border-t border-slate-50 space-y-2">
-                    <div className="flex justify-between items-center bg-blue-50/50 p-2 rounded-lg">
-                      <span className="text-[9px] font-black text-blue-600 uppercase flex items-center gap-1">
-                        <Box className="w-3 h-3" /> Saldo Total
-                      </span>
-                      <span className="text-sm font-black text-blue-700">
-                        {(inventory || []).filter(i => i.productId === product.id).reduce((acc, curr) => acc + (curr.quantity || 0), 0)} UN
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-1 px-1">
-                      {(inventory || []).filter(i => i.productId === product.id).map((stock, idx) => {
-                        const storeName = (stores || []).find(s => s.id === stock.locationId)?.name || stock.locationId;
-                        return (
-                          <div key={idx} className="flex flex-col">
-                            <span className="text-[8px] text-slate-400 font-bold truncate">{storeName}</span>
-                            <span className="text-[10px] text-slate-700 font-black">{stock.quantity || 0} UN</span>
+                    {(() => {
+                      const norteStore = (stores || []).find(s => s.type === 'CD' && s.name.toLowerCase().includes('norte'));
+                      const norteId = norteStore?.id;
+                      
+                      const norteStock = (inventory || [])
+                        .filter(i => i.productId === product.id && i.locationId === norteId)
+                        .reduce((acc, curr) => acc + (curr.quantity || 0), 0);
+                        
+                      const lojasStock = (inventory || [])
+                        .filter(i => i.productId === product.id && i.locationId !== norteId && (i.type === 'STORE_STOCK' || i.type === 'CD_LOJA'))
+                        .reduce((acc, curr) => acc + (curr.quantity || 0), 0);
+                        
+                      const totalStock = (inventory || [])
+                        .filter(i => i.productId === product.id)
+                        .reduce((acc, curr) => acc + (curr.quantity || 0), 0);
+
+                      return (
+                        <>
+                          <div className="flex justify-between items-center bg-blue-50/50 p-2 rounded-lg">
+                            <span className="text-[9px] font-black text-blue-600 uppercase flex items-center gap-1">
+                              <Box className="w-3 h-3" /> Saldo Total
+                            </span>
+                            <span className="text-sm font-black text-blue-700">
+                              {totalStock} UN
+                            </span>
                           </div>
-                        );
-                      })}
-                    </div>
+                          <div className="grid grid-cols-2 gap-2 px-1">
+                            <div className="flex flex-col">
+                              <span className="text-[8px] text-slate-400 font-black uppercase">CD Norte</span>
+                              <span className={`text-[10px] font-black ${norteStock > 0 ? 'text-emerald-600' : 'text-slate-300'}`}>
+                                {norteStock} UN
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[8px] text-slate-400 font-black uppercase">Lojas</span>
+                              <span className={`text-[10px] font-black ${lojasStock > 0 ? 'text-blue-600' : 'text-slate-300'}`}>
+                                {lojasStock} UN
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
 

@@ -59,6 +59,30 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ user, sale, onBack, stores, p
     window.print();
   };
 
+  const formatAddress = (address: any) => {
+    if (!address) return '—';
+    if (typeof address === 'string' && address.startsWith('{')) {
+      try {
+        const addr = JSON.parse(address);
+        const parts = [
+          addr.street && addr.number ? `${addr.street}, ${addr.number}` : addr.street || addr.number,
+          addr.complement,
+          addr.neighborhood,
+          addr.city,
+          addr.state ? (addr.city ? `/${addr.state}` : addr.state) : ''
+        ].filter(Boolean);
+
+        let formatted = parts.join(' - ').replace(' - /', '/');
+        if (addr.cep) formatted += ` - CEP: ${addr.cep}`;
+        if (addr.reference) formatted += ` (Ref: ${addr.reference})`;
+        return formatted;
+      } catch (e) {
+        return address;
+      }
+    }
+    return address;
+  };
+
   const handleEmitNFe = async () => {
     setIsEmitting(true);
     setNfeStatus('idle');
@@ -373,7 +397,7 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ user, sale, onBack, stores, p
             <p><strong>CPF:</strong> {sale.customerCpf}</p>
           </div>
           <p><strong>Telefone:</strong> {sale.customerPhone}</p>
-          <p><strong>Endereço:</strong> {sale.deliveryAddress}</p>
+          <p><strong>Endereço:</strong> {formatAddress(sale.deliveryAddress)}</p>
           {sale.customerReference && <p><strong>Referencia:</strong> {sale.customerReference}</p>}
           <div className="flex gap-8 flex-wrap">
             {sale.customerEmail && <p><strong>Email:</strong> {sale.customerEmail}</p>}
