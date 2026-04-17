@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Product, InventoryItem, WholesaleReservation, Store } from '../types.ts';
-import { ShoppingCart, Plus, Minus, CheckCircle, Package, Info, Search, ShoppingBag, X, Filter, Settings, Eye, EyeOff, Lock, Unlock, Share2 } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, CheckCircle, Package, Info, Search, ShoppingBag, X, Filter, Settings, Eye, EyeOff, Lock, Unlock, Share2, ListChecks, Download, Loader2 } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService.ts';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
 
@@ -38,13 +38,25 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     const [showTotalPrice, setShowTotalPrice] = useState<boolean>(() => localStorage.getItem('wholesale_show_total_price') !== 'false');
     const [sharingLoading, setSharingLoading] = useState<string | null>(null);
 
+    // Novos Estados
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+    const [productInstallments, setProductInstallments] = useState<Record<string, number>>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('wholesale_product_installments') || '{}');
+        } catch (e) {
+            return {};
+        }
+    });
+
     // Persistir configurações
     React.useEffect(() => {
         localStorage.setItem('wholesale_markup', markup.toString());
         localStorage.setItem('wholesale_show_installments', showInstallments.toString());
         localStorage.setItem('wholesale_installments', installmentCount.toString());
         localStorage.setItem('wholesale_show_total_price', showTotalPrice.toString());
-    }, [markup, showInstallments, installmentCount, showTotalPrice]);
+        localStorage.setItem('wholesale_product_installments', JSON.stringify(productInstallments));
+    }, [markup, showInstallments, installmentCount, showTotalPrice, productInstallments]);
 
     // Fetch reservations when tab changes
     const fetchReservations = async () => {
@@ -69,6 +81,10 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
     const getPrice = (price: number = 0) => {
         if (showWholesalePrices) return price;
         return price * (1 + markup / 100);
+    };
+
+    const getProductInstallments = (productId: string) => {
+        return productInstallments[productId] || installmentCount;
     };
 
     // Resetar modalImage quando o produto muda (corrigido: useMemo não deve ser usado para side-effects)
@@ -230,7 +246,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             const metrics = ctx.measureText(testLine);
             const testWidth = metrics.width;
             if (testWidth > maxWidth && n > 0) {
-                ctx.fillText(line, x, currentY);
+                ctx.fillText(line.trim(), x, currentY);
                 line = words[n] + ' ';
                 currentY += lineHeight;
                 lineCount++;
@@ -238,43 +254,37 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 line = testLine;
             }
         }
-        ctx.fillText(line, x, currentY);
+        ctx.fillText(line.trim(), x, currentY);
         return currentY + lineHeight;
     };
 
-    const handleShareWhatsApp = async (product: Product) => {
-        setSharingLoading(product.id);
+    // Função Unificada de Geração de Card
+    const generateProductCardBlob = async (product: Product): Promise<Blob | null> => {
         try {
+            const currentInstallments = getProductInstallments(product.id);
             const price = getPrice(product.wholesalePrice || 0);
             const formattedPrice = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
-            const instValue = price / installmentCount;
+            const instValue = price / currentInstallments;
             const formattedInst = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(instValue);
 
-            // Criar Canvas
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            if (!ctx) return;
+            if (!ctx) return null;
 
-            // Configuração do Card (1080x1550 para acomodar descrição)
             canvas.width = 1080;
             canvas.height = 1550;
 
-            // 1. Fundo (Gradiente Suave)
             const gradient = ctx.createLinearGradient(0, 0, 1080, 1550);
             gradient.addColorStop(0, '#f8fafc');
             gradient.addColorStop(1, '#f1f5f9');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, 1080, 1550);
 
-            // 2. Carregar Imagem do Produto (Via Proxy para evitar CORS)
             const img = new Image();
             img.crossOrigin = "anonymous";
             let rawUrl = getDirectImageUrl(product.imageUrl) || FALLBACK_IMG;
-            
-            // Reforço no Proxy (Tentativa de bypass mais agressiva)
             let imageUrl = rawUrl;
             if (rawUrl && !rawUrl.startsWith('data:')) {
-                // Adicionando um timestamp para evitar cache e garantir headers CORS
                 const timestamp = new Date().getTime();
                 imageUrl = `https://images.weserv.nl/?url=${encodeURIComponent(rawUrl)}&w=1200&t=${timestamp}`;
             }
@@ -289,12 +299,10 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 });
                 imageLoaded = true;
             } catch (imgErr) {
-                console.warn("Falha no primeiro proxy, tentando segundo...", imgErr);
-                // Segunda tentativa com outro proxy se necessário
                 try {
                     const proxy2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`;
                     await new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => reject(new Error("Timeout")), 10000);
+                        const timeout = setTimeout(() => reject(new Error("Timeout")), 5000);
                         img.onload = () => { clearTimeout(timeout); resolve(true); };
                         img.onerror = reject;
                         img.src = proxy2;
@@ -305,13 +313,11 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 }
             }
 
-            // 3. Desenhar Imagem ou Fallback
             const padding = 80;
             const imgMaxHeight = 850;
             const imgMaxWidth = 920;
             const canvasCenterX = 540;
 
-            // Fundo Branco para a área da imagem
             ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
             ctx.shadowBlur = 40;
             ctx.shadowOffsetY = 20;
@@ -328,33 +334,24 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 drawHeight *= ratio;
                 ctx.drawImage(img, (1080 - drawWidth) / 2, padding + (imgMaxHeight - drawHeight) / 2, drawWidth, drawHeight);
             } else {
-                ctx.fillStyle = '#f8fafc';
-                ctx.fillRect((1080 - imgMaxWidth) / 2, padding, imgMaxWidth, imgMaxHeight);
                 ctx.fillStyle = '#cbd5e1';
                 ctx.font = '120px serif';
                 ctx.textAlign = 'center';
                 ctx.fillText('🖼️', canvasCenterX, padding + imgMaxHeight / 2);
-                ctx.font = '700 30px sans-serif';
-                ctx.fillText('FOTO EM CARREGAMENTO...', canvasCenterX, padding + imgMaxHeight / 2 + 80);
             }
 
-            // 4. Textos (Rodapé)
             let nextY = 1050;
             ctx.textAlign = 'center';
-            
-            // Categoria
             ctx.font = '900 30px sans-serif';
             ctx.fillStyle = '#3b82f6';
             ctx.fillText((product.category || 'PRODUTO').toUpperCase(), canvasCenterX, nextY);
             nextY += 70;
 
-            // Nome do Produto (COM WRAP)
             ctx.font = '900 68px sans-serif';
             ctx.fillStyle = '#0f172a';
             nextY = wrapText(ctx, product.name.toUpperCase(), canvasCenterX, nextY, 900, 75);
             nextY += 10;
 
-            // Descrição (COM WRAP)
             if (product.description) {
                 ctx.font = '500 34px sans-serif';
                 ctx.fillStyle = '#64748b';
@@ -362,7 +359,6 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 nextY += 20;
             }
 
-            // Preço Total
             if (showTotalPrice) {
                 ctx.font = '900 115px sans-serif';
                 ctx.fillStyle = '#2563eb';
@@ -370,44 +366,83 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                 nextY += 110;
             }
 
-            // Parcelamento
-            if (showInstallments && installmentCount > 1) {
+            if (showInstallments && currentInstallments > 1) {
                 ctx.font = '700 50px sans-serif';
                 ctx.fillStyle = '#1e293b';
-                ctx.fillText(`${installmentCount}x de ${formattedInst}`, canvasCenterX, nextY + 40);
+                ctx.fillText(`${currentInstallments}x de ${formattedInst}`, canvasCenterX, nextY + 40);
                 nextY += 60;
             }
 
-            // Marca (Sempre no fundo)
-            ctx.font = '800 32px sans-serif';
-            ctx.fillStyle = '#94a3b8';
-            ctx.fillText('CATÁLOGO DE ATACADO • LM MÓVEIS', canvasCenterX, 1500);
 
-            // 5. Compartilhar
-            canvas.toBlob(async (blob) => {
-                if (!blob) return;
-                const fileName = `${product.name.substring(0, 20).replace(/\s+/g, '_')}_${new Date().getTime()}.png`;
-                const file = new File([blob], fileName, { type: 'image/png' });
-                
-                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: product.name,
-                        text: `Confira este produto: ${product.name}`
-                    });
-                } else {
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        } catch (err) {
+            console.error("Erro na geração do card:", err);
+            return null;
+        }
+    };
+
+    const handleShareWhatsApp = async (product: Product) => {
+        setSharingLoading(product.id);
+        try {
+            const blob = await generateProductCardBlob(product);
+            if (!blob) throw new Error("Falha ao gerar Blob");
+
+            const fileName = `${product.name.substring(0, 20).replace(/\s+/g, '_')}_${new Date().getTime()}.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: product.name,
+                    text: `Confira este produto: ${product.name}`
+                });
+            } else {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                link.click();
+            }
+        } catch (err) {
+            alert("Erro ao compartilhar. Verifique a imagem do produto.");
+        } finally {
+            setSharingLoading(null);
+        }
+    };
+
+    const toggleProductSelection = (productId: string) => {
+        setSelectedProducts(prev => {
+            const next = new Set(prev);
+            if (next.has(productId)) next.delete(productId);
+            else next.add(productId);
+            return next;
+        });
+    };
+
+    const handleBulkDownload = async () => {
+        if (selectedProducts.size === 0) return;
+        setLoading(true);
+        const selectedList = products.filter(p => selectedProducts.has(p.id));
+        
+        try {
+            for (const product of selectedList) {
+                const blob = await generateProductCardBlob(product);
+                if (blob) {
+                    const fileName = `CARD_${product.name.substring(0,15).replace(/\s+/g, '_')}.png`;
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
                     link.download = fileName;
                     link.click();
+                    // Pequeno delay para não bloquear
+                    await new Promise(r => setTimeout(r, 600));
                 }
-            }, 'image/png');
-
+            }
+            alert(`${selectedProducts.size} imagens enviadas para download.`);
+            setIsSelectionMode(false);
+            setSelectedProducts(new Set());
         } catch (err) {
-            console.error("Erro ao gerar imagem:", err);
-            alert("Erro ao gerar imagem. Verifique se a foto do produto está disponível.");
+            alert("Erro durante a geração em lote.");
         } finally {
-            setSharingLoading(null);
+            setLoading(false);
         }
     };
 
@@ -441,7 +476,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                     </button>
                 </div>
 
-                <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
                     {activeTab === 'catalog' && (
                         <>
                             <div className="relative flex-1 md:w-64">
@@ -454,6 +489,17 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
                             </div>
+                            <button 
+                                onClick={() => {
+                                    setIsSelectionMode(!isSelectionMode);
+                                    if (isSelectionMode) setSelectedProducts(new Set());
+                                }}
+                                className={`p-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2 text-xs font-black uppercase ${isSelectionMode ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-slate-100 text-slate-600'}`}
+                                title="Modo de Seleção"
+                            >
+                                <ListChecks className="w-5 h-5 md:w-4 md:h-4" />
+                                <span className="hidden sm:inline">{isSelectionMode ? 'Sair Seleção' : 'Selecionar'}</span>
+                            </button>
                             <button 
                                 onClick={() => setIsMarkupModalOpen(true)}
                                 className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors text-slate-600 active:scale-95"
@@ -614,6 +660,17 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                             className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-700"
                                                         />
                                                         
+                                                        {isSelectionMode && (
+                                                            <div 
+                                                                className="absolute inset-0 z-20 flex items-center justify-center bg-blue-600/10 cursor-pointer"
+                                                                onClick={(e) => { e.stopPropagation(); toggleProductSelection(product.id); }}
+                                                            >
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 shadow-xl transition-all ${selectedProducts.has(product.id) ? 'bg-blue-600 border-white text-white' : 'bg-white/80 border-white text-transparent'}`}>
+                                                                    <CheckCircle className="w-6 h-6" />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        
                                                         {/* Share Button (Mobile - Fixed / Desktop - Overlay) */}
                                                         <button 
                                                             onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(product); }}
@@ -662,9 +719,28 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                                                 </p>
                                                             )}
                                                             {showInstallments && !showWholesalePrices && (
-                                                                <p className={`font-bold text-slate-500 mt-0.5 ${!showTotalPrice ? 'text-sm md:text-xl font-black italic text-slate-900' : 'text-[9px] md:text-[11px]'}`}>
-                                                                    {!showTotalPrice ? '' : 'Ou '} {installmentCount}x de <span className="text-blue-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0) / installmentCount)}</span>
-                                                                </p>
+                                                                <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                                                    <p className={`font-bold text-slate-500 ${!showTotalPrice ? 'text-sm md:text-xl font-black italic text-slate-900' : 'text-[9px] md:text-[11px]'}`}>
+                                                                        {!showTotalPrice ? '' : 'Ou '} {getProductInstallments(product.id)}x de <span className="text-blue-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getPrice(product.wholesalePrice || 0) / getProductInstallments(product.id))}</span>
+                                                                    </p>
+                                                                    
+                                                                    {/* Override Parcelas Individual */}
+                                                                    <div className="flex items-center gap-1 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-xl border border-blue-100 shadow-sm">
+                                                                        <button 
+                                                                            onClick={(e) => { e.stopPropagation(); setProductInstallments(prev => ({ ...prev, [product.id]: Math.max(1, getProductInstallments(product.id) - 1) })); }}
+                                                                            className="w-5 h-5 flex items-center justify-center text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                        >
+                                                                            <Minus className="w-3 h-3" />
+                                                                        </button>
+                                                                        <span className="text-[10px] font-black text-blue-700 min-w-[22px] text-center tracking-tighter">{getProductInstallments(product.id)}x</span>
+                                                                        <button 
+                                                                            onClick={(e) => { e.stopPropagation(); setProductInstallments(prev => ({ ...prev, [product.id]: getProductInstallments(product.id) + 1 })); }}
+                                                                            className="w-5 h-5 flex items-center justify-center text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                        >
+                                                                            <Plus className="w-3 h-3" />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
                                                             )}
                                                         </div>
                                                         <div className="md:text-right flex md:block items-center justify-between">
@@ -1025,33 +1101,42 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
 
             {/* Modal de Configuração de Margem */}
             {isMarkupModalOpen && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
-                    <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-in zoom-in duration-300 border border-white/20">
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                                <Settings className="w-8 h-8 text-blue-600" />
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xl animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] animate-in zoom-in-95 duration-500 border border-slate-100 relative group">
+                        {/* Glow effect */}
+                        <div className="absolute -inset-1 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[3rem] opacity-5 blur-2xl transition duration-500 group-hover:opacity-10"></div>
+                        
+                        <button onClick={() => setIsMarkupModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-all">
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="text-center mb-10 relative">
+                            <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm border border-blue-100/50">
+                                <Settings className="w-10 h-10 text-blue-600 animate-[spin_8s_linear_infinite]" />
                             </div>
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Margem de Lucro</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-widest">Defina sua margem de venda</p>
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight italic">Configurações</h3>
+                            <p className="text-[10px] font-black text-slate-400 uppercase mt-2 tracking-[0.2em]">Personalize seu catálogo</p>
                         </div>
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Margem de Lucro (%)</label>
-                                <div className="relative">
-                                    <input 
-                                        type="number" 
-                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 font-black text-center text-2xl pr-12"
-                                        placeholder="0"
-                                        value={markup}
-                                        onChange={(e) => setMarkup(Number(e.target.value))}
-                                    />
-                                    <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">%</span>
-                                </div>
+                        
+                        <div className="space-y-8 relative">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Margem de Lucro</label>
+                                    <div className="relative group/input">
+                                        <div className="absolute inset-0 bg-blue-600 opacity-0 group-focus-within/input:opacity-5 rounded-2xl transition-opacity"></div>
+                                        <input 
+                                            type="number" 
+                                            className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all font-black text-center text-3xl text-slate-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            placeholder="0"
+                                            value={markup}
+                                            onChange={(e) => setMarkup(Number(e.target.value))}
+                                        />
+                                        <span className="absolute right-8 top-1/2 -translate-y-1/2 font-black text-blue-600 text-2xl">%</span>
+                                    </div>
                             </div>
 
-                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
-                                <label className="flex items-center justify-between cursor-pointer group">
-                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Exibir Preço Total</span>
+                            <div className="p-6 bg-slate-50/80 rounded-[2rem] border border-slate-100/50 space-y-5">
+                                <label className="flex items-center justify-between cursor-pointer group/toggle">
+                                    <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest group-hover/toggle:text-blue-600 transition-colors">Exibir Preço Total</span>
                                     <div className="relative inline-flex items-center">
                                         <input 
                                             type="checkbox" 
@@ -1059,12 +1144,12 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                             checked={showTotalPrice}
                                             onChange={() => setShowTotalPrice(!showTotalPrice)}
                                         />
-                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div className="w-12 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[20px] after:w-[20px] after:transition-all peer-checked:bg-blue-600 shadow-inner"></div>
                                     </div>
                                 </label>
 
-                                <label className="flex items-center justify-between cursor-pointer group">
-                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Exibir Parcelado</span>
+                                <label className="flex items-center justify-between cursor-pointer group/toggle">
+                                    <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest group-hover/toggle:text-blue-600 transition-colors">Exibir Parcelado</span>
                                     <div className="relative inline-flex items-center">
                                         <input 
                                             type="checkbox" 
@@ -1072,29 +1157,73 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                             checked={showInstallments}
                                             onChange={() => setShowInstallments(!showInstallments)}
                                         />
-                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 shadow-inner"></div>
                                     </div>
                                 </label>
 
                                 {showInstallments && (
-                                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Qtd. Parcelas</label>
-                                        <div className="grid grid-cols-4 gap-2">
-                                            {[6, 10, 12, 18].map(n => (
-                                                <button 
-                                                    key={n}
-                                                    onClick={() => setInstallmentCount(n)}
-                                                    className={`py-2 rounded-xl text-xs font-black transition-all ${installmentCount === n ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-white text-slate-400 hover:bg-slate-100'}`}
-                                                >
-                                                    {n}x
-                                                </button>
-                                            ))}
+                                    <div className="space-y-3 animate-in slide-in-from-top-2 duration-300 pt-2 border-t border-slate-200/50">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Default de Parcelas</label>
+                                        <div className="relative group/input">
+                                            <input 
+                                                type="number"
+                                                className="w-full px-6 py-4 bg-white border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-black text-center text-2xl text-slate-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                value={installmentCount}
+                                                onChange={(e) => setInstallmentCount(Number(e.target.value))}
+                                            />
+                                            <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-blue-500 text-xl italic uppercase pointer-events-none">x</span>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            <button onClick={() => setIsMarkupModalOpen(false)} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 tracking-widest">Salvar Configurações</button>
+                            <button 
+                                onClick={() => setIsMarkupModalOpen(false)} 
+                                className="w-full py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black uppercase text-xs hover:from-blue-700 hover:to-indigo-700 transition-all shadow-xl shadow-blue-500/20 tracking-[0.2em] active:scale-[0.98] ring-offset-2 focus:ring-2 focus:ring-blue-500"
+                            >
+                                Salvar Configurações
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Action Bar */}
+            {selectedProducts.size > 0 && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[80] w-[92%] md:w-auto animate-in slide-in-from-bottom duration-700">
+                    <div className="bg-slate-900/95 text-white px-6 md:px-12 py-5 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center justify-between gap-10 backdrop-blur-2xl border border-white/10 relative overflow-hidden group">
+                        {/* Shimmer effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                        
+                        <div className="flex items-center gap-5 relative">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center font-black text-lg shadow-lg shadow-blue-500/30 animate-in zoom-in duration-500">
+                                {selectedProducts.size}
+                            </div>
+                            <div className="hidden sm:block">
+                                <p className="text-xs font-black uppercase tracking-[0.2em] leading-none italic">Produtos Selecionados</p>
+                                <p className="text-[10px] text-slate-400 mt-1.5 uppercase font-bold tracking-widest">Condição {installmentCount}x default</p>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-4 relative">
+                            <button 
+                                onClick={() => {
+                                    setSelectedProducts(new Set());
+                                    setIsSelectionMode(false);
+                                }}
+                                className="px-6 py-3 rounded-2xl border border-white/10 hover:bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleBulkDownload}
+                                disabled={loading}
+                                className="px-10 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/40 transition-all flex items-center gap-3 active:scale-95 disabled:opacity-50"
+                            >
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 shadow-sm" />}
+                                <span className="hidden xs:inline">Gerar Todos</span>
+                                <span className="xs:hidden">Gerar</span>
+                            </button>
                         </div>
                     </div>
                 </div>
