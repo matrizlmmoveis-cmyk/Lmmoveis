@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { OrderStatus, Sale, Product, Employee, Store } from '../types.ts';
 import { supabaseService } from '../services/supabaseService';
-import { Wrench, MapPin, CheckCircle, Clock, Printer, Phone, History } from 'lucide-react';
+import { offlineSyncService } from '../services/offlineSyncService';
+import { Wrench, MapPin, CheckCircle, Clock, Printer, Phone, History, WifiOff, CloudOff, RefreshCw } from 'lucide-react';
 
 interface AssemblyProps {
   user: Employee | { id: string, name: string, role: string, storeId?: string } | null;
@@ -15,6 +16,26 @@ interface AssemblyProps {
 
 const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, stores, employees, refreshData }) => {
   const [showHistory, setShowHistory] = useState(false);
+
+  const [isOnline, setIsOnline] = useState(offlineSyncService.getOnlineStatus());
+  const [pendingSyncCount, setPendingSyncCount] = useState(offlineSyncService.getPendingCount());
+
+  React.useEffect(() => {
+    const handleSyncStatus = () => {
+      setIsOnline(offlineSyncService.getOnlineStatus());
+      setPendingSyncCount(offlineSyncService.getPendingCount());
+    };
+    window.addEventListener('online', handleSyncStatus);
+    window.addEventListener('offline', handleSyncStatus);
+    window.addEventListener('lm_sync_completed', handleSyncStatus);
+    const interval = setInterval(handleSyncStatus, 2000);
+    return () => {
+      window.removeEventListener('online', handleSyncStatus);
+      window.removeEventListener('offline', handleSyncStatus);
+      window.removeEventListener('lm_sync_completed', handleSyncStatus);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Tarefas pendentes (aguardando entrega ou liberadas para montagem)
   const myTasks = sales.filter(s =>
@@ -56,14 +77,20 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
   const handleComplete = async (id: string) => {
     if (!window.confirm("Deseja marcar esta montagem como CONCLUÍDA?")) return;
     try {
-      await supabaseService.updateSaleStatus(id, OrderStatus.COMPLETED);
-      await supabaseService.syncRomaneioStatus(id);
+      // Optimistic Update
       setSales(prev => prev.map(s =>
         s.id === id ? { ...s, status: OrderStatus.COMPLETED, assemblyCompletedAt: new Date().toISOString() } : s
       ));
+
+      // Enqueue for Sync
+      await offlineSyncService.enqueueStatusUpdate(id, OrderStatus.COMPLETED);
+      
+      if (!isOnline) {
+        alert("Montagem salva localmente. Será sincronizada assim que houver internet.");
+      }
     } catch (err) {
       console.error("Erro ao concluir montagem:", err);
-      alert("Erro ao salvar no banco de dados.");
+      alert("Erro ao salvar baixa.");
     }
   };
 
@@ -284,6 +311,35 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
           </div>
           <Wrench className="w-10 h-10 text-white/20" />
         </div>
+
+        {!isOnline && (
+          <div className="mt-4 bg-amber-500/20 border border-amber-500/50 p-3 rounded-2xl flex items-center justify-between animate-pulse">
+            <div className="flex items-center gap-3">
+              <CloudOff className="w-5 h-5 text-amber-500" />
+              <div>
+                <p className="text-amber-200 text-[10px] font-black uppercase">Modo Offline Ativado</p>
+                <p className="text-white text-[9px] font-medium leading-tight">Sua montagem será salva e enviada ao banco quando o sinal voltar.</p>
+              </div>
+            </div>
+            <WifiOff className="w-4 h-4 text-amber-500" />
+          </div>
+        )}
+
+        {pendingSyncCount > 0 && (
+          <div className="mt-2 bg-emerald-500 border border-emerald-400 p-3 rounded-2xl flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <RefreshCw className="w-5 h-5 text-white animate-spin" />
+              <div>
+                <p className="text-emerald-100 text-[10px] font-black uppercase">Sincronização Pendente</p>
+                <p className="text-white text-xs font-black uppercase">{pendingSyncCount} {pendingSyncCount === 1 ? 'montagem aguardando' : 'montagens aguardando'}</p>
+              </div>
+            </div>
+            {isOnline && (
+              <span className="text-[10px] font-black bg-white/20 text-white px-3 py-1 rounded-full uppercase">Sincronizando...</span>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4 mt-6">
           <div className="bg-white/10 p-4 rounded-2xl">
             <p className="text-[10px] font-black text-white/40 uppercase">Pendentes</p>

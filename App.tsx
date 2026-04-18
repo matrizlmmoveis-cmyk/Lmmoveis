@@ -26,6 +26,7 @@ import { Employee, UserRole, Sale, InventoryItem, Store, Product, Customer, Supp
 import { CartProvider } from './components/CartContext.tsx';
 import { supabaseService } from './services/supabaseService.ts';
 import { supabase } from './services/supabase.ts';
+import { offlineSyncService } from './services/offlineSyncService.ts';
 class ErrorBoundary extends React.Component<any, any> {
   constructor(props: any) {
     super(props);
@@ -116,6 +117,8 @@ const App: React.FC = () => {
       if (resolvedScope === 'sales') {
         const sItems = await supabaseService.getSales(startDate, endDate);
         setSales(sItems);
+        // Salvar em cache se for motorista ou montador
+        if (isFieldRole) offlineSyncService.saveSalesCache(sItems);
         return;
       }
 
@@ -151,10 +154,21 @@ const App: React.FC = () => {
           setProducts(pItems);
           setCustomers(cItems);
           setSuppliers(supItems);
+
+          // Salvar em cache de campo
+          if (isFieldRole) offlineSyncService.saveSalesCache(sItems);
         }
       }
     } catch (err) {
       console.error("Erro ao carregar dados do Supabase:", err);
+      // Fallback para cache offline se for equipe interna
+      if (isFieldRole) {
+        const cachedSales = offlineSyncService.getSalesCache();
+        if (cachedSales) {
+          console.log("[Offline] Carregando dados do cache local...");
+          setSales(cachedSales);
+        }
+      }
     } finally {
       setIsLoading(false);
     }
@@ -188,7 +202,16 @@ const App: React.FC = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    const handleSyncComplete = () => {
+      console.log("[OfflineSync] Sincronização concluída, atualizando dados...");
+      initData('sales');
+    };
+    window.addEventListener('lm_sync_completed', handleSyncComplete);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('lm_sync_completed', handleSyncComplete);
+    };
   }, [user?.id]); // Re-run if user changes to fetch their specific data
 
   const redirectByRole = (employee: Employee) => {

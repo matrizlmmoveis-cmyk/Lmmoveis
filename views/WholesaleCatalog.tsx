@@ -286,30 +286,46 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             let imageUrl = rawUrl;
             if (rawUrl && !rawUrl.startsWith('data:')) {
                 const timestamp = new Date().getTime();
-                imageUrl = `https://images.weserv.nl/?url=${encodeURIComponent(rawUrl)}&w=1200&t=${timestamp}`;
+                // Aumentando qualidade (q=100) e largura (w=2000) e usando compressão sem perda se possível
+                imageUrl = `https://images.weserv.nl/?url=${encodeURIComponent(rawUrl)}&w=2000&q=100&il&t=${timestamp}`;
             }
 
             let imageLoaded = false;
             try {
+                // Tentativa 1: Weserv (Melhor performance e redimensionamento)
                 await new Promise((resolve, reject) => {
-                    const timeout = setTimeout(() => reject(new Error("Timeout")), 10000);
+                    const timeout = setTimeout(() => reject(new Error("Timeout")), 8000);
                     img.onload = () => { clearTimeout(timeout); resolve(true); };
                     img.onerror = () => { clearTimeout(timeout); reject(new Error("Proxy Error")); };
                     img.src = imageUrl;
                 });
                 imageLoaded = true;
             } catch (imgErr) {
+                console.warn("Falha no Weserv, tentando AllOrigins...", imgErr);
                 try {
+                    // Tentativa 2: AllOrigins (CORS puro, imagem original)
                     const proxy2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`;
                     await new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => reject(new Error("Timeout")), 5000);
+                        const timeout = setTimeout(() => reject(new Error("Timeout")), 7000);
                         img.onload = () => { clearTimeout(timeout); resolve(true); };
                         img.onerror = reject;
                         img.src = proxy2;
                     });
                     imageLoaded = true;
                 } catch (e2) {
-                    imageLoaded = false;
+                    console.warn("Falha no AllOrigins, tentando URL direta...", e2);
+                    try {
+                        // Tentativa 3: URL Direta (Alguns browsers/servidores podem permitir via cache ou headers)
+                        await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => reject(new Error("Timeout")), 5000);
+                            img.onload = () => { clearTimeout(timeout); resolve(true); };
+                            img.onerror = reject;
+                            img.src = rawUrl;
+                        });
+                        imageLoaded = true;
+                    } catch (e3) {
+                        imageLoaded = false;
+                    }
                 }
             }
 
@@ -451,13 +467,13 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
             {/* Header com Abas */}
             <div className="sticky top-0 z-30 bg-white shadow-sm border-b border-slate-100 px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
 
-                <div className="flex items-center gap-4">
-                    <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
-                        <ShoppingBag className="w-5 h-5 text-white" />
+                <div className="flex items-center gap-3">
+                    <div className="bg-blue-600 p-1.5 md:p-2 rounded-xl shadow-lg shadow-blue-500/20">
+                        <ShoppingBag className="w-4 h-4 md:w-5 md:h-5 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-lg font-black text-slate-900 tracking-tight uppercase">Catálogo de Atacado</h1>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{user?.name}</p>
+                        <h1 className="text-sm md:text-lg font-black text-slate-900 tracking-tight uppercase leading-none">Catálogo Atacado</h1>
+                        <p className="hidden md:block text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{user?.name}</p>
                     </div>
                 </div>
 
@@ -701,7 +717,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
 
                                                 <div className="p-3 md:p-6">
                                                     <div className="mb-2 md:mb-4">
-                                                        <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 h-8 md:h-10 md:min-h-[40px] leading-tight cursor-pointer uppercase text-[10px] md:text-sm" onClick={() => setSelectedProduct(product)}>
+                                                        <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-none md:line-clamp-2 h-auto md:h-10 md:min-h-[40px] leading-tight cursor-pointer uppercase text-[10px] md:text-sm" onClick={() => setSelectedProduct(product)}>
                                                             {product.name}
                                                         </h3>
                                                         <p className="text-[8px] md:text-[10px] font-black text-slate-300 uppercase tracking-widest mt-0.5 md:mt-1 tracking-tighter">{product.sku}</p>
@@ -1122,15 +1138,21 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Margem de Lucro</label>
                                     <div className="relative group/input">
-                                        <div className="absolute inset-0 bg-blue-600 opacity-0 group-focus-within/input:opacity-5 rounded-2xl transition-opacity"></div>
+                                        <div className="absolute inset-0 bg-blue-600 opacity-0 group-focus-within/input:opacity-5 rounded-2xl transition-opacity pointer-events-none"></div>
                                         <input 
-                                            type="number" 
-                                            className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all font-black text-center text-3xl text-slate-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            type="text" 
+                                            inputMode="decimal"
+                                            className="w-full px-8 py-5 bg-white border-2 border-blue-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-black text-center text-3xl text-black placeholder:text-slate-900 z-10 relative"
                                             placeholder="0"
-                                            value={markup}
-                                            onChange={(e) => setMarkup(Number(e.target.value))}
+                                            value={markup === 0 ? '' : markup}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(',', '.');
+                                                if (val === '' || !isNaN(Number(val))) {
+                                                    setMarkup(val === '' ? 0 : Number(val));
+                                                }
+                                            }}
                                         />
-                                        <span className="absolute right-8 top-1/2 -translate-y-1/2 font-black text-blue-600 text-2xl">%</span>
+                                        <span className="absolute right-8 top-1/2 -translate-y-1/2 font-black text-blue-600 text-2xl pointer-events-none z-20">%</span>
                                     </div>
                             </div>
 
@@ -1144,7 +1166,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                             checked={showTotalPrice}
                                             onChange={() => setShowTotalPrice(!showTotalPrice)}
                                         />
-                                        <div className="w-12 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[20px] after:w-[20px] after:transition-all peer-checked:bg-blue-600 shadow-inner"></div>
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 shadow-inner flex-shrink-0"></div>
                                     </div>
                                 </label>
 
@@ -1157,7 +1179,7 @@ const WholesaleCatalog: React.FC<WholesaleCatalogProps> = ({ user, products, inv
                                             checked={showInstallments}
                                             onChange={() => setShowInstallments(!showInstallments)}
                                         />
-                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 shadow-inner"></div>
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 shadow-inner flex-shrink-0"></div>
                                     </div>
                                 </label>
 

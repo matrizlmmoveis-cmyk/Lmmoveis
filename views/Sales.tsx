@@ -575,9 +575,9 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                       <div className="w-8 h-8 bg-white rounded-lg overflow-hidden border shrink-0">
                         <img src={getDirectImageUrl(p.imageUrl || p.images?.[0]?.url)} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-black uppercase truncate text-slate-800" style={{ fontSize: '9px' }}>{p.name}</p>
-                        <p className="text-blue-600 font-bold" style={{ fontSize: '10px' }}>R$ {p.price.toFixed(2)}</p>
+                      <div className="flex-1 min-w-0 py-1">
+                        <p className="font-black uppercase text-slate-800 leading-tight" style={{ fontSize: '11px' }}>{p.name}</p>
+                        <p className="text-blue-600 font-bold mt-0.5" style={{ fontSize: '11px' }}>R$ {p.price.toFixed(2)}</p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {/* CD NORTE */}
@@ -633,7 +633,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                     const itemStocks = inventory.filter(i => i.productId === item.productId && i.quantity > 0);
                     return (
                       <div key={item.productId} className="bg-white border border-slate-100 rounded-2xl p-3 space-y-2">
-                        <p className="text-[10px] font-black uppercase text-blue-700 truncate">{p?.name}</p>
+                        <p className="text-[11px] font-black uppercase text-blue-700 leading-tight mb-1">{p?.name}</p>
                         <div className="flex flex-wrap items-center gap-2">
                           <input type="number" min="1" className="w-14 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" value={item.quantity} onChange={e => {
                             const newQty = parseInt(e.target.value) || 1;
@@ -747,14 +747,14 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 <button
                   onClick={handleSaveSale}
                   disabled={isSubmitting}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-3 text-sm"
                 >
                   {isSubmitting ? (
                     <RefreshCw className="w-5 h-5 animate-spin" />
                   ) : (
                     <CheckCircle2 className="w-5 h-5" />
                   )}
-                  {isSubmitting ? 'Finalizando...' : 'Finalizar Venda'}
+                  {isSubmitting ? 'Finalizando...' : 'FINALIZAR VENDA'}
                 </button>
               </div>
             </div>

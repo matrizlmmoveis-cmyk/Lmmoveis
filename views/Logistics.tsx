@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Truck, MapPin, CheckCircle2, Navigation, Package, Camera, X, Check, Eraser, Phone, MessageSquare, Printer, History, ChevronUp, ChevronDown } from 'lucide-react';
 import { OrderStatus, Sale, Employee, Product, Store } from '../types.ts';
 import { supabaseService } from '../services/supabaseService';
+import { offlineSyncService } from '../services/offlineSyncService';
+import { WifiOff, CloudOff, RefreshCw } from 'lucide-react';
 
 interface LogisticsProps {
   user: Employee | { id: string, name: string, role: string, storeId?: string } | null;
@@ -21,6 +23,30 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
     const saved = localStorage.getItem('logisticsActiveTab');
     return (saved === 'PADRAO' || saved === 'ROTEIRO' || saved === 'ENTREGUE_LOJA') ? (saved as any) : 'PADRAO';
   });
+
+  const [isOnline, setIsOnline] = useState(offlineSyncService.getOnlineStatus());
+  const [pendingSyncCount, setPendingSyncCount] = useState(offlineSyncService.getPendingCount());
+
+  useEffect(() => {
+    const handleSyncStatus = () => {
+      setIsOnline(offlineSyncService.getOnlineStatus());
+      setPendingSyncCount(offlineSyncService.getPendingCount());
+    };
+
+    window.addEventListener('online', handleSyncStatus);
+    window.addEventListener('offline', handleSyncStatus);
+    window.addEventListener('lm_sync_completed', handleSyncStatus);
+
+    // Update count when something is added manually (optimistic)
+    const interval = setInterval(handleSyncStatus, 2000);
+
+    return () => {
+      window.removeEventListener('online', handleSyncStatus);
+      window.removeEventListener('offline', handleSyncStatus);
+      window.removeEventListener('lm_sync_completed', handleSyncStatus);
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('logisticsActiveTab', activeTab);
@@ -168,8 +194,11 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
 
   const handleLoadDelivery = async (saleId: string) => {
     try {
-      await supabaseService.updateSaleStatus(saleId, OrderStatus.SHIPPED);
+      // Optimistic Update
       setSales(prev => prev.map(s => s.id === saleId ? { ...s, status: OrderStatus.SHIPPED } : s));
+      
+      // Enqueue for Sync
+      await offlineSyncService.enqueueStatusUpdate(saleId, OrderStatus.SHIPPED);
     } catch (err) {
       console.error("Erro ao carregar entrega:", err);
       alert("Erro ao marcar como carregado.");
@@ -190,24 +219,28 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
     const signatureData = canvasRef.current?.toDataURL();
 
     try {
-      await supabaseService.updateSaleStatus(activeDeliveryId, nextStatus, {
-        deliverySignature: signatureData,
-        deliveryPhoto: photo || undefined
-      });
-
-      await supabaseService.syncRomaneioStatus(activeDeliveryId);
-
+      // Optimistic Update
       setSales(prev => prev.map(s =>
         s.id === activeDeliveryId
           ? { ...s, status: nextStatus, deliverySignature: signatureData, deliveryPhoto: photo || undefined }
           : s
       ));
 
+      // Enqueue for Sync
+      await offlineSyncService.enqueueStatusUpdate(activeDeliveryId, nextStatus, {
+        deliverySignature: signatureData,
+        deliveryPhoto: photo || undefined
+      });
+
       setActiveDeliveryId(null);
       setPhoto(null);
+      
+      if (!isOnline) {
+        alert("Entrega salva localmente. Será sincronizada assim que você tiver internet.");
+      }
     } catch (err) {
       console.error("Erro ao baixar entrega:", err);
-      alert("Erro ao salvar baixa no banco de dados.");
+      alert("Erro ao salvar baixa.");
     }
   };
 
@@ -494,13 +527,45 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
               </button>
             </div>
           </div>
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className={`p-4 rounded-2xl transition-all ${showHistory ? 'bg-emerald-500 text-white shadow-lg' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
-          >
-            <History className="w-6 h-6" />
-          </button>
-        </div>
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className={`p-4 rounded-2xl transition-all relative ${showHistory ? 'bg-emerald-500 text-white shadow-lg' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+            >
+              <History className="w-6 h-6" />
+              {!isOnline && (
+                <div className="absolute -top-1 -right-1 bg-red-500 text-white p-1 rounded-full border-2 border-slate-900">
+                  <WifiOff className="w-3 h-3" />
+                </div>
+              )}
+            </button>
+          </div>
+
+        {!isOnline && (
+          <div className="mt-4 bg-amber-500/20 border border-amber-500/50 p-3 rounded-2xl flex items-center justify-between animate-pulse">
+            <div className="flex items-center gap-3">
+              <CloudOff className="w-5 h-5 text-amber-500" />
+              <div>
+                <p className="text-amber-200 text-[10px] font-black uppercase">Modo Offline Ativado</p>
+                <p className="text-white text-[9px] font-medium leading-tight">Suas baixas serão salvas no celular e enviadas ao banco assim que o sinal voltar.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pendingSyncCount > 0 && (
+          <div className="mt-2 bg-blue-500 border border-blue-400 p-3 rounded-2xl flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <RefreshCw className="w-5 h-5 text-white animate-spin" />
+              <div>
+                <p className="text-blue-100 text-[10px] font-black uppercase">Sincronização Pendente</p>
+                <p className="text-white text-xs font-black uppercase">{pendingSyncCount} {pendingSyncCount === 1 ? 'entrega aguardando' : 'entregas aguardando'}</p>
+              </div>
+            </div>
+            {isOnline && (
+              <span className="text-[10px] font-black bg-white/20 text-white px-3 py-1 rounded-full uppercase">Sincronizando...</span>
+            )}
+          </div>
+        )}
       </header>
 
       {!showHistory && (

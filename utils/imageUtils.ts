@@ -34,10 +34,10 @@ export const getDirectImageUrl = (url: string | null | undefined): string => {
     }
 
     if (fileId) {
-      // Usar o endpoint thumbnail com sz=w1000 costuma ser MAIS CONFIÁVEL que o /uc
+      // Usar o endpoint thumbnail com sz=w2000 costuma ser MAIS CONFIÁVEL que o /uc
       // pois o /uc às vezes falha em arquivos grandes devido ao aviso de vírus do Google.
-      // E para exibição em interface, a miniatura de alta resolução (w1000) é perfeita.
-      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+      // E para exibição em interface, a miniatura de alta resolução (w2000) é perfeita.
+      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w2000`;
     }
   } catch (e) {
     console.warn('Erro ao processar link do Google Drive:', e);
