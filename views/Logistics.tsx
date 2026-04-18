@@ -24,6 +24,14 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
     return (saved === 'PADRAO' || saved === 'ROTEIRO' || saved === 'ENTREGUE_LOJA') ? (saved as any) : 'PADRAO';
   });
 
+  const [deliveryHistoryCount, setDeliveryHistoryCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (user?.id && user.id !== 'admin' && user.id !== 'master') {
+      supabaseService.getDriverHistoryCount(user.id).then(setDeliveryHistoryCount);
+    }
+  }, [user]);
+
   const [isOnline, setIsOnline] = useState(offlineSyncService.getOnlineStatus());
   const [pendingSyncCount, setPendingSyncCount] = useState(offlineSyncService.getPendingCount());
 
@@ -405,6 +413,12 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
               <p className="text-[8px] font-black text-slate-400 uppercase">Venda</p>
               <p className="text-[10px] font-bold text-slate-700 lowercase">{task.date ? new Date(task.date).toLocaleDateString('pt-BR') : 'N/A'}</p>
             </div>
+            {isHistory && task.deliveryDate && (
+              <div className="bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
+                <p className="text-[8px] font-black text-emerald-600 uppercase">Entrega</p>
+                <p className="text-[10px] font-bold text-emerald-700 truncate">{new Date(task.deliveryDate).toLocaleDateString('pt-BR')}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -539,6 +553,30 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
               )}
             </button>
           </div>
+
+        {user?.id !== 'admin' && user?.id !== 'master' && (
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="bg-white/10 p-4 rounded-2xl">
+              <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Total Entregas</p>
+              <p className="text-2xl font-black text-white">{deliveryHistoryCount}</p>
+            </div>
+            <div className="bg-white/10 p-4 rounded-2xl">
+              <div className="flex justify-between items-start">
+                <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Ciclo Atual</p>
+                <div className="bg-blue-500 text-[8px] font-black px-1.5 py-0.5 rounded-md">
+                   {Math.floor(deliveryHistoryCount / 120)}º CICLO
+                </div>
+              </div>
+              <p className="text-2xl font-black text-white">{deliveryHistoryCount % 120}<span className="text-sm text-white/40">/120</span></p>
+              <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-blue-500 transition-all duration-1000" 
+                  style={{ width: `${Math.min(((deliveryHistoryCount % 120) / 120) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {!isOnline && (
           <div className="mt-4 bg-amber-500/20 border border-amber-500/50 p-3 rounded-2xl flex items-center justify-between animate-pulse">

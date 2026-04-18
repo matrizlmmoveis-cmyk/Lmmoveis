@@ -624,6 +624,16 @@ export const supabaseService = {
         return true;
     },
 
+    async getDriverHistoryCount(driverId: string) {
+        const { count, error } = await supabase
+            .from('sales')
+            .select('*', { count: 'exact', head: true })
+            .eq('assigned_driver_id', driverId)
+            .in('status', ['Entregue', 'Finalizado', 'Entregue - Aguardando Montagem', 'Montagem Pendente', 'Entregue']);
+        if (error) throw error;
+        return count || 0;
+    },
+
     async getProductMovements(productId: string) {
         const { data, error } = await supabase
             .from('inventory_movements')
@@ -710,13 +720,33 @@ export const supabaseService = {
 
         if (error) throw error;
 
-        // Liberar pagamentos pendentes de entrega para o Acerto Caixa
+        // Liberar pagamentos pendentes de entrega para o Acerto Caixa e verificar metas
         if (status === 'Entregue' || status === 'Entregue - Aguardando Montagem') {
             await supabase
                 .from('sale_payments')
                 .update({ status: 'AGUARDANDO_ACERTO' })
                 .eq('sale_id', saleId)
                 .eq('status', 'PENDENTE_ENTREGA');
+
+            // --- LÓGICA DE ALERTA DE META (120 ENTREGAS) ---
+            try {
+                const { data: saleData } = await supabase.from('sales').select('assigned_driver_id').eq('id', saleId).single();
+                if (saleData?.assigned_driver_id) {
+                    const count = await this.getDriverHistoryCount(saleData.assigned_driver_id);
+                    if (count > 0 && count % 120 === 0) {
+                        const { data: driver } = await supabase.from('employees').select('name').eq('id', saleData.assigned_driver_id).single();
+                        await this.createTask({
+                            title: `Meta Atingida - Motorista ${driver?.name || 'N/D'}!`,
+                            description: `O motorista ${driver?.name || 'N/D'} atingiu a marca de 120 entregas concluídas em ${new Date().toLocaleDateString('pt-BR')}.`,
+                            type: 'AVISO_META',
+                            priority: 'ALTA',
+                            assigned_to: 'Master'
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Erro ao processar alerta de meta:", err);
+            }
         }
 
         return true;
