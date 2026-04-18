@@ -43,6 +43,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
     (s.status === OrderStatus.DELIVERED || 
      s.status === OrderStatus.SHIPPED || 
      s.status === OrderStatus.PENDING || 
+     s.status === OrderStatus.AWAITING_LOAD ||
      s.status === OrderStatus.ASSEMBLY_PENDING) &&
     (user?.id === 'admin' || user?.id === 'master' || s.assignedAssemblerId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
   );
