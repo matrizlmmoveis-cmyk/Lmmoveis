@@ -1260,7 +1260,18 @@ export const supabaseService = {
         return data?.id as string;
     },
 
-    async applySaleEdit(params: {        // --- Apply item changes ---
+    async applySaleEdit(params: {
+        saleId: string;
+        taskId: string;
+        authorizedBy: string;
+        originalSnapshot: any;
+        proposedSnapshot: any;
+        stores: any[];
+    }) {
+        const { originalSnapshot: orig, proposedSnapshot: proposed } = params;
+        const changes: any[] = [];
+
+        // --- Apply item changes ---
         const origItems: any[] = orig.items || [];
         const propItems: any[] = proposed.items || [];
 
