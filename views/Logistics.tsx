@@ -252,6 +252,40 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
     }
   };
 
+  const formatAddress = (addr: any): string => {
+    if (!addr) return 'Endereço não informado';
+    try {
+      let parsed = typeof addr === 'string' ? JSON.parse(addr) : addr;
+      if (typeof parsed === 'string') parsed = JSON.parse(parsed); // Double encoding case
+      
+      if (!parsed || typeof parsed !== 'object') return addr;
+      
+      const parts = [];
+      const getVal = (obj: any, keys: string[]) => {
+        for (const k of keys) {
+          if (obj[k]) return obj[k];
+        }
+        return '';
+      };
+
+      const street = getVal(parsed, ['STREET', 'Street', 'street']);
+      const number = getVal(parsed, ['NUMBER', 'Number', 'number']);
+      const neighborhood = getVal(parsed, ['NEIGHBORHOOD', 'Neighborhood', 'neighborhood']);
+      const city = getVal(parsed, ['CITY', 'City', 'city']);
+      const state = getVal(parsed, ['STATE', 'State', 'state']);
+
+      if (street) parts.push(street.trim());
+      if (number) parts.push(number.trim());
+      if (neighborhood) parts.push(neighborhood.trim());
+      if (city) parts.push(city.trim());
+      if (state) parts.push(state.trim());
+      
+      return parts.length > 0 ? parts.join(', ') : (typeof addr === 'string' ? addr : JSON.stringify(addr));
+    } catch {
+      return typeof addr === 'string' ? addr : JSON.stringify(addr);
+    }
+  };
+
   const handlePrintRoute = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -300,7 +334,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
                   <div style="font-weight: bold">PEDIDO #${delivery.id}</div>
                 </div>
                 <div class="customer-name">${delivery.customerName}</div>
-                <div class="address">📍 ${delivery.deliveryAddress}</div>
+                <div class="address">📍 ${formatAddress(delivery.deliveryAddress)}</div>
                 
                 <div class="info-bar">
                   <span>UNIDADE: ${store?.name || 'N/A'}</span>
@@ -352,6 +386,8 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
     tasks: myDeliveries.filter(t => t.storeId === store.id)
   })).filter(g => g.tasks.length > 0);
 
+
+
   const DeliveryCard = ({ task, isHistory = false }: { task: Sale, isHistory?: boolean, key?: any }) => {
     const store = (stores || []).find(s => s.id === task.storeId);
     const seller = (employees || []).find(e => e.id === task.sellerId);
@@ -390,7 +426,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
           <div className="flex flex-col gap-1 mt-3">
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-              <span className="font-bold uppercase line-clamp-2">{task.deliveryAddress}</span>
+              <span className="font-bold uppercase line-clamp-2">{formatAddress(task.deliveryAddress)}</span>
             </div>
             {task.customerReference && (
               <div className="flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-50 p-2 rounded-xl border border-slate-100 italic">

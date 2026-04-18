@@ -74,6 +74,40 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
     return `https://wa.me/55${digits}`;
   };
 
+  const formatAddress = (addr: any): string => {
+    if (!addr) return 'Endereço não informado';
+    try {
+      let parsed = typeof addr === 'string' ? JSON.parse(addr) : addr;
+      if (typeof parsed === 'string') parsed = JSON.parse(parsed); // Double encoding case
+      
+      if (!parsed || typeof parsed !== 'object') return addr;
+      
+      const parts = [];
+      const getVal = (obj: any, keys: string[]) => {
+        for (const k of keys) {
+          if (obj[k]) return obj[k];
+        }
+        return '';
+      };
+
+      const street = getVal(parsed, ['STREET', 'Street', 'street']);
+      const number = getVal(parsed, ['NUMBER', 'Number', 'number']);
+      const neighborhood = getVal(parsed, ['NEIGHBORHOOD', 'Neighborhood', 'neighborhood']);
+      const city = getVal(parsed, ['CITY', 'City', 'city']);
+      const state = getVal(parsed, ['STATE', 'State', 'state']);
+
+      if (street) parts.push(street.trim());
+      if (number) parts.push(number.trim());
+      if (neighborhood) parts.push(neighborhood.trim());
+      if (city) parts.push(city.trim());
+      if (state) parts.push(state.trim());
+      
+      return parts.length > 0 ? parts.join(', ') : (typeof addr === 'string' ? addr : JSON.stringify(addr));
+    } catch {
+      return typeof addr === 'string' ? addr : JSON.stringify(addr);
+    }
+  };
+
   const handleComplete = async (id: string) => {
     if (!window.confirm("Deseja marcar esta montagem como CONCLUÍDA?")) return;
     try {
@@ -138,7 +172,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
                   <div style="font-weight: bold">PEDIDO #${task.id}</div>
                 </div>
                 <div class="customer-name">${task.customerName}</div>
-                <div class="address">📍 ${task.deliveryAddress}</div>
+                <div class="address">📍 ${formatAddress(task.deliveryAddress)}</div>
                 ${task.customerPhone ? `<div class="phone">📞 ${task.customerPhone}</div>` : ''}
                 <div class="dates">
                   Venda: ${new Date(task.date).toLocaleDateString('pt-BR')}
@@ -199,7 +233,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
           <h3 className="text-lg font-black text-slate-900 uppercase leading-tight">{task.customerName}</h3>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-2">
             <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-            <span className="font-bold uppercase">{task.deliveryAddress}</span>
+            <span className="font-bold uppercase">{formatAddress(task.deliveryAddress)}</span>
           </div>
 
           <div className="flex items-center gap-4 mt-2 mb-2">

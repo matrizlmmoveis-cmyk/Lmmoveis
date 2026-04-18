@@ -138,6 +138,40 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
     }
   };
 
+  const formatAddress = (addr: any): string => {
+    if (!addr) return 'Endereço não informado';
+    try {
+      let parsed = typeof addr === 'string' ? JSON.parse(addr) : addr;
+      if (typeof parsed === 'string') parsed = JSON.parse(parsed); // Double encoding case
+      
+      if (!parsed || typeof parsed !== 'object') return addr;
+      
+      const parts = [];
+      const getVal = (obj: any, keys: string[]) => {
+        for (const k of keys) {
+          if (obj[k]) return obj[k];
+        }
+        return '';
+      };
+
+      const street = getVal(parsed, ['STREET', 'Street', 'street']);
+      const number = getVal(parsed, ['NUMBER', 'Number', 'number']);
+      const neighborhood = getVal(parsed, ['NEIGHBORHOOD', 'Neighborhood', 'neighborhood']);
+      const city = getVal(parsed, ['CITY', 'City', 'city']);
+      const state = getVal(parsed, ['STATE', 'State', 'state']);
+
+      if (street) parts.push(street.trim());
+      if (number) parts.push(number.trim());
+      if (neighborhood) parts.push(neighborhood.trim());
+      if (city) parts.push(city.trim());
+      if (state) parts.push(state.trim());
+      
+      return parts.length > 0 ? parts.join(', ') : (typeof addr === 'string' ? addr : JSON.stringify(addr));
+    } catch {
+      return typeof addr === 'string' ? addr : JSON.stringify(addr);
+    }
+  };
+
   const handleOpenBatchPrint = () => {
     const selectedRomaneios = romaneios.filter(r => selectedRomaneioIds.includes(r.id));
     if (selectedRomaneios.length === 0) return;
@@ -201,7 +235,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                           <span class="font-black underline text-8">#${sale.id}</span>
                           <span class="font-black uppercase text-8 truncate" style="flex: 1;">${sale.customerName}</span>
                         </div>
-                        <div class="font-bold uppercase text-7 truncate" style="font-style: italic; opacity: 0.8;">${sale.deliveryAddress}</div>
+                        <div class="font-bold uppercase text-7 truncate" style="font-style: italic; opacity: 0.8;">${formatAddress(sale.deliveryAddress)}</div>
                         <div class="text-7 uppercase" style="display: flex; gap: 7px; margin-top: 2px;">
                           ${sale.customerPhone ? `<span class="font-bold">📞 ${sale.customerPhone}</span>` : ''}
                           ${sale.deliveryObs ? `<span class="font-black" style="color: #1e40af;">OBS: ${sale.deliveryObs}</span>` : ''}
@@ -308,7 +342,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                     <p className="text-base font-black uppercase">{sale.customerName}</p>
                     {isEntrega && (
                       <>
-                        <p className="text-xs font-bold uppercase mt-0.5">{sale.deliveryAddress}</p>
+                        <p className="text-xs font-bold uppercase mt-0.5">{formatAddress(sale.deliveryAddress)}</p>
                         {sale.customerPhone && <p className="text-xs font-bold mt-0.5">📞 {sale.customerPhone}</p>}
                         {sale.customerCpf && <p className="text-[10px] text-gray-600 font-bold mt-0.5">CPF: {sale.customerCpf}</p>}
                         {sale.deliveryObs && (
@@ -692,7 +726,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                           <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-black">#{sale.id}</span>
                           <span className="text-[10px] font-black text-slate-500 uppercase truncate flex-1">{sale.customerName}</span>
                         </div>
-                        <p className="text-[10px] text-slate-600 font-bold uppercase line-clamp-2 leading-relaxed">{sale.deliveryAddress}</p>
+                        <p className="text-[10px] text-slate-600 font-bold uppercase line-clamp-2 leading-relaxed">{formatAddress(sale.deliveryAddress)}</p>
                         <button
                           onClick={() => removeSale(sale.id)}
                           className="absolute -top-2 -right-2 bg-white text-red-500 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all border border-slate-100"
