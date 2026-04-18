@@ -921,9 +921,30 @@ export const supabaseService = {
     },
 
     async getCustomers() {
-        const { data, error } = await supabase.from('customers').select('*').order('name', { ascending: true });
-        if (error) throw error;
-        return (data || []).map((c: any) => {
+        let allData: any[] = [];
+        let from = 0;
+        const step = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+            const { data, error } = await supabase
+                .from('customers')
+                .select('*')
+                .order('name', { ascending: true })
+                .range(from, from + step - 1);
+
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+                allData = [...allData, ...data];
+                from += step;
+                if (data.length < step) hasMore = false;
+            } else {
+                hasMore = false;
+            }
+        }
+
+        return allData.map((c: any) => {
             const addr = typeof c.address === 'object' ? c.address : {};
             return {
                 id: c.id,
