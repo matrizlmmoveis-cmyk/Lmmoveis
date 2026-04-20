@@ -208,9 +208,56 @@ const App: React.FC = () => {
     };
     window.addEventListener('lm_sync_completed', handleSyncComplete);
 
+    // ─── REALTIME SUBSCRIPTIONS ──────────────────────────────────────────────
+    const productsChannel = supabase.channel('products-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+        const { eventType, new: newRow, old: oldRow } = payload;
+        console.log("[Realtime] Product Change:", eventType, newRow?.id || oldRow?.id);
+        
+        if (eventType === 'INSERT') {
+          const mapped = supabaseService.mapProduct(newRow);
+          setProducts(prev => {
+            if (prev.some(p => p.id === mapped.id)) return prev;
+            return [...prev, mapped];
+          });
+        } else if (eventType === 'UPDATE') {
+          const mapped = supabaseService.mapProduct(newRow);
+          setProducts(prev => prev.map(p => p.id === mapped.id ? mapped : p));
+        } else if (eventType === 'DELETE') {
+          setProducts(prev => prev.filter(p => p.id !== oldRow.id));
+        }
+        supabaseService.cacheInvalidate('products');
+      })
+      .subscribe();
+
+    const inventoryChannel = supabase.channel('inventory-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, (payload) => {
+        const { eventType, new: newRow, old: oldRow } = payload;
+        console.log("[Realtime] Inventory Change:", eventType, newRow?.product_id || oldRow?.product_id);
+
+        if (eventType === 'INSERT' || eventType === 'UPDATE') {
+          const mapped = supabaseService.mapInventoryItem(newRow);
+          setInventory(prev => {
+            const exists = prev.some(i => i.productId === mapped.productId && i.locationId === mapped.locationId);
+            if (exists) {
+              return prev.map(i => (i.productId === mapped.productId && i.locationId === mapped.locationId) ? mapped : i);
+            }
+            return [...prev, mapped];
+          });
+        } else if (eventType === 'DELETE') {
+          setInventory(prev => prev.filter(i => 
+            !(i.productId === oldRow.product_id && i.locationId === oldRow.location_id)
+          ));
+        }
+      })
+      .subscribe();
+    // ─────────────────────────────────────────────────────────────────────────
+
     return () => {
       subscription.unsubscribe();
       window.removeEventListener('lm_sync_completed', handleSyncComplete);
+      supabase.removeChannel(productsChannel);
+      supabase.removeChannel(inventoryChannel);
     };
   }, [user?.id]); // Re-run if user changes to fetch their specific data
 

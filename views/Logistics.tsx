@@ -28,7 +28,7 @@ const Logistics: React.FC<LogisticsProps> = ({ user, sales = [], setSales, produ
 
   useEffect(() => {
     if (user?.id && user.id !== 'admin' && user.id !== 'master') {
-      supabaseService.getDriverHistoryCount(user.id).then(setDeliveryHistoryCount);
+      supabaseService.getDriverHistoryCount(user.id, user.name).then(setDeliveryHistoryCount);
     }
   }, [user]);
 

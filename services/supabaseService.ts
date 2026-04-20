@@ -134,6 +134,30 @@ export const supabaseService = {
         return true;
     },
 
+    // Helper to map DB Product to Interface
+    mapProduct(p: any): Product {
+        return {
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            price: p.price,
+            costPrice: p.cost_price,
+            assemblyPrice: p.assembly_price,
+            sku: p.sku,
+            imageUrl: p.image_url,
+            imageUrl2: p.image_url_2,
+            supplierId: p.supplier_id,
+            description: p.description,
+            ncm: p.ncm,
+            cfop: p.cfop,
+            unidade: p.unidade,
+            active: typeof p.active !== 'undefined' ? p.active : true,
+            isWholesale: p.is_wholesale,
+            wholesalePrice: p.wholesale_price,
+            productCode: p.product_code
+        };
+    },
+
     // PRODUCTS
     async getProducts(bypassCache = false) {
         if (!bypassCache) {
@@ -150,26 +174,7 @@ export const supabaseService = {
             if (error) throw error;
 
             if (data && data.length > 0) {
-                const mapped = data.map((p: any) => ({
-                    id: p.id,
-                    name: p.name,
-                    category: p.category,
-                    price: p.price,
-                    costPrice: p.cost_price,
-                    assemblyPrice: p.assembly_price,
-                    sku: p.sku,
-                    imageUrl: p.image_url,
-                    imageUrl2: p.image_url_2,
-                    supplierId: p.supplier_id,
-                    description: p.description,
-                    ncm: p.ncm,
-                    cfop: p.cfop,
-                    unidade: p.unidade,
-                    active: typeof p.active !== 'undefined' ? p.active : true,
-                    isWholesale: p.is_wholesale,
-                    wholesalePrice: p.wholesale_price,
-                    productCode: p.product_code
-                }));
+                const mapped = data.map((p: any) => this.mapProduct(p));
                 allItems = allItems.concat(mapped as Product[]);
                 page++;
                 if (data.length < limit) hasMore = false;
@@ -323,6 +328,17 @@ export const supabaseService = {
         return true;
     },
 
+    // Helper to map DB Inventory to Interface
+    mapInventoryItem(i: any): InventoryItem {
+        return {
+            productId: i.product_id,
+            locationId: i.location_id,
+            quantity: i.quantity,
+            type: i.type,
+            lastUpdated: i.last_updated
+        };
+    },
+
     // INVENTORY
     async getInventory() {
         let allItems: any[] = [];
@@ -343,13 +359,7 @@ export const supabaseService = {
             }
         }
 
-        return allItems.map((i: any) => ({
-            productId: i.product_id,
-            locationId: i.location_id,
-            quantity: i.quantity,
-            type: i.type,
-            lastUpdated: i.last_updated
-        })) as InventoryItem[];
+        return allItems.map((i: any) => this.mapInventoryItem(i));
     },
 
     // SALES
@@ -624,12 +634,32 @@ export const supabaseService = {
         return true;
     },
 
-    async getDriverHistoryCount(driverId: string) {
-        const { count, error } = await supabase
+    async getDriverHistoryCount(driverId: string, driverName?: string) {
+        let name = driverName;
+        
+        // Se o nome não foi passado, busca no banco para saber se é um dos motoristas com data de corte
+        if (!name) {
+            const { data } = await supabase.from('employees').select('name').eq('id', driverId).single();
+            name = data?.name;
+        }
+
+        let query = supabase
             .from('sales')
             .select('*', { count: 'exact', head: true })
             .eq('assigned_driver_id', driverId)
             .in('status', ['Entregue', 'Finalizado', 'Entregue - Aguardando Montagem', 'Montagem Pendente', 'Entregue']);
+
+        // Filtro de data personalizado para Wesley e Filipi (solicitação do usuário)
+        if (name) {
+            const upperName = name.toUpperCase();
+            if (upperName.includes('WESLEY')) {
+                query = query.gte('delivery_date', '2026-04-11');
+            } else if (upperName.includes('FILIPI')) {
+                query = query.gte('delivery_date', '2026-04-18');
+            }
+        }
+
+        const { count, error } = await query;
         if (error) throw error;
         return count || 0;
     },
