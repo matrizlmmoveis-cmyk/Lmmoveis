@@ -203,15 +203,16 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
             .font-black { font-weight: 900; }
             .font-bold { font-weight: 700; }
             .uppercase { text-transform: uppercase; }
-            .text-7 { font-size: 8.5px; }
-            .text-6 { font-size: 7px; }
-            .text-8 { font-size: 10.5px; }
+            .text-7 { font-size: 9.5px; }
+            .text-6 { font-size: 8px; }
+            .text-8 { font-size: 11.5px; }
             .opacity-40 { opacity: 0.5; }
             .underline { text-decoration: underline; }
             .sig-box { border-bottom: 1px solid #ccc; height: 22px; display: flex; align-items: center; justify-content: center; }
             .footer { margin-top: 10px; text-align: right; font-size: 7.5px; font-weight: 900; font-style: italic; opacity: 0.4; }
             .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .item-row { border-bottom: 1px solid #f1f5f9; }
+            .item-row { border-bottom: 1px solid #e2e8f0; }
+            .item-row td { padding: 6px 0; }
             .item-row:last-child { border-bottom: none; }
           </style>
         </head>
@@ -236,10 +237,12 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                           <span class="font-black uppercase text-8 truncate" style="flex: 1;">${sale.customerName}</span>
                         </div>
                         <div class="font-bold uppercase text-7 truncate" style="font-style: italic; opacity: 0.8;">${formatAddress(sale.deliveryAddress)}</div>
+                        ${sale.customerReference ? `<div class="font-bold uppercase text-7 truncate" style="opacity: 0.7;">REF: ${sale.customerReference}</div>` : ''}
                         <div class="text-7 uppercase" style="display: flex; gap: 7px; margin-top: 2px;">
                           ${sale.customerPhone ? `<span class="font-bold">📞 ${sale.customerPhone}</span>` : ''}
-                          ${sale.deliveryObs ? `<span class="font-black" style="color: #1e40af;">OBS: ${sale.deliveryObs}</span>` : ''}
+                          <span class="font-bold" style="opacity: 0.7;">VEND: ${allEmployees.find(e => e.id === sale.sellerId)?.name || 'N/A'} / LOJA: ${stores.find(st => st.id === sale.storeId)?.name || 'N/A'}</span>
                         </div>
+                        ${sale.deliveryObs ? `<div class="text-7 font-black uppercase mt-1" style="color: #1e40af;">OBS: ${sale.deliveryObs}</div>` : ''}
                       </div>
                     `).join('')}
                   </div>
@@ -247,20 +250,20 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                     <table class="text-7">
                       <thead>
                         <tr style="border-bottom: 1.5px solid #000;">
-                          <th style="text-align: left; width: 22px;">Q</th>
-                          <th style="text-align: left;">PRODUTO</th>
-                          <th style="text-align: right; width: 65px;">ORIGEM</th>
+                          <th style="text-align: left; width: 22px; padding-bottom: 6px;">Q</th>
+                          <th style="text-align: left; padding-bottom: 6px;">PRODUTO</th>
+                          <th style="text-align: right; width: 65px; padding-bottom: 6px;">ORIGEM</th>
                         </tr>
                       </thead>
                       <tbody>
-                        ${romaneioSales.flatMap(s => s.items).map(item => {
+                        ${romaneioSales.flatMap(s => s.items.filter(i => r.type === 'entrega' || i.assemblyRequired)).map(item => {
                           const prod = products.find(p => p.id === item.productId);
                           const storeName = stores.find(st => st.id === item.locationId)?.name || item.locationId || '—';
                           return `
                             <tr class="item-row font-bold">
-                              <td class="font-black" style="font-size: 10px;">${item.quantity}x</td>
-                              <td class="uppercase truncate" style="max-width: 160px; font-size: 9px;">${prod?.name || item.productId}</td>
-                              <td style="text-align: right;" class="font-black opacity-40 uppercase">${storeName}</td>
+                              <td class="font-black" style="font-size: 11.5px;">${item.quantity}x</td>
+                              <td class="uppercase truncate" style="max-width: 160px; font-size: 10.5px;">${prod?.name || item.productId}</td>
+                              <td style="text-align: right; font-size: 9.5px;" class="font-black opacity-40 uppercase">${storeName}</td>
                             </tr>
                           `;
                         }).join('')}
@@ -340,18 +343,16 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                   <div className="border-b border-dashed border-gray-400 pb-3">
                     <p className="text-[9px] font-black uppercase mb-1">Cliente / {isEntrega ? 'Destino' : 'Local'}</p>
                     <p className="text-base font-black uppercase">{sale.customerName}</p>
-                    {isEntrega && (
-                      <>
-                        <p className="text-xs font-bold uppercase mt-0.5">{formatAddress(sale.deliveryAddress)}</p>
-                        {sale.customerPhone && <p className="text-xs font-bold mt-0.5">📞 {sale.customerPhone}</p>}
-                        {sale.customerCpf && <p className="text-[10px] text-gray-600 font-bold mt-0.5">CPF: {sale.customerCpf}</p>}
-                        {sale.deliveryObs && (
-                          <div className="mt-1 bg-gray-100 border border-gray-300 rounded px-2 py-1">
-                            <p className="text-[9px] font-black uppercase">Obs da Venda:</p>
-                            <p className="text-[10px] font-bold italic">{sale.deliveryObs}</p>
-                          </div>
-                        )}
-                      </>
+                    <p className="text-[9px] font-bold uppercase text-gray-600 mt-1">Vend: {allEmployees.find(e => e.id === sale.sellerId)?.name || 'N/A'} | Loja: {stores.find(s => s.id === sale.storeId)?.name || 'N/A'}</p>
+                    <p className="text-xs font-bold uppercase mt-0.5">{formatAddress(sale.deliveryAddress)}</p>
+                    {sale.customerReference && <p className="text-[10px] text-gray-600 font-bold uppercase mt-0.5">Ref: {sale.customerReference}</p>}
+                    {sale.customerPhone && <p className="text-xs font-bold mt-0.5">📞 {sale.customerPhone}</p>}
+                    {sale.customerCpf && <p className="text-[10px] text-gray-600 font-bold mt-0.5">CPF: {sale.customerCpf}</p>}
+                    {sale.deliveryObs && (
+                      <div className="mt-1 bg-gray-100 border border-gray-300 rounded px-2 py-1">
+                        <p className="text-[9px] font-black uppercase">Obs da Venda:</p>
+                        <p className="text-[10px] font-bold italic">{sale.deliveryObs}</p>
+                      </div>
                     )}
                   </div>
 
@@ -366,7 +367,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                         </tr>
                       </thead>
                       <tbody>
-                        {sale.items.map((item, iIdx) => {
+                        {sale.items.filter(item => isEntrega || item.assemblyRequired).map((item, iIdx) => {
                           const prod = products.find(p => p.id === item.productId);
                           return (
                             <tr key={iIdx} className="border-b border-dashed border-gray-200">

@@ -498,13 +498,38 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSal
                                                 </button>
                                             )}
                                             {canManageTask(task) && !isConcluida && task.type === 'CANCELAMENTO_PENDENTE' && task.sale_id && (
-                                                <button
-                                                    onClick={() => setStockReturnModal({ task, selectedLocationId: '__ORIGINAL__' })}
-                                                    disabled={isProcessing}
-                                                    className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-black transition-all disabled:opacity-50 shadow-md shadow-red-500/20"
-                                                >
-                                                    <Package className="w-3.5 h-3.5" /> Autorizar e Devolver Saldo
-                                                </button>
+                                                <>
+                                                    <button
+                                                        onClick={() => setStockReturnModal({ task, selectedLocationId: '__ORIGINAL__' })}
+                                                        disabled={isProcessing}
+                                                        className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-black transition-all disabled:opacity-50 shadow-md shadow-red-500/20"
+                                                    >
+                                                        <Package className="w-3.5 h-3.5" /> Autorizar e Devolver Saldo
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (!window.confirm('Rejeitar cancelamento? A venda voltará para "Aguardando Entrega".')) return;
+                                                            setProcessingId(task.id);
+                                                            try {
+                                                                await supabase.from('sales').update({ status: 'Aguardando Entrega' }).eq('id', task.sale_id);
+                                                                await supabase.from('tasks').update({ status: 'CONCLUIDA', resolved_at: new Date().toISOString(), notes: `Cancelamento rejeitado por ${user?.name || 'Sistema'}` }).eq('id', task.id);
+                                                                setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'CONCLUIDA' } : t));
+                                                                if (setSales && task.sale_id) {
+                                                                    setSales(prev => prev.map(s => s.id === task.sale_id ? { ...s, status: 'Aguardando Entrega' as any } : s));
+                                                                }
+                                                                showToast('❌ Cancelamento rejeitado.');
+                                                            } catch (err) {
+                                                                showToast('Erro ao rejeitar.', 'error');
+                                                            } finally {
+                                                                setProcessingId(null);
+                                                            }
+                                                        }}
+                                                        disabled={isProcessing}
+                                                        className="flex items-center gap-1.5 bg-slate-500 hover:bg-slate-600 text-white px-4 py-2 rounded-xl text-xs font-black transition-all disabled:opacity-50 shadow-md shadow-slate-500/20"
+                                                    >
+                                                        <XCircle className="w-3.5 h-3.5" /> Rejeitar
+                                                    </button>
+                                                </>
                                             )}
                                             {canManageTask(task) && !isConcluida && task.type !== 'CANCELAMENTO_PENDENTE' && (
                                                 <button onClick={() => updateTaskStatus(task, 'CONCLUIDA')} disabled={isProcessing} className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-black transition-all disabled:opacity-50 shadow-md shadow-emerald-500/20">

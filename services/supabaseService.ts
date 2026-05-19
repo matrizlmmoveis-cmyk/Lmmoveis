@@ -364,33 +364,46 @@ export const supabaseService = {
 
     // SALES
     async getSales(startDate?: string, endDate?: string) {
-        let query = supabase
-            .from('sales')
-            .select('*, items:sale_items(*), payments:sale_payments(*)')
-            .order('created_at', { ascending: false });
+        let allData: any[] = [];
+        let hasMore = true;
+        let page = 0;
+        const limit = 1000;
 
-        if (startDate) {
-            query = query.gte('date', startDate);
-        } else {
-            // Padrão: Últimos 7 dias OU status não finalizado
-            const defaultDate = new Date();
-            defaultDate.setDate(defaultDate.getDate() - 30); // Aumentado para 30 dias para garantir histórico recente
-            const dateStr = defaultDate.toISOString().split('T')[0];
+        while (hasMore) {
+            let query = supabase
+                .from('sales')
+                .select('*, items:sale_items(*), payments:sale_payments(*)')
+                .order('created_at', { ascending: false })
+                .range(page * limit, (page + 1) * limit - 1);
 
-            // Queremos: (date >= defaultDate) OR (status NOT IN (COMPLETED, FINISHED, CANCELED))
-            // E também queremos garantir que qualquer coisa pendente de montagem ou entrega (não cancelada) venha
-            query = query.or(`date.gte.${dateStr},and(status.not.in.("${OrderStatus.COMPLETED}","${OrderStatus.FINISHED}","${OrderStatus.CANCELED}"))`);
+            if (startDate) {
+                query = query.gte('date', startDate);
+            } else {
+                // Padrão: Últimos 30 dias OU status não finalizado
+                const defaultDate = new Date();
+                defaultDate.setDate(defaultDate.getDate() - 30);
+                const dateStr = defaultDate.toISOString().split('T')[0];
+                query = query.or(`date.gte.${dateStr},and(status.not.in.("${OrderStatus.COMPLETED}","${OrderStatus.FINISHED}","${OrderStatus.CANCELED}"))`);
+            }
+
+            if (endDate) {
+                query = query.lte('date', `${endDate}T23:59:59.999Z`);
+            }
+
+            const { data, error } = await query;
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                allData = allData.concat(data);
+                page++;
+                if (data.length < limit) hasMore = false;
+            } else {
+                hasMore = false;
+            }
         }
 
-        if (endDate) {
-            // Garante que o filtro inclua todo o dia selecionado (até o último segundo)
-            query = query.lte('date', `${endDate}T23:59:59.999Z`);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-        return (data || []).map((s: any) => ({
+        return allData.map((s: any) => ({
             id: s.id,
             date: s.date,
             customerName: s.customer_name,
