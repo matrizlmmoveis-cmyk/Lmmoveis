@@ -10,6 +10,10 @@ import html2canvas from 'html2canvas';
 
 import { supabaseService } from '../services/supabaseService.ts';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
+import { nfEmailService } from '../services/nfe/nfeService.ts';
+import { SEFAZTxtGenerator } from '../services/nfe/sefazGenerator.ts';
+import { NFeIssuer, NFeDest, NFeItem } from '../services/nfe/types.ts';
+import { FileText, Receipt, Loader2 } from 'lucide-react';
 
 interface SalesProps {
   user?: any;
@@ -43,6 +47,146 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [storeFilter, setStoreFilter] = useState('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [nfeStatuses, setNfeStatuses] = useState<Record<string, { status: 'idle' | 'success' | 'error', errorMessage: string, isEmitting: boolean }>>({});
+
+  const handleEmitNFeList = async (sale: Sale, isNfce: boolean = false) => {
+    setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'idle', errorMessage: '', isEmitting: true } }));
+
+    try {
+      const settings = await supabaseService.getNFeSettings();
+      if (!settings) throw new Error("As configurações de NF-e não foram encontradas.");
+      
+      const customer = customers.find(c => c.document === sale.customerCpf);
+      if (!customer) throw new Error("Dados do cliente não encontrados no cadastro.");
+
+      const store = stores.find(s => s.id === sale.storeId);
+
+      const issuer: NFeIssuer = {
+        name: settings.issuer.name || store?.name || 'Móveis LM',
+        cnpj: settings.cnpj,
+        state: settings.issuer.state || 'RJ',
+        ibge: settings.issuer.ibge || '3304557',
+        street: settings.issuer.street || store?.location || 'Rua Principal',
+        number: settings.issuer.number || '0',
+        neighborhood: settings.issuer.neighborhood || 'Centro',
+        city: settings.issuer.city || 'Rio de Janeiro',
+        cep: settings.issuer.cep || '00000000'
+      };
+
+      let street = customer.address || '';
+      let number = customer.number || 'S/N';
+      let neighborhood = customer.neighborhood || '';
+      let city = customer.city || '';
+      let state = customer.state || '';
+      let cep = customer.zipCode || '';
+
+      if (customer.address?.startsWith('{')) {
+        try {
+          const addrObj = JSON.parse(customer.address);
+          street = addrObj.street || street;
+          number = addrObj.number || number;
+          neighborhood = addrObj.neighborhood || neighborhood;
+          city = addrObj.city || city;
+          state = addrObj.state || state;
+          cep = addrObj.cep || addrObj.zipCode || cep;
+        } catch (e) {}
+      }
+
+      const dest: NFeDest = {
+        name: customer.name,
+        document: customer.document,
+        type: customer.type === 'PJ' ? 'CNPJ' : 'CPF',
+        email: customer.email,
+        street, number, neighborhood, city, state, cep,
+        ibge: settings.issuer.ibge || '3304557'
+      };
+
+      const items: NFeItem[] = sale.items.map(item => {
+        const prod = products.find(p => p.id === item.productId);
+        return {
+          description: prod?.name || 'Produto',
+          ncm: prod?.ncm || '94036000',
+          cfop: prod?.cfop || '5102',
+          unit: prod?.unidade || 'UN',
+          qty: item.quantity,
+          unitValue: item.price,
+          totalValue: item.price * item.quantity * (1 - (item.discount || 0) / 100),
+          code: prod?.productCode?.toString() || prod?.id || '0'
+        };
+      });
+
+      let currentNumber = settings.nextNumber;
+      if (isNfce) {
+        const userInput = window.prompt("Número da NFC-e:", "5");
+        if (!userInput) {
+          setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'idle', errorMessage: 'Cancelado', isEmitting: false } }));
+          return;
+        }
+        currentNumber = parseInt(userInput, 10);
+      }
+
+      nfEmailService.setConfig({ cnpj: settings.cnpj, apiKey: settings.apiKey });
+
+      let txtContent = SEFAZTxtGenerator.generate(
+        issuer, dest, items, currentNumber, settings.currentSeries, settings.environment, settings.taxRegime
+      );
+
+      if (isNfce) {
+        let lines = txtContent.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].startsWith('B|')) {
+            let bFields = lines[i].split('|');
+            if (bFields[4] === '55') bFields[4] = '65'; // mod
+            if (bFields.length > 12) bFields[12] = '4'; // tpImp
+            if (bFields.length > 18) bFields[18] = '4'; // indPres = 4 (Entrega a domicílio)
+            if (bFields.length > 19) bFields[19] = '0'; // indIntermed = 0 (Sem intermediador)
+            lines[i] = bFields.join('|');
+            break;
+          }
+        }
+        txtContent = lines.join('\n');
+      }
+
+      const response = await nfEmailService.sendNFe(txtContent);
+      const nfeId = response.id || response.nfe_id;
+
+      if (response && nfeId) {
+        let finalKey = response.chave || '';
+        let finalStatus = response.status || 'Enviada';
+
+        if (!finalKey) {
+          try {
+            const statusRaw = await nfEmailService.getNFeStatus(nfeId);
+            const statusData = JSON.parse(statusRaw);
+            const nfeDetails = statusData?.ListaNotaFiscal?.[0];
+            if (nfeDetails) {
+              finalKey = nfeDetails.nfe_chave || '';
+              finalStatus = nfeDetails.dsc_processo || 'Processando';
+            }
+          } catch (e) {}
+        }
+
+        await supabaseService.updateSaleNFe(sale.id, {
+          number: currentNumber,
+          series: settings.currentSeries,
+          key: finalKey,
+          status: finalStatus,
+          nfeId: nfeId,
+          settingsId: settings.id
+        });
+
+        setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'success', errorMessage: '', isEmitting: false } }));
+        alert(`Nota emitida com sucesso! (Chave: ${finalKey})`);
+      } else {
+        throw new Error(`NF-e: ${response.rawResponse || response.message || "Sem ID de retorno"}`);
+      }
+
+    } catch (error: any) {
+      console.error(error);
+      setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'error', errorMessage: error.message || "Erro desconhecido", isEmitting: false } }));
+      alert(`Erro na emissão: ${error.message || "Erro desconhecido"}`);
+    }
+  };
 
   // Lógica de acesso por unidade para colunas de logística
   const isAdminOrSupervisor = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master';
@@ -947,13 +1091,14 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {filteredSales.map(sale => {
                 const hasAssembly = sale.assemblyRequired || sale.items?.some(i => i.assemblyRequired);
                 const isDelivered = sale.status === OrderStatus.COMPLETED || sale.status === OrderStatus.DELIVERED;
                 const showAguardandoMontagem = isDelivered && hasAssembly;
                 return (
-                  <tr key={sale.id} className={`hover:bg-slate-50/50 transition-colors ${selectedSaleIds.includes(sale.id) ? 'bg-blue-50/30' : ''}`}>
+                  <React.Fragment key={sale.id}>
+                    <tr className={`hover:bg-slate-50/50 transition-colors border-t border-slate-100 ${selectedSaleIds.includes(sale.id) ? 'bg-blue-50/30' : ''}`}>
                     {isAdminOrSupervisor && (
                       <td className="px-6 py-4">
                         <button
@@ -972,6 +1117,26 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                             Montagem
                           </span>
                         )}
+                        <div className="flex gap-1 mt-2">
+                          <button
+                            onClick={() => handleEmitNFeList(sale, false)}
+                            disabled={nfeStatuses[sale.id]?.isEmitting || nfeStatuses[sale.id]?.status === 'success' || !!sale.nfeId}
+                            className="flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-1.5 py-0.5 rounded text-[8px] font-black uppercase disabled:opacity-50"
+                            title={nfeStatuses[sale.id]?.errorMessage || "Emitir NFe (55)"}
+                          >
+                            {nfeStatuses[sale.id]?.isEmitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <FileText className="w-2.5 h-2.5" />}
+                            NF-e
+                          </button>
+                          <button
+                            onClick={() => handleEmitNFeList(sale, true)}
+                            disabled={nfeStatuses[sale.id]?.isEmitting || nfeStatuses[sale.id]?.status === 'success' || !!sale.nfeId}
+                            className="flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-1.5 py-0.5 rounded text-[8px] font-black uppercase disabled:opacity-50"
+                            title={nfeStatuses[sale.id]?.errorMessage || "Emitir NFCe (65)"}
+                          >
+                            {nfeStatuses[sale.id]?.isEmitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Receipt className="w-2.5 h-2.5" />}
+                            NFC-e
+                          </button>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4"><p className="font-medium text-slate-700 text-sm uppercase">{sale.customerName}</p><p className="text-[10px] text-slate-400">{new Date(sale.date).toLocaleDateString()}</p></td>
@@ -1103,6 +1268,20 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                       </div>
                     </td>
                   </tr>
+                  <tr className={`${selectedSaleIds.includes(sale.id) ? 'bg-blue-50/20' : 'bg-slate-50/30'}`}>
+                    <td colSpan={isAdminOrSupervisor ? 4 : 3}></td>
+                    <td colSpan={6} className="px-6 pb-4 pt-0 text-left">
+                       <div className="flex justify-start gap-8 text-[10px] text-slate-500 uppercase font-medium -mt-3">
+                         <span className="font-black text-slate-700">Total: {sale.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                         {sale.payments?.map((p, idx) => (
+                           <span key={p.id || idx}>
+                             {p.method}: <span className="font-bold text-emerald-600">{p.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                           </span>
+                         ))}
+                       </div>
+                    </td>
+                  </tr>
+                </React.Fragment>
                 );
               })}
             </tbody>

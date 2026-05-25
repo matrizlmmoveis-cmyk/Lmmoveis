@@ -437,7 +437,11 @@ export const supabaseService = {
                 method: p.method,
                 amount: p.amount,
                 status: p.status
-            }))
+            })),
+            nfeId: s.nfe_id || undefined,
+            nfeNumber: s.nfe_number || undefined,
+            nfeStatus: s.nfe_status || undefined,
+            nfeKey: s.nfe_key || undefined
         })) as Sale[];
     },
 

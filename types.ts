@@ -158,6 +158,10 @@ export interface Sale {
   deliverySignature?: string; // Assinatura em Base64
   deliveryPhoto?: string;     // Foto em Base64 (baixa resolução)
   assemblyCompletedAt?: string; // Data/hora de conclusão da montagem
+  nfeId?: string;
+  nfeNumber?: number;
+  nfeStatus?: string;
+  nfeKey?: string;
 }
 
 export interface InventoryMovement {
