@@ -172,7 +172,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
           key: finalKey,
           status: finalStatus,
           nfeId: nfeId,
-          settingsId: settings.id
+          settingsId: settings.id,
+          isNfce: isNfce
         });
 
         setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'success', errorMessage: '', isEmitting: false } }));

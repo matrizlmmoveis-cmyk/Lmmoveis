@@ -1695,7 +1695,8 @@ export const supabaseService = {
         key: string,
         status: string,
         nfeId: string,
-        settingsId: string
+        settingsId: string,
+        isNfce?: boolean
     }) {
         // 1. Atualizar a venda (tabela sales)
         const { error: saleError } = await supabase.from('sales').update({
@@ -1708,13 +1709,15 @@ export const supabaseService = {
 
         if (saleError) throw saleError;
 
-        // 2. Incrementar o próximo número na nfe_settings usando o ID dinâmico
-        const { error: settingsError } = await supabase.from('nfe_settings')
-            .update({ next_number: nfeData.number + 1 })
-            .eq('id', nfeData.settingsId);
+        // 2. Incrementar o próximo número na nfe_settings usando o ID dinâmico APENAS se for NFe (55)
+        if (!nfeData.isNfce) {
+            const { error: settingsError } = await supabase.from('nfe_settings')
+                .update({ next_number: nfeData.number + 1 })
+                .eq('id', nfeData.settingsId);
 
-        if (settingsError) {
-            console.error("Erro ao incrementar número da NFe:", settingsError);
+            if (settingsError) {
+                console.error("Erro ao incrementar número da NFe:", settingsError);
+            }
         }
     },
 
