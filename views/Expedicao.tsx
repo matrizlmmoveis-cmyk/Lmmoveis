@@ -49,7 +49,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
     const [stats, setStats] = useState({ pendente: 0, separado: 0, indisponivel: 0 });
     const [filterStore, setFilterStore] = useState('Todos');
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-    const [activeTab, setActiveTab] = useState<'SEPARACAO' | 'DEVOLUCOES' | 'ATACADO'>('SEPARACAO');
+    const [activeTab, setActiveTab] = useState<'SEPARACAO' | 'SEPARADAS' | 'DEVOLUCOES' | 'ATACADO'>('SEPARACAO');
     const [wholesaleReservations, setWholesaleReservations] = useState<WholesaleReservation[]>([]);
     const [devolutionItems, setDevolutionItems] = useState<any[]>([]);
     const [devReturnModal, setDevReturnModal] = useState<{ itemId: string; productName: string; qty: number; locationId: string } | null>(null);
@@ -70,7 +70,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
           sales!inner(id, customer_name, store_id, created_at),
           products(name, sku, image_url)
         `)
-                .eq('dispatch_status', 'PENDENTE')
+                .in('dispatch_status', ['PENDENTE', 'SEPARADO'])
                 .order('sale_id');
 
             if (error) throw error;
@@ -218,6 +218,9 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
     // Filtrar e preparar dados para renderização
     const filteredUnits = Array.from(unitsMap.entries()).map(([unitId, unitItems]) => {
         const filteredItems = unitItems.filter(item => {
+            if (activeTab === 'SEPARACAO' && item.dispatch_status !== 'PENDENTE') return false;
+            if (activeTab === 'SEPARADAS' && item.dispatch_status !== 'SEPARADO') return false;
+
             if (!search) return true;
             const s = search.toLowerCase();
             return (
@@ -257,7 +260,8 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
 
             {/* Tabs */}
             <div className="flex gap-2 p-1.5 bg-slate-200/50 rounded-2xl">
-                <button onClick={() => setActiveTab('SEPARACAO')} className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'SEPARACAO' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}>📦 Separação ({stats.pendente} pendentes)</button>
+                <button onClick={() => setActiveTab('SEPARACAO')} className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'SEPARACAO' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}>📦 Separação ({stats.pendente})</button>
+                <button onClick={() => setActiveTab('SEPARADAS')} className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'SEPARADAS' ? 'bg-white text-emerald-700 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}>✅ Separadas ({stats.separado})</button>
                 <button onClick={() => setActiveTab('ATACADO')} className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'ATACADO' ? 'bg-white text-blue-700 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}>🏢 Atacado ({wholesaleReservations.length})</button>
                 <button onClick={() => setActiveTab('DEVOLUCOES')} className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'DEVOLUCOES' ? 'bg-white text-red-700 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}>↩️ Devoluções ({devolutionItems.length})</button>
             </div>
@@ -291,7 +295,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
             </div>
 
             {/* Renderizar abas condicionalmente */}
-            {activeTab === 'SEPARACAO' ? (
+            {activeTab === 'SEPARACAO' || activeTab === 'SEPARADAS' ? (
                 loading ? (
                     <div className="flex items-center justify-center p-20">
                         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
@@ -299,8 +303,8 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                 ) : filteredUnits.length === 0 ? (
                     <div className="text-center py-20 bg-white rounded-3xl border border-slate-100">
                         <CheckCircle className="w-16 h-16 text-emerald-400 mx-auto mb-4" />
-                        <h3 className="text-xl font-black text-slate-900">Tudo separado!</h3>
-                        <p className="text-slate-500 mt-2">Não há itens pendentes de separação no momento.</p>
+                        <h3 className="text-xl font-black text-slate-900">{activeTab === 'SEPARACAO' ? 'Tudo separado!' : 'Nenhum item separado!'}</h3>
+                        <p className="text-slate-500 mt-2">{activeTab === 'SEPARACAO' ? 'Não há itens pendentes de separação no momento.' : 'Não há itens separados no momento.'}</p>
                     </div>
                 ) : (
                     <div className="space-y-8">
@@ -351,22 +355,31 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                                                         </div>
 
                                                         <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => markIndisponivel(item)}
-                                                                disabled={isProcessing}
-                                                                title="Indisponível"
-                                                                className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
-                                                            >
-                                                                <XCircle className="w-5 h-5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => markSeparado(item)}
-                                                                disabled={isProcessing}
-                                                                className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-2xl text-xs font-black hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-emerald-500/20"
-                                                            >
-                                                                {isProcessing ? <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                                                                SEPARADO
-                                                            </button>
+                                                            {item.dispatch_status === 'PENDENTE' && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => markIndisponivel(item)}
+                                                                        disabled={isProcessing}
+                                                                        title="Indisponível"
+                                                                        className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
+                                                                    >
+                                                                        <XCircle className="w-5 h-5" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => markSeparado(item)}
+                                                                        disabled={isProcessing}
+                                                                        className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-2xl text-xs font-black hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-emerald-500/20"
+                                                                    >
+                                                                        {isProcessing ? <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                                                                        SEPARADO
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            {item.dispatch_status === 'SEPARADO' && (
+                                                                <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl text-xs font-black">
+                                                                    <CheckCircle className="w-4 h-4" /> SEPARADO
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

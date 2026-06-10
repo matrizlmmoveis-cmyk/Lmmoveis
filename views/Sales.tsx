@@ -55,7 +55,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     try {
       const settings = await supabaseService.getNFeSettings();
       if (!settings) throw new Error("As configurações de NF-e não foram encontradas.");
-      
+
       const customer = customers.find(c => c.document === sale.customerCpf);
       if (!customer) throw new Error("Dados do cliente não encontrados no cadastro.");
 
@@ -89,7 +89,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
           city = addrObj.city || city;
           state = addrObj.state || state;
           cep = addrObj.cep || addrObj.zipCode || cep;
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const dest: NFeDest = {
@@ -163,7 +163,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
               finalKey = nfeDetails.nfe_chave || '';
               finalStatus = nfeDetails.dsc_processo || 'Processando';
             }
-          } catch (e) {}
+          } catch (e) { }
         }
 
         await supabaseService.updateSaleNFe(sale.id, {
@@ -1100,189 +1100,203 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 return (
                   <React.Fragment key={sale.id}>
                     <tr className={`hover:bg-slate-50/50 transition-colors border-t border-slate-100 ${selectedSaleIds.includes(sale.id) ? 'bg-blue-50/30' : ''}`}>
-                    {isAdminOrSupervisor && (
+                      {isAdminOrSupervisor && (
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => setSelectedSaleIds(prev => prev.includes(sale.id) ? prev.filter(id => id !== sale.id) : [...prev, sale.id])}
+                            className={`${selectedSaleIds.includes(sale.id) ? 'text-blue-600' : 'text-slate-300'} transition-colors`}
+                          >
+                            {selectedSaleIds.includes(sale.id) ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                          </button>
+                        </td>
+                      )}
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() => setSelectedSaleIds(prev => prev.includes(sale.id) ? prev.filter(id => id !== sale.id) : [...prev, sale.id])}
-                          className={`${selectedSaleIds.includes(sale.id) ? 'text-blue-600' : 'text-slate-300'} transition-colors`}
-                        >
-                          {selectedSaleIds.includes(sale.id) ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
-                        </button>
-                      </td>
-                    )}
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-black text-blue-600 text-sm">#{sale.id}</span>
-                        {hasAssembly && (
-                          <span className="text-[9px] font-black text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 uppercase w-fit mt-1">
-                            Montagem
-                          </span>
-                        )}
-                        <div className="flex gap-1 mt-2">
-                          <button
-                            onClick={() => handleEmitNFeList(sale, false)}
-                            disabled={nfeStatuses[sale.id]?.isEmitting || nfeStatuses[sale.id]?.status === 'success' || !!sale.nfeId}
-                            className="flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-1.5 py-0.5 rounded text-[8px] font-black uppercase disabled:opacity-50"
-                            title={nfeStatuses[sale.id]?.errorMessage || "Emitir NFe (55)"}
-                          >
-                            {nfeStatuses[sale.id]?.isEmitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <FileText className="w-2.5 h-2.5" />}
-                            NF-e
-                          </button>
-                          <button
-                            onClick={() => handleEmitNFeList(sale, true)}
-                            disabled={nfeStatuses[sale.id]?.isEmitting || nfeStatuses[sale.id]?.status === 'success' || !!sale.nfeId}
-                            className="flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-1.5 py-0.5 rounded text-[8px] font-black uppercase disabled:opacity-50"
-                            title={nfeStatuses[sale.id]?.errorMessage || "Emitir NFCe (65)"}
-                          >
-                            {nfeStatuses[sale.id]?.isEmitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Receipt className="w-2.5 h-2.5" />}
-                            NFC-e
-                          </button>
+                        <div className="flex flex-col">
+                          <span className="font-black text-blue-600 text-sm">#{sale.id}</span>
+                          {hasAssembly && (
+                            <span className="text-[9px] font-black text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 uppercase w-fit mt-1">
+                              Montagem
+                            </span>
+                          )}
+                          <div className="flex gap-1 mt-2 w-full">
+                            <button
+                              onClick={() => handleEmitNFeList(sale, false)}
+                              disabled={nfeStatuses[sale.id]?.isEmitting || nfeStatuses[sale.id]?.status === 'success' || !!sale.nfeId}
+                              className="flex flex-col items-center justify-center flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-1 py-1 rounded disabled:opacity-50 transition-colors"
+                              title={nfeStatuses[sale.id]?.errorMessage || "Emitir NFe (55)"}
+                            >
+                              <div className="flex items-center gap-1 text-[8px] font-black uppercase">
+                                {nfeStatuses[sale.id]?.isEmitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <FileText className="w-2.5 h-2.5" />}
+                                NF-e
+                              </div>
+                              {sale.nfeId && sale.nfeNumber && (
+                                <span className="text-[7px] font-bold text-emerald-100 mt-0.5 tracking-wider">
+                                  Nº {sale.nfeNumber}
+                                </span>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleEmitNFeList(sale, true)}
+                              disabled={nfeStatuses[sale.id]?.isEmitting || nfeStatuses[sale.id]?.status === 'success' || !!sale.nfeId}
+                              className="flex flex-col items-center justify-center flex-1 bg-blue-600 hover:bg-blue-700 text-white px-1 py-1 rounded disabled:opacity-50 transition-colors"
+                              title={nfeStatuses[sale.id]?.errorMessage || "Emitir NFCe (65)"}
+                            >
+                              <div className="flex items-center gap-1 text-[8px] font-black uppercase">
+                                {nfeStatuses[sale.id]?.isEmitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Receipt className="w-2.5 h-2.5" />}
+                                NFC-e
+                              </div>
+                              {sale.nfeId && sale.nfeNumber && (
+                                <span className="text-[7px] font-bold text-blue-100 mt-0.5 tracking-wider">
+                                  Nº {sale.nfeNumber}
+                                </span>
+                              )}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4"><p className="font-medium text-slate-700 text-sm uppercase">{sale.customerName}</p><p className="text-[10px] text-slate-400">{new Date(sale.date).toLocaleDateString()}</p></td>
-                    <td className="px-6 py-4"><span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{stores.find(s => s.id === sale.storeId)?.name}</span></td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        {/* Tag principal de status */}
-                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black border uppercase w-fit ${sale.status === OrderStatus.CANCELED ? 'bg-red-50 text-red-600 border-red-100' :
-                          (sale.status === OrderStatus.COMPLETED || sale.status === OrderStatus.DELIVERED) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                            'bg-blue-50 text-blue-600 border-blue-100'
-                          }`}>
-                          {sale.status}
-                        </span>
-                        {/* Segunda tag: Aguardando Montagem */}
-                        {showAguardandoMontagem && (
-                          <span className="px-2 py-1 rounded-lg text-[10px] font-black border uppercase w-fit bg-amber-50 text-amber-700 border-amber-200">
-                            Aguardando Montagem
-                          </span>
-                        )}
-                        {sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (
-                          <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase animate-pulse">
-                            AGUARDANDO CONFERÊNCIA
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    {canSeeMotorista && (
-                      <td className="px-6 py-4">
-                        <select
-                          className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-blue-500"
-                          value={sale.assignedDriverId || ''}
-                          onChange={(e) => handleAssignLogistics(sale.id, e.target.value, 'entrega')}
-                        >
-                          <option value="">Selecionar</option>
-                          {employees.filter(e => e.role === 'MOTORISTA').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                        </select>
                       </td>
-                    )}
-                    {canSeeMontador && (
+                      <td className="px-6 py-4"><p className="font-medium text-slate-700 text-sm uppercase">{sale.customerName}</p><p className="text-[10px] text-slate-400">{new Date(sale.date).toLocaleDateString()}</p></td>
+                      <td className="px-6 py-4"><span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{stores.find(s => s.id === sale.storeId)?.name}</span></td>
                       <td className="px-6 py-4">
-                        <select
-                          className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-emerald-500"
-                          value={sale.assignedAssemblerId || ''}
-                          onChange={(e) => handleAssignLogistics(sale.id, e.target.value, 'montagem')}
-                        >
-                          <option value="">Selecionar</option>
-                          {employees.filter(e => e.role === 'MONTADOR').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                        </select>
+                        <div className="flex flex-col gap-1">
+                          {/* Tag principal de status */}
+                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black border uppercase w-fit ${sale.status === OrderStatus.CANCELED ? 'bg-red-50 text-red-600 border-red-100' :
+                            (sale.status === OrderStatus.COMPLETED || sale.status === OrderStatus.DELIVERED) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                              'bg-blue-50 text-blue-600 border-blue-100'
+                            }`}>
+                            {sale.status}
+                          </span>
+                          {/* Segunda tag: Aguardando Montagem */}
+                          {showAguardandoMontagem && (
+                            <span className="px-2 py-1 rounded-lg text-[10px] font-black border uppercase w-fit bg-amber-50 text-amber-700 border-amber-200">
+                              Aguardando Montagem
+                            </span>
+                          )}
+                          {sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (
+                            <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase animate-pulse">
+                              AGUARDANDO CONFERÊNCIA
+                            </span>
+                          )}
+                        </div>
                       </td>
-                    )}
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => setSelectedRomaneioHistory(sale)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Histórico de Logística">
-                          <Calendar className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => setSelectedSale(sale)} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-black uppercase"><Eye className="w-4 h-4" /> Ver</button>
-                        {/* Botão Retirada — cliente retira na loja sem precisar de entrega */}
-                        {(user?.role === 'GERENTE' || isAdminOrSupervisor) &&
-                          (sale.status === OrderStatus.PENDING || sale.status === OrderStatus.AWAITING_LOAD) && (
-                            <button
-                              onClick={async () => {
-                                if (!window.confirm(`Confirmar RETIRADA da venda #${sale.id}? O cliente está retirando o produto na loja.`)) return;
-                                try {
-                                  await supabaseService.updateSale(sale.id, { status: OrderStatus.COMPLETED });
-                                  setSales(prev => prev.map(s => s.id === sale.id ? { ...s, status: OrderStatus.COMPLETED } : s));
-                                } catch { alert('Erro ao registrar retirada.'); }
-                              }}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg text-xs font-black uppercase border border-teal-200"
-                            >
-                              <CheckCircle2 className="w-4 h-4" /> Retirada
-                            </button>
+                      {canSeeMotorista && (
+                        <td className="px-6 py-4">
+                          <select
+                            className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-blue-500"
+                            value={sale.assignedDriverId || ''}
+                            onChange={(e) => handleAssignLogistics(sale.id, e.target.value, 'entrega')}
+                          >
+                            <option value="">Selecionar</option>
+                            {employees.filter(e => e.role === 'MOTORISTA').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                          </select>
+                        </td>
+                      )}
+                      {canSeeMontador && (
+                        <td className="px-6 py-4">
+                          <select
+                            className="text-[10px] font-bold uppercase p-1 bg-slate-50 border border-slate-200 rounded w-full outline-none focus:border-emerald-500"
+                            value={sale.assignedAssemblerId || ''}
+                            onChange={(e) => handleAssignLogistics(sale.id, e.target.value, 'montagem')}
+                          >
+                            <option value="">Selecionar</option>
+                            {employees.filter(e => e.role === 'MONTADOR').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                          </select>
+                        </td>
+                      )}
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => setSelectedRomaneioHistory(sale)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Histórico de Logística">
+                            <Calendar className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setSelectedSale(sale)} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-black uppercase"><Eye className="w-4 h-4" /> Ver</button>
+                          {/* Botão Retirada — cliente retira na loja sem precisar de entrega */}
+                          {(user?.role === 'GERENTE' || isAdminOrSupervisor) &&
+                            (sale.status === OrderStatus.PENDING || sale.status === OrderStatus.AWAITING_LOAD) && (
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm(`Confirmar RETIRADA da venda #${sale.id}? O cliente está retirando o produto na loja.`)) return;
+                                  try {
+                                    await supabaseService.updateSale(sale.id, { status: OrderStatus.COMPLETED });
+                                    setSales(prev => prev.map(s => s.id === sale.id ? { ...s, status: OrderStatus.COMPLETED } : s));
+                                  } catch { alert('Erro ao registrar retirada.'); }
+                                }}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg text-xs font-black uppercase border border-teal-200"
+                              >
+                                <CheckCircle2 className="w-4 h-4" /> Retirada
+                              </button>
+                            )}
+                          {isAdminOrSupervisor && sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (
+                            <button onClick={() => { const p = sale.payments.find(p => p.status === 'AGUARDANDO_ACERTO'); if (p) handleConfirmPayment(sale.id, p.amount); }} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black uppercase shadow-sm"><DollarSign className="w-4 h-4" /> Receber</button>
                           )}
-                        {isAdminOrSupervisor && sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (
-                          <button onClick={() => { const p = sale.payments.find(p => p.status === 'AGUARDANDO_ACERTO'); if (p) handleConfirmPayment(sale.id, p.amount); }} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black uppercase shadow-sm"><DollarSign className="w-4 h-4" /> Receber</button>
-                        )}
-                        {/* Botão Pago na Loja para gerentes — pagamento de entrega recebido no balcão */}
-                        {sale.payments?.some(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO')) &&
-                          (user?.role === 'GERENTE') && (
-                            <button
-                              onClick={async () => {
-                                const p = sale.payments.find(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));
-                                if (!p) return;
-                                if (!window.confirm(`Confirmar que o cliente pagou R$ ${p.amount.toFixed(2)} na loja? O motorista NÃO deve cobrar na entrega.`)) return;
-                                try {
-                                  await supabaseService.markPaymentPaidAtStore(sale.id, p.amount);
-                                  setSales(prev => prev.map(s => s.id === sale.id ? { ...s, payments: s.payments.map(pay => pay.method === 'Entrega' && pay.amount === p.amount ? { ...pay, status: 'PAGO_EM_LOJA' as any } : pay) } : s));
-                                } catch { alert('Erro ao registrar pagamento na loja.'); }
-                              }}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-xs font-black uppercase border border-violet-200"
-                            >
-                              <DollarSign className="w-4 h-4" /> Pago na Loja
-                            </button>
+                          {/* Botão Pago na Loja para gerentes — pagamento de entrega recebido no balcão */}
+                          {sale.payments?.some(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO')) &&
+                            (user?.role === 'GERENTE') && (
+                              <button
+                                onClick={async () => {
+                                  const p = sale.payments.find(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));
+                                  if (!p) return;
+                                  if (!window.confirm(`Confirmar que o cliente pagou R$ ${p.amount.toFixed(2)} na loja? O motorista NÃO deve cobrar na entrega.`)) return;
+                                  try {
+                                    await supabaseService.markPaymentPaidAtStore(sale.id, p.amount);
+                                    setSales(prev => prev.map(s => s.id === sale.id ? { ...s, payments: s.payments.map(pay => pay.method === 'Entrega' && pay.amount === p.amount ? { ...pay, status: 'PAGO_EM_LOJA' as any } : pay) } : s));
+                                  } catch { alert('Erro ao registrar pagamento na loja.'); }
+                                }}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-xs font-black uppercase border border-violet-200"
+                              >
+                                <DollarSign className="w-4 h-4" /> Pago na Loja
+                              </button>
+                            )}
+                          {sale.payments?.some(p => p.method === 'Entrega' && p.status === 'PAGO_EM_LOJA') && (
+                            <span className="text-[9px] font-black text-violet-700 bg-violet-50 px-2 py-1 rounded border border-violet-200 uppercase">Pago na Loja</span>
                           )}
-                        {sale.payments?.some(p => p.method === 'Entrega' && p.status === 'PAGO_EM_LOJA') && (
-                          <span className="text-[9px] font-black text-violet-700 bg-violet-50 px-2 py-1 rounded border border-violet-200 uppercase">Pago na Loja</span>
-                        )}
-                        {/* Botão Editar Venda */}
-                        {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || (user?.role === 'GERENTE' && sale.storeId === user?.storeId)) &&
-                          sale.status !== OrderStatus.CANCELED &&
-                          sale.status !== OrderStatus.CANCEL_PENDING &&
-                          sale.status !== OrderStatus.COMPLETED &&
-                          sale.status !== OrderStatus.EDIT_PENDING && (
-                            <button
-                              onClick={() => setEditRequest({
-                                sale,
-                                editedItems: sale.items ? [...sale.items] : [],
-                                editedPayments: sale.payments ? [...sale.payments] : [],
-                                justification: '',
-                                productSearch: '',
-                                submitting: false,
-                                editedObs: sale.deliveryObs || '',
-                                editedSellerId: sale.sellerId || ''
-                              })}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-black uppercase border border-amber-200"
-                            >
-                              ✏️ Editar
-                            </button>
+                          {/* Botão Editar Venda */}
+                          {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || (user?.role === 'GERENTE' && sale.storeId === user?.storeId)) &&
+                            sale.status !== OrderStatus.CANCELED &&
+                            sale.status !== OrderStatus.CANCEL_PENDING &&
+                            sale.status !== OrderStatus.COMPLETED &&
+                            sale.status !== OrderStatus.EDIT_PENDING && (
+                              <button
+                                onClick={() => setEditRequest({
+                                  sale,
+                                  editedItems: sale.items ? [...sale.items] : [],
+                                  editedPayments: sale.payments ? [...sale.payments] : [],
+                                  justification: '',
+                                  productSearch: '',
+                                  submitting: false,
+                                  editedObs: sale.deliveryObs || '',
+                                  editedSellerId: sale.sellerId || ''
+                                })}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-black uppercase border border-amber-200"
+                              >
+                                ✏️ Editar
+                              </button>
+                            )}
+                          {sale.status === OrderStatus.EDIT_PENDING && (
+                            <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200 uppercase">Edição Pendente</span>
                           )}
-                        {sale.status === OrderStatus.EDIT_PENDING && (
-                          <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200 uppercase">Edição Pendente</span>
-                        )}
-                        {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || (user?.role === 'GERENTE' && sale.storeId === user?.storeId)) &&
-                          sale.status !== OrderStatus.CANCELED && sale.status !== OrderStatus.CANCEL_PENDING && (
-                            <button onClick={() => setCancelRequest({ saleId: sale.id, justification: '' })} className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-black uppercase"><Trash2 className="w-4 h-4" /> Cancelar</button>
+                          {(user?.username === 'Master' || user?.role === 'SUPERVISOR' || (user?.role === 'GERENTE' && sale.storeId === user?.storeId)) &&
+                            sale.status !== OrderStatus.CANCELED && sale.status !== OrderStatus.CANCEL_PENDING && (
+                              <button onClick={() => setCancelRequest({ saleId: sale.id, justification: '' })} className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-black uppercase"><Trash2 className="w-4 h-4" /> Cancelar</button>
+                            )}
+                          {sale.status === OrderStatus.CANCEL_PENDING && (
+                            <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-100 uppercase">Aguard. Autorização</span>
                           )}
-                        {sale.status === OrderStatus.CANCEL_PENDING && (
-                          <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-100 uppercase">Aguard. Autorização</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr className={`${selectedSaleIds.includes(sale.id) ? 'bg-blue-50/20' : 'bg-slate-50/30'}`}>
-                    <td colSpan={isAdminOrSupervisor ? 4 : 3}></td>
-                    <td colSpan={6} className="px-6 pb-4 pt-0 text-left">
-                       <div className="flex justify-start gap-8 text-[10px] text-slate-500 uppercase font-medium -mt-3">
-                         <span className="font-black text-slate-700">Total: {sale.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                         {sale.payments?.map((p, idx) => (
-                           <span key={p.id || idx}>
-                             {p.method}: <span className="font-bold text-emerald-600">{p.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                           </span>
-                         ))}
-                       </div>
-                    </td>
-                  </tr>
-                </React.Fragment>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr className={`${selectedSaleIds.includes(sale.id) ? 'bg-blue-50/20' : 'bg-slate-50/30'}`}>
+                      <td colSpan={isAdminOrSupervisor ? 4 : 3}></td>
+                      <td colSpan={6} className="px-6 pb-4 pt-0 text-left">
+                        <div className="flex justify-start gap-8 text-[10px] text-slate-500 uppercase font-medium -mt-3">
+                          <span className="font-black text-slate-700">Total: {sale.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                          {sale.payments?.map((p, idx) => (
+                            <span key={p.id || idx}>
+                              {p.method}: <span className="font-bold text-emerald-600">{p.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 );
               })}
             </tbody>
