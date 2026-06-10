@@ -19,6 +19,7 @@ interface SaleItem {
         customer_name: string;
         store_id: string;
         created_at: string;
+        date?: string;
     };
     products?: {
         name: string;
@@ -50,6 +51,12 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
     const [filterStore, setFilterStore] = useState('Todos');
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [activeTab, setActiveTab] = useState<'SEPARACAO' | 'SEPARADAS' | 'DEVOLUCOES' | 'ATACADO'>('SEPARACAO');
+    
+    const today = new Date().toISOString().split('T')[0];
+    const [sepStartDate, setSepStartDate] = useState(today);
+    const [sepEndDate, setSepEndDate] = useState(today);
+    const [sepUnitFilter, setSepUnitFilter] = useState('Todas');
+
     const [wholesaleReservations, setWholesaleReservations] = useState<WholesaleReservation[]>([]);
     const [devolutionItems, setDevolutionItems] = useState<any[]>([]);
     const [devReturnModal, setDevReturnModal] = useState<{ itemId: string; productName: string; qty: number; locationId: string } | null>(null);
@@ -62,16 +69,27 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
     const loadItems = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         try {
-            // Buscar itens pendentes de vendas do CD Norte
-            const { data, error } = await supabase
+            let query = supabase
                 .from('sale_items')
                 .select(`
           id, sale_id, product_id, quantity, price, dispatch_status, location_id,
-          sales!inner(id, customer_name, store_id, created_at),
+          sales!inner(id, customer_name, store_id, created_at, date),
           products(name, sku, image_url)
-        `)
-                .in('dispatch_status', ['PENDENTE', 'SEPARADO'])
-                .order('sale_id');
+        `);
+
+            if (activeTab === 'SEPARADAS' || activeTab === 'SEPARACAO') {
+                query = query.gte('sales.date', `${sepStartDate}T00:00:00`)
+                             .lte('sales.date', `${sepEndDate}T23:59:59`);
+
+                if (activeTab === 'SEPARADAS') {
+                    query = query.eq('dispatch_status', 'SEPARADO');
+                } else {
+                    query = query.eq('dispatch_status', 'PENDENTE');
+                }
+            }
+
+            // Buscar itens pendentes ou separados (conforme a aba) do CD Norte
+            const { data, error } = await query.order('sale_id');
 
             if (error) throw error;
 
@@ -112,7 +130,7 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
         } finally {
             if (!silent) setLoading(false);
         }
-    }, [stores, filterStore]);
+    }, [stores, filterStore, activeTab, sepStartDate, sepEndDate]);
 
     const loadDevolutions = useCallback(async () => {
         try {
@@ -140,6 +158,9 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
 
     useEffect(() => {
         loadItems();
+    }, [loadItems]);
+
+    useEffect(() => {
         loadDevolutions();
         loadWholesale();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -217,7 +238,9 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
 
     // Filtrar e preparar dados para renderização
     const filteredUnits = Array.from(unitsMap.entries()).map(([unitId, unitItems]) => {
-        const filteredItems = unitItems.filter(item => {
+        if (activeTab === 'SEPARADAS' && sepUnitFilter !== 'Todas' && unitId !== sepUnitFilter) return null;
+
+        let filteredItems = unitItems.filter(item => {
             if (activeTab === 'SEPARACAO' && item.dispatch_status !== 'PENDENTE') return false;
             if (activeTab === 'SEPARADAS' && item.dispatch_status !== 'SEPARADO') return false;
 
@@ -230,8 +253,19 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                 item.products?.sku?.toLowerCase().includes(s)
             );
         });
+
+        if (activeTab === 'SEPARADAS') {
+            filteredItems.sort((a, b) => {
+                const dateA = a.sales?.date ? new Date(a.sales.date).getTime() : 0;
+                const dateB = b.sales?.date ? new Date(b.sales.date).getTime() : 0;
+                return dateB - dateA;
+            });
+        } else {
+            filteredItems.sort((a, b) => a.sale_id.localeCompare(b.sale_id));
+        }
+
         return { unitId, items: filteredItems };
-    }).filter(u => u.items.length > 0);
+    }).filter(u => u !== null && u.items.length > 0) as { unitId: string, items: SaleItem[] }[];
 
     return (
         <div className="space-y-6 relative">
@@ -294,6 +328,31 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                 />
             </div>
 
+            {/* Filtros para Separadas / Separação */}
+            {(activeTab === 'SEPARADAS' || activeTab === 'SEPARACAO') && (
+                <div className="flex flex-col md:flex-row gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <div className="flex-1">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Venda: Data Inicial</label>
+                        <input type="date" value={sepStartDate} onChange={e => setSepStartDate(e.target.value)} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500" />
+                    </div>
+                    <div className="flex-1">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Venda: Data Final</label>
+                        <input type="date" value={sepEndDate} onChange={e => setSepEndDate(e.target.value)} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500" />
+                    </div>
+                    {activeTab === 'SEPARADAS' && (
+                        <div className="flex-[2]">
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Loja da Venda</label>
+                            <select value={sepUnitFilter} onChange={e => setSepUnitFilter(e.target.value)} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500">
+                                <option value="Todas">Todas as Lojas</option>
+                                {stores.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Renderizar abas condicionalmente */}
             {activeTab === 'SEPARACAO' || activeTab === 'SEPARADAS' ? (
                 loading ? (
@@ -330,9 +389,34 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                                                         <div className="flex justify-between items-start gap-2">
                                                             <p className="text-[10px] font-black text-blue-600 uppercase tracking-wider">{item.sale_id}</p>
                                                             <button
-                                                                onClick={() => {
+                                                                onClick={async () => {
                                                                     const sale = sales.find(s => s.id === item.sale_id);
-                                                                    if (sale) setSelectedSaleForReceipt(sale);
+                                                                    if (sale) {
+                                                                        setSelectedSaleForReceipt(sale);
+                                                                    } else {
+                                                                        try {
+                                                                            const { data, error } = await supabase.from('sales').select('*, items:sale_items(*), payments:sale_payments(*)').eq('id', item.sale_id).single();
+                                                                            if (data && !error) {
+                                                                                setSelectedSaleForReceipt({
+                                                                                    id: data.id, date: data.date, customerName: data.customer_name, customerCpf: data.customer_cpf,
+                                                                                    customerPhone: data.customer_phone, customerEmail: data.customer_email, customerReference: data.customer_reference,
+                                                                                    storeId: data.store_id, sellerId: data.seller_id, total: data.total, status: data.status,
+                                                                                    deliveryAddress: data.delivery_address, deliveryObs: data.delivery_obs, assemblyRequired: data.assembly_required,
+                                                                                    assignedDriverId: data.assigned_driver_id, assignedAssemblerId: data.assigned_assembler_id,
+                                                                                    assemblyCompletedAt: data.assembly_completed_at, deliveryDate: data.delivery_date,
+                                                                                    items: (data.items || []).map((i: any) => ({
+                                                                                        id: i.id, productId: i.product_id, quantity: i.quantity, price: i.price, discount: i.discount,
+                                                                                        originalPrice: i.original_price, locationId: i.location_id, assemblyRequired: i.assembly_required, dispatchStatus: i.dispatch_status
+                                                                                    })),
+                                                                                    payments: (data.payments || []).map((p: any) => ({ method: p.method, amount: p.amount, status: p.status }))
+                                                                                });
+                                                                            } else {
+                                                                                showToast('Não foi possível carregar a nota.', 'error');
+                                                                            }
+                                                                        } catch (e) {
+                                                                            showToast('Erro ao carregar nota.', 'error');
+                                                                        }
+                                                                    }
                                                                 }}
                                                                 className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 hover:bg-blue-100"
                                                             >
@@ -341,6 +425,9 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                                                         </div>
                                                         <h3 className="font-black text-slate-900 text-sm leading-tight mt-1 truncate">{item.products?.name}</h3>
                                                         <p className="font-bold text-slate-500 text-xs mt-1 truncate">👤 {item.sales?.customer_name}</p>
+                                                        <div className="mt-1 text-[10px] text-slate-400 font-medium">
+                                                            <p>Data da Venda: {new Date(item.sales?.date || item.sales?.created_at || '').toLocaleDateString('pt-BR')}</p>
+                                                        </div>
                                                     </div>
 
                                                     <div className="flex items-center justify-between text-xs pt-3 border-t border-slate-50">
