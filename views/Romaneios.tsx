@@ -221,7 +221,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
           <div class="border-container">
             ${selectedRomaneios.map(r => {
               const emp = allEmployees.find(e => e.id === r.employeeId);
-              const romaneioSales = sales.filter(s => r.saleIds.includes(s.id));
+              const romaneioSales = sales.filter(s => r.saleIds.includes(s.id) && s.status !== 'Cancelada' && s.status !== 'Cancelamento Pendente');
               return `
                 <div class="row">
                   <div class="col-info">
@@ -256,7 +256,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                         </tr>
                       </thead>
                       <tbody>
-                        ${romaneioSales.flatMap(s => s.items.filter(i => r.type === 'entrega' || i.assemblyRequired)).map(item => {
+                        ${romaneioSales.flatMap(s => s.items.filter(i => (r.type === 'entrega' || i.assemblyRequired) && !['DEVOLVER', 'CANCELADO', 'DEVOLVIDO'].includes(i.dispatchStatus || ''))).map(item => {
                           const prod = products.find(p => p.id === item.productId);
                           const storeName = stores.find(st => st.id === item.locationId)?.name || item.locationId || '—';
                           return `
@@ -283,7 +283,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
             }).join('')}
           </div>
           <div class="footer uppercase">
-            Móveis LM — Gerado em: ${new Date().toLocaleString('pt-BR')} — Romaneios: ${selectedRomaneios.length} — Itens: ${selectedRomaneios.reduce((acc, r) => acc + sales.filter(s => r.saleIds.includes(s.id)).reduce((a, s) => a + s.items.reduce((q, i) => q + i.quantity, 0), 0), 0)} UN
+            Móveis LM — Gerado em: ${new Date().toLocaleString('pt-BR')} — Romaneios: ${selectedRomaneios.length} — Itens: ${selectedRomaneios.reduce((acc, r) => acc + sales.filter(s => r.saleIds.includes(s.id) && s.status !== 'Cancelada' && s.status !== 'Cancelamento Pendente').reduce((a, s) => a + s.items.filter(i => !['DEVOLVER', 'CANCELADO', 'DEVOLVIDO'].includes(i.dispatchStatus || '')).reduce((q, i) => q + i.quantity, 0), 0), 0)} UN
           </div>
           <script>
             // Auto-trigger print if requested? User might prefer to click.
