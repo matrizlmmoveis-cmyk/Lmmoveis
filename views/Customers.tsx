@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Customer } from '../types.ts';
-import { Search, Plus, X, User, Building, MapPin, Loader2, Phone, Mail, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, X, User, Building, MapPin, Loader2, Phone, Mail, CheckCircle2, History, Package } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService.ts';
 
 interface CustomersProps {
@@ -15,6 +15,10 @@ const Customers: React.FC<CustomersProps> = ({ customers, setCustomers }) => {
   const [isLoadingApi, setIsLoadingApi] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState<'info' | 'history'>('info');
+  const [customerSales, setCustomerSales] = useState<any[]>([]);
+  const [isLoadingSales, setIsLoadingSales] = useState(false);
 
   const [formData, setFormData] = useState<Partial<Customer>>({
     type: 'PF',
@@ -141,13 +145,28 @@ const Customers: React.FC<CustomersProps> = ({ customers, setCustomers }) => {
     });
     setIsEditing(false);
     setSelectedCustomerId(null);
+    setActiveTab('info');
+  };
+
+  const loadCustomerSales = async (document: string) => {
+    setIsLoadingSales(true);
+    try {
+      const sales = await supabaseService.getCustomerSales(document);
+      setCustomerSales(sales);
+    } catch (err) {
+      console.error("Erro ao carregar histórico de vendas", err);
+    } finally {
+      setIsLoadingSales(false);
+    }
   };
 
   const handleEdit = (customer: Customer) => {
     setFormData({ ...customer });
     setSelectedCustomerId(customer.id);
     setIsEditing(true);
+    setActiveTab('info');
     setIsModalOpen(true);
+    loadCustomerSales(customer.document);
   };
 
   return (
@@ -245,7 +264,7 @@ const Customers: React.FC<CustomersProps> = ({ customers, setCustomers }) => {
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-black text-slate-900 uppercase">
-                  {isEditing ? 'Editar Cadastro' : 'Novo Cadastro'}
+                  {isEditing ? 'Detalhes do Cliente' : 'Novo Cadastro'}
                 </h2>
                 {isLoadingApi && <Loader2 className="w-5 h-5 animate-spin text-blue-600" />}
               </div>
@@ -254,6 +273,24 @@ const Customers: React.FC<CustomersProps> = ({ customers, setCustomers }) => {
               </button>
             </div>
 
+            {isEditing && (
+              <div className="flex border-b border-slate-100 bg-slate-50/50 px-6">
+                <button
+                  onClick={() => setActiveTab('info')}
+                  className={`py-3 px-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'info' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                >
+                  Informações
+                </button>
+                <button
+                  onClick={() => setActiveTab('history')}
+                  className={`py-3 px-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex items-center gap-2 ${activeTab === 'history' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                >
+                  <History className="w-3.5 h-3.5" /> Histórico de Vendas
+                </button>
+              </div>
+            )}
+
+            {activeTab === 'info' ? (
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div className="flex bg-slate-100 p-1 rounded-2xl w-fit">
                 <button
@@ -409,6 +446,49 @@ const Customers: React.FC<CustomersProps> = ({ customers, setCustomers }) => {
                 </button>
               </div>
             </form>
+            ) : (
+              <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                {isLoadingSales ? (
+                  <div className="flex justify-center p-10"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+                ) : customerSales.length === 0 ? (
+                  <div className="p-10 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-slate-400 font-bold uppercase text-xs">
+                    Nenhuma venda registrada para este cliente.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {customerSales.map(sale => (
+                      <div key={sale.id} className="p-4 bg-white border border-slate-200 shadow-sm rounded-2xl flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-black rounded-lg uppercase">
+                              #{sale.id}
+                            </span>
+                            <span className="text-xs font-bold text-slate-500">
+                              {new Date(sale.date).toLocaleDateString('pt-BR')}
+                            </span>
+                          </div>
+                          <span className="text-sm font-black text-slate-900">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(sale.total)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md">
+                            <Package className="w-3.5 h-3.5" />
+                            {sale.items.length} {sale.items.length === 1 ? 'item' : 'itens'}
+                          </div>
+                          <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase ${
+                            sale.status === 'Finalizado' || sale.status === 'Entregue' ? 'bg-emerald-100 text-emerald-700' : 
+                            sale.status === 'Cancelado' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                          }`}>
+                            {sale.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -363,6 +363,57 @@ export const supabaseService = {
     },
 
     // SALES
+    async getCustomerSales(customerDocument: string) {
+        const { data, error } = await supabase
+            .from('sales')
+            .select('*, items:sale_items(*), payments:sale_payments(*)')
+            .eq('customer_cpf', customerDocument)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        return (data || []).map((s: any) => ({
+            id: s.id,
+            date: s.date,
+            customerName: s.customer_name,
+            customerCpf: s.customer_cpf,
+            customerPhone: s.customer_phone,
+            customerEmail: s.customer_email,
+            customerReference: s.customer_reference,
+            storeId: s.store_id,
+            sellerId: s.seller_id,
+            total: s.total,
+            status: s.status,
+            deliveryAddress: s.delivery_address,
+            deliveryObs: s.delivery_obs,
+            assemblyRequired: s.assembly_required,
+            assignedDriverId: s.assigned_driver_id,
+            assignedAssemblerId: s.assigned_assembler_id,
+            assemblyCompletedAt: s.assembly_completed_at || null,
+            deliveryDate: s.delivery_date || null,
+            items: (s.items || []).map((i: any) => ({
+                id: i.id,
+                productId: i.product_id,
+                quantity: i.quantity,
+                price: i.price,
+                discount: i.discount,
+                originalPrice: i.original_price,
+                locationId: i.location_id,
+                assemblyRequired: i.assembly_required,
+                dispatchStatus: i.dispatch_status
+            })),
+            payments: (s.payments || []).map((p: any) => ({
+                method: p.method,
+                amount: p.amount,
+                status: p.status
+            })),
+            nfeId: s.nfe_id || undefined,
+            nfeNumber: s.nfe_number || undefined,
+            nfeStatus: s.nfe_status || undefined,
+            nfeKey: s.nfe_key || undefined
+        })) as Sale[];
+    },
+
     async getSales(startDate?: string, endDate?: string) {
         let allData: any[] = [];
         let hasMore = true;

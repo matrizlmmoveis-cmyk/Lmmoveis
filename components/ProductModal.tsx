@@ -65,7 +65,25 @@ const ProductModal: React.FC<ProductModalProps> = ({
         setIsLoadingMovements(true);
         try {
             const data = await supabaseService.getProductMovements(productId);
-            setMovements(data);
+            
+            // Deduplicar visualmente as movimentações para não duplicar a informação de vendas,
+            // garantindo que o saldo e as contagens reais não sejam afetados.
+            const uniqueMovements: any[] = [];
+            const seen = new Set();
+            
+            for (const mov of data) {
+                if (mov.reason === 'VENDA' && mov.referenceId) {
+                    const key = `${mov.referenceId}-${mov.type}-${mov.locationId}-${mov.reason}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        uniqueMovements.push(mov);
+                    }
+                } else {
+                    uniqueMovements.push(mov);
+                }
+            }
+            
+            setMovements(uniqueMovements);
         } catch (err) {
             console.error('Erro ao carregar movimentos:', err);
         } finally {
