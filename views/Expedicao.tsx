@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabase.ts';
-import { CheckCircle, XCircle, Package, RefreshCw, Search, AlertTriangle, ChevronDown, ChevronUp, Clock, FileText } from 'lucide-react';
+import { CheckCircle, XCircle, Package, RefreshCw, Search, AlertTriangle, ChevronDown, ChevronUp, Clock, FileText, Printer } from 'lucide-react';
 import { Sale, Product, Employee, Customer, Store, WholesaleReservation } from '../types.ts';
 import { supabaseService } from '../services/supabaseService.ts';
 import SaleReceipt from './SaleReceipt.tsx';
@@ -575,6 +575,14 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
                                                                         className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
                                                                     >
                                                                         <XCircle className="w-5 h-5" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => printLabel(item, user)}
+                                                                        disabled={isProcessing}
+                                                                        className="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-500 hover:text-white transition-all disabled:opacity-50"
+                                                                        title="Imprimir Etiqueta"
+                                                                    >
+                                                                        <Printer className="w-5 h-5" />
                                                                     </button>
                                                                     <button
                                                                         onClick={() => markSeparado(item)}
