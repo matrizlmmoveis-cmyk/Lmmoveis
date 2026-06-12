@@ -168,60 +168,123 @@ const Expedicao: React.FC<ExpedicaoProps> = ({ user, stores, sales, products, em
 
     // Polling removido por solicitação do usuário para economizar dados
 
-    const printLabel = (item: SaleItem, user: Employee | null) => {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-        
-        const doc = iframe.contentWindow?.document;
-        if (doc) {
-            doc.open();
-            doc.write(`
-                <html>
-                    <head>
-                        <title>Etiqueta ${item.sale_id}</title>
-                        <style>
-                            @page { margin: 0; size: 80mm auto; }
-                            body { 
-                                font-family: monospace; 
-                                width: 75mm; 
-                                margin: 0; 
-                                padding: 5mm; 
-                                font-size: 14px;
-                                color: #000;
-                            }
-                            .title { font-size: 18px; font-weight: bold; text-align: center; border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 5px; }
-                            .info { margin-bottom: 3px; }
-                            .label { font-weight: bold; }
-                            .product { font-size: 16px; font-weight: bold; margin: 10px 0; padding: 5px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; text-align: center; }
-                            .footer { text-align: center; font-size: 12px; margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px;}
-                        </style>
-                    </head>
-                    <body>
-                        <div class="title">ETIQUETA DE SEPARACAO</div>
-                        <div class="info"><span class="label">PEDIDO:</span> #${item.sale_id}</div>
-                        <div class="info"><span class="label">CLIENTE:</span> ${item.sales?.customer_name || 'N/D'}</div>
-                        <div class="product">
-                            ${item.quantity}x ${item.products?.name || item.product_id}
-                        </div>
-                        <div class="info"><span class="label">SKU:</span> ${item.products?.sku || '-'}</div>
-                        <div class="info"><span class="label">DATA:</span> ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</div>
-                        <div class="footer">
-                            Separado por: ${user?.name || 'Conferente'}<br/>
-                            <b>L&M MOVEIS</b>
-                        </div>
-                    </body>
-                </html>
-            `);
-            doc.close();
+    const printLabel = async (item: SaleItem, user: Employee | null) => {
+        try {
+            // Buscar itens completos do pedido para separar locais
+            const { data: fullSale } = await supabase
+                .from('sales')
+                .select('*, items:sale_items(*, products(name, sku))')
+                .eq('id', item.sale_id)
+                .single();
+
+            let outrosNorte = '';
+            let outrosLocais = '';
+
+            if (fullSale && fullSale.items) {
+                const otherItems = fullSale.items.filter((i: any) => i.id !== item.id);
+                
+                const norteItems = otherItems.filter((i: any) => {
+                    const locName = stores.find(s => s.id === i.location_id)?.name || '';
+                    return locName.toLowerCase().includes('norte');
+                });
+                
+                const demaisItems = otherItems.filter((i: any) => {
+                    const locName = stores.find(s => s.id === i.location_id)?.name || '';
+                    return !locName.toLowerCase().includes('norte');
+                });
+
+                if (norteItems.length > 0) {
+                    outrosNorte = `
+                        <div class="section-title">OUTROS ITENS - CD NORTE</div>
+                        <ul class="other-items">
+                            ${norteItems.map((i: any) => `<li>${i.quantity}x ${i.products?.name}</li>`).join('')}
+                        </ul>
+                    `;
+                }
+
+                if (demaisItems.length > 0) {
+                    outrosLocais = `
+                        <div class="section-title">OUTROS ITENS - OUTROS LOCAIS</div>
+                        <ul class="other-items">
+                            ${demaisItems.map((i: any) => `<li>${i.quantity}x ${i.products?.name}</li>`).join('')}
+                        </ul>
+                    `;
+                }
+            }
+
+            const storeName = stores.find(s => s.id === item.sales?.store_id)?.name || 'L&M MÓVEIS';
+            const saleDate = new Date(item.sales?.date || item.sales?.created_at || '').toLocaleDateString('pt-BR');
+
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
             
-            iframe.onload = () => {
-                iframe.contentWindow?.focus();
-                iframe.contentWindow?.print();
-                setTimeout(() => {
-                    document.body.removeChild(iframe);
-                }, 1000);
-            };
+            const doc = iframe.contentWindow?.document;
+            if (doc) {
+                doc.open();
+                doc.write(`
+                    <html>
+                        <head>
+                            <title>Etiqueta ${item.sale_id}</title>
+                            <style>
+                                @page { margin: 0; size: 80mm auto; }
+                                body { 
+                                    font-family: monospace; 
+                                    width: 75mm; 
+                                    margin: 0; 
+                                    padding: 5mm; 
+                                    font-size: 14px;
+                                    color: #000;
+                                }
+                                .title { font-size: 18px; font-weight: bold; text-align: center; }
+                                .store { font-size: 18px; font-weight: bold; text-align: center; border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 5px; }
+                                .info { margin-bottom: 5px; }
+                                .label { font-weight: bold; }
+                                .big-info { font-size: 20px; font-weight: bold; margin: 5px 0; text-align: center; }
+                                .product { font-size: 22px; font-weight: bold; margin: 10px 0; padding: 10px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; text-align: center; line-height: 1.2;}
+                                .section-title { font-weight: bold; font-size: 14px; margin-top: 10px; border-bottom: 1px solid #000; padding-bottom: 2px; }
+                                .other-items { list-style: none; padding: 0; margin: 5px 0 0 0; font-size: 12px; }
+                                .other-items li { margin-bottom: 3px; }
+                                .footer { text-align: center; font-size: 12px; margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px;}
+                            </style>
+                        </head>
+                        <body>
+                            <div class="title">ETIQUETA DE SEPARACAO</div>
+                            <div class="store">${storeName}</div>
+                            
+                            <div class="big-info">PEDIDO: #${item.sale_id}</div>
+                            <div class="big-info">DATA: ${saleDate}</div>
+                            
+                            <div class="info"><span class="label">CLIENTE:</span> ${item.sales?.customer_name || 'N/D'}</div>
+                            
+                            <div class="product">
+                                ${item.quantity}x ${item.products?.name || item.product_id}
+                            </div>
+                            <div class="info" style="text-align: center;"><span class="label">SKU:</span> ${item.products?.sku || '-'}</div>
+                            
+                            ${outrosNorte}
+                            ${outrosLocais}
+
+                            <div class="footer">
+                                Separado por: ${user?.name || 'Conferente'}<br/>
+                                <b>L&M MOVEIS</b><br/>
+                                Impresso em: ${new Date().toLocaleString('pt-BR')}
+                            </div>
+                        </body>
+                    </html>
+                `);
+                doc.close();
+                
+                iframe.onload = () => {
+                    iframe.contentWindow?.focus();
+                    iframe.contentWindow?.print();
+                    setTimeout(() => {
+                        document.body.removeChild(iframe);
+                    }, 1000);
+                };
+            }
+        } catch (e) {
+            console.error("Erro ao gerar etiqueta", e);
         }
     };
 
