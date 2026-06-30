@@ -47,11 +47,11 @@ export class SEFAZTxtGeneratorSimples {
         lines.push(`C02|${this.cleanString(issuer.cnpj)}|`);
         lines.push(`C05|${issuer.street}|${issuer.number}||${issuer.neighborhood}|${issuer.ibge}|${issuer.city}|${issuer.state}|${issuer.cep}|1058|BRASIL||`);
 
-        // E - Destinatário
-        lines.push(`E|${this.formatField(dest.name, 60)}|9||||${this.formatField(dest.email, 60)}|`);
-        const docLine = dest.type === 'CNPJ' ? 'E02' : 'E03';
-        lines.push(`${docLine}|${this.cleanString(dest.document)}|`);
-        lines.push(`E05|${this.formatField(dest.street, 60)}|${dest.number}||${dest.neighborhood}|${dest.ibge}|${dest.city}|${dest.state}|${dest.cep}|1058|BRASIL||`);
+        // E - Destinatário (Removido para emitir sem destinatário no botão novo)
+        // lines.push(`E|${this.formatField(dest.name, 60)}|9||||${this.formatField(dest.email, 60)}|`);
+        // const docLine = dest.type === 'CNPJ' ? 'E02' : 'E03';
+        // lines.push(`${docLine}|${this.cleanString(dest.document)}|`);
+        // lines.push(`E05|${this.formatField(dest.street, 60)}|${dest.number}||${dest.neighborhood}|${dest.ibge}|${dest.city}|${dest.state}|${dest.cep}|1058|BRASIL||`);
 
         let totalVBC = 0;
         let totalVICMS = 0;
