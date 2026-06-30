@@ -265,7 +265,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       nfEmailService.setConfig({ cnpj: "39357816000102", apiKey: "4rbIXmbPsmZ86RPmcnvmfKZL7TETKls9LXiBdgj" });
 
       let txtContent = SEFAZTxtGenerator.generate(
-        issuer, dest, items, currentNumber, currentSeries, settings.environment, settings.taxRegime
+        issuer, dest, items, currentNumber, currentSeries, settings.environment, 1 // 1-Simples Nacional
       );
 
       let lines = txtContent.split('\n');
