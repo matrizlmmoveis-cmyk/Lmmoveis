@@ -12,6 +12,7 @@ import { supabaseService } from '../services/supabaseService.ts';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
 import { nfEmailService } from '../services/nfe/nfeService.ts';
 import { SEFAZTxtGenerator } from '../services/nfe/sefazGenerator.ts';
+import { SEFAZTxtGeneratorSimples } from '../services/nfe/sefazGeneratorSimples.ts';
 import { NFeIssuer, NFeDest, NFeItem } from '../services/nfe/types.ts';
 import { FileText, Receipt, Loader2 } from 'lucide-react';
 
@@ -264,7 +265,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
 
       nfEmailService.setConfig({ cnpj: "39357816000102", apiKey: "4rbIXmbPsmZ86RPmcnvmfKZL7TETKls9LXiBdgj" });
 
-      let txtContent = SEFAZTxtGenerator.generate(
+      let txtContent = SEFAZTxtGeneratorSimples.generate(
         issuer, dest, items, currentNumber, currentSeries, settings.environment, 1 // 1-Simples Nacional
       );
 
@@ -274,7 +275,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
           let bFields = lines[i].split('|');
           if (bFields[4] === '55') bFields[4] = '65'; // mod
           if (bFields.length > 12) bFields[12] = '4'; // tpImp
-          if (bFields.length > 18) bFields[18] = '4'; // indPres = 4 (Entrega a domicílio)
+          if (bFields.length > 18) bFields[18] = '1'; // indPres = 1 (Operação presencial, igual ao XML aprovado)
           if (bFields.length > 19) bFields[19] = '0'; // indIntermed = 0 (Sem intermediador)
           lines[i] = bFields.join('|');
           break;
