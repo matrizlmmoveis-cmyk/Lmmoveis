@@ -418,15 +418,19 @@ const ProductModal: React.FC<ProductModalProps> = ({
                                 <DollarSign className="w-3 h-3" /> Custo
                             </div>
                             {isEditMode ? (
-                                <input
-                                    type="text"
-                                    className="w-full bg-transparent text-xl font-black text-red-700 outline-none"
-                                    value={formatCurrencyBRL(editForm.costPrice || 0)}
-                                    onChange={e => handleCurrencyChange(e, (num) => setEditForm({ ...editForm, costPrice: num }))}
-                                />
+                                user?.username === 'Master' ? (
+                                    <input
+                                        type="text"
+                                        className="w-full bg-transparent text-xl font-black text-red-700 outline-none"
+                                        value={formatCurrencyBRL(editForm.costPrice || 0)}
+                                        onChange={e => handleCurrencyChange(e, (num) => setEditForm({ ...editForm, costPrice: num }))}
+                                    />
+                                ) : (
+                                    <p className="text-2xl font-black text-red-700 italic">*****</p>
+                                )
                             ) : (
                                 <p className="text-2xl font-black text-red-700 italic">
-                                    {(user?.role === 'ADMIN' || user?.username === 'Master') ? formatCurrencyBRL(product.costPrice || 0) : '*****'}
+                                    {user?.username === 'Master' ? formatCurrencyBRL(product.costPrice || 0) : '*****'}
                                 </p>
                             )}
                         </div>
@@ -435,14 +439,20 @@ const ProductModal: React.FC<ProductModalProps> = ({
                                 <Package className="w-3 h-3 text-blue-400" /> Preço Atacado
                             </div>
                             {isEditMode ? (
-                                <input
-                                    type="text"
-                                    className="w-full bg-transparent text-xl font-black text-slate-900 outline-none"
-                                    value={formatCurrencyBRL(editForm.wholesalePrice || 0)}
-                                    onChange={e => handleCurrencyChange(e, (num) => setEditForm({ ...editForm, wholesalePrice: num }))}
-                                />
+                                user?.username === 'Master' ? (
+                                    <input
+                                        type="text"
+                                        className="w-full bg-transparent text-xl font-black text-slate-900 outline-none"
+                                        value={formatCurrencyBRL(editForm.wholesalePrice || 0)}
+                                        onChange={e => handleCurrencyChange(e, (num) => setEditForm({ ...editForm, wholesalePrice: num }))}
+                                    />
+                                ) : (
+                                    <p className="text-2xl font-black text-slate-900 italic">*****</p>
+                                )
                             ) : (
-                                <p className="text-2xl font-black text-slate-900 italic">{formatCurrencyBRL(product.wholesalePrice || 0)}</p>
+                                <p className="text-2xl font-black text-slate-900 italic">
+                                    {user?.username === 'Master' ? formatCurrencyBRL(product.wholesalePrice || 0) : '*****'}
+                                </p>
                             )}
                         </div>
                     </div>
