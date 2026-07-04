@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Download, FileText, Printer, X } from 'lucide-react';
 import { Sale, Store, Product, Employee } from '../types.ts';
+import { getSaoPauloDateString } from '../utils/dateUtils.ts';
 
 interface ReportsProps {
   user: Employee | { id: 'admin', name: 'Lucas', role: 'ADMIN', storeId?: string } | null;
@@ -33,17 +34,17 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
     let end: string | undefined;
 
     if (dateFilter === 'today') {
-      start = now.toISOString().split('T')[0];
+      start = getSaoPauloDateString(now);
       end = start;
     } else if (dateFilter === 'this_week') {
       const startD = new Date(now); startD.setDate(now.getDate() - now.getDay());
-      start = startD.toISOString().split('T')[0];
-      end = now.toISOString().split('T')[0];
+      start = getSaoPauloDateString(startD);
+      end = getSaoPauloDateString(now);
     } else if (dateFilter === 'this_month') {
       const startD = new Date(now.getFullYear(), now.getMonth(), 1);
       const endD = new Date(now.getFullYear(), now.getMonth() + 1, 0); // último dia do mês
-      start = startD.toISOString().split('T')[0];
-      end = endD.toISOString().split('T')[0];
+      start = getSaoPauloDateString(startD);
+      end = getSaoPauloDateString(endD);
     } else if (dateFilter === 'custom' && customStart && customEnd) {
       start = customStart;
       end = customEnd;
@@ -65,21 +66,19 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
 
     const now = new Date();
     if (dateFilter === 'today') {
-      filtered = filtered.filter(s => new Date(s.date).toDateString() === now.toDateString());
+      const todayStr = getSaoPauloDateString(now);
+      filtered = filtered.filter(s => getSaoPauloDateString(s.date) === todayStr);
     } else if (dateFilter === 'this_week') {
       const start = new Date(now); start.setDate(now.getDate() - now.getDay());
-      filtered = filtered.filter(s => new Date(s.date) >= start);
+      const startStr = getSaoPauloDateString(start);
+      filtered = filtered.filter(s => getSaoPauloDateString(s.date) >= startStr);
     } else if (dateFilter === 'this_month') {
-      filtered = filtered.filter(s => {
-        const d = new Date(s.date);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      });
+      const currentMonthStr = getSaoPauloDateString(now).substring(0, 7);
+      filtered = filtered.filter(s => getSaoPauloDateString(s.date).substring(0, 7) === currentMonthStr);
     } else if (dateFilter === 'custom' && customStart && customEnd) {
-      const start = new Date(customStart + 'T00:00:00');
-      const end = new Date(customEnd + 'T23:59:59');
       filtered = filtered.filter(s => {
-        const d = new Date(s.date);
-        return d >= start && d <= end;
+        const sDate = getSaoPauloDateString(s.date);
+        return sDate >= customStart && sDate <= customEnd;
       });
     }
 

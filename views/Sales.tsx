@@ -10,6 +10,7 @@ import html2canvas from 'html2canvas';
 
 import { supabaseService } from '../services/supabaseService.ts';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
+import { getSaoPauloDateString, formatSaoPauloDateBR } from '../utils/dateUtils.ts';
 import { nfEmailService } from '../services/nfe/nfeService.ts';
 import { SEFAZTxtGenerator } from '../services/nfe/sefazGenerator.ts';
 import { SEFAZTxtGeneratorSimples } from '../services/nfe/sefazGeneratorSimples.ts';
@@ -35,8 +36,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [startDate, setStartDate] = useState(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(getSaoPauloDateString(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  const [endDate, setEndDate] = useState(getSaoPauloDateString());
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
   const [isBulkPrinting, setIsBulkPrinting] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -434,7 +435,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   };
 
   const filteredSales = (sales || []).filter(s => {
-    const saleDate = new Date(s.date).toISOString().split('T')[0];
+    const saleDate = getSaoPauloDateString(s.date);
     const isInDateRange = (!startDate || saleDate >= startDate) && (!endDate || saleDate <= endDate);
     if (!isInDateRange) return false;
 
