@@ -174,6 +174,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
                 </div>
                 <div class="customer-name">${task.customerName}</div>
                 <div class="address">📍 ${formatAddress(task.deliveryAddress)}</div>
+                ${task.customerReference ? `<div class="address" style="color: #666; margin-top: -5px; margin-bottom: 8px;">📍 Ref: ${task.customerReference}</div>` : ''}
                 ${task.customerPhone ? `<div class="phone">📞 ${task.customerPhone}</div>` : ''}
                 <div class="dates">
                   Venda: ${new Date(task.date).toLocaleDateString('pt-BR')}
@@ -236,6 +237,12 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
             <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
             <span className="font-bold uppercase">{formatAddress(task.deliveryAddress)}</span>
           </div>
+          {task.customerReference && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
+              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 opacity-0" />
+              <span className="font-bold uppercase">Ref: {task.customerReference}</span>
+            </div>
+          )}
 
           <div className="flex items-center gap-4 mt-2 mb-2">
             <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
