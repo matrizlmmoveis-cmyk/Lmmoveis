@@ -59,7 +59,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
     if (!isOpen || !product) return null;
 
-    const canEdit = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.name === 'Lucas' || user?.username === 'Master';
+    const canEdit = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.name === 'Lucas' || user?.username === 'Master' || user?.name?.toLowerCase().includes('ismael') || user?.username?.toLowerCase().includes('ismael');
 
     const loadMovements = async (productId: string) => {
         setIsLoadingMovements(true);

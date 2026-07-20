@@ -42,7 +42,7 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
-  const canCreateProduct = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master';
+  const canCreateProduct = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master' || user?.name?.toLowerCase().includes('ismael') || user?.username?.toLowerCase().includes('ismael');
 
   const handleNewProduct = async () => {
     setIsSavingProduct(true);
@@ -302,7 +302,7 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
             </div>
 
             <form onSubmit={handleAdjustmentSubmit} className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className={`grid ${!(user?.name?.toLowerCase().includes('ismael') || user?.username?.toLowerCase().includes('ismael')) ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
                 <button
                   type="button"
                   onClick={() => setAdjustForm({ ...adjustForm, type: 'IN' })}
@@ -311,14 +311,16 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
                   <Plus className={`w-8 h-8 ${adjustForm.type === 'IN' ? 'text-emerald-500' : 'text-slate-400'}`} />
                   <span className="font-bold">ENTRADA</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setAdjustForm({ ...adjustForm, type: 'OUT' })}
-                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${adjustForm.type === 'OUT' ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-100 hover:border-slate-200 text-slate-500'}`}
-                >
-                  <Minus className={`w-8 h-8 ${adjustForm.type === 'OUT' ? 'text-red-500' : 'text-slate-400'}`} />
-                  <span className="font-bold">SAÍDA</span>
-                </button>
+                {!(user?.name?.toLowerCase().includes('ismael') || user?.username?.toLowerCase().includes('ismael')) && (
+                  <button
+                    type="button"
+                    onClick={() => setAdjustForm({ ...adjustForm, type: 'OUT' })}
+                    className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${adjustForm.type === 'OUT' ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-100 hover:border-slate-200 text-slate-500'}`}
+                  >
+                    <Minus className={`w-8 h-8 ${adjustForm.type === 'OUT' ? 'text-red-500' : 'text-slate-400'}`} />
+                    <span className="font-bold">SAÍDA</span>
+                  </button>
+                )}
               </div>
 
               <div className="space-y-4">

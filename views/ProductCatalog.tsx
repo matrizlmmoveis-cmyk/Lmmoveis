@@ -50,7 +50,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [orderConfirmed, setOrderConfirmed] = useState(false);
 
-  const isAdmin = user?.role === 'ADMIN' || user?.name === 'Lucas' || (user as any)?.username === 'Master' || user?.role === 'SUPERVISOR';
+  const isAdmin = user?.role === 'ADMIN' || user?.name === 'Lucas' || (user as any)?.username === 'Master' || user?.role === 'SUPERVISOR' || user?.name?.toLowerCase().includes('ismael') || user?.username?.toLowerCase().includes('ismael');
 
   const filteredProducts = (products || []).filter(p =>
     p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku?.toLowerCase().includes(searchTerm.toLowerCase())

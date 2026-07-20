@@ -897,7 +897,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                             M
                           </button>
                         )}
-                        {(!hasStock || isSpecialRulePeriod) && (
+                        {(!lojaStock || isSpecialRulePeriod) && (
                           <button onClick={() => handleAddItem(p, false, true)} title="Venda Encomenda" className="w-7 h-7 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95 font-black text-xs">
                             E
                           </button>
