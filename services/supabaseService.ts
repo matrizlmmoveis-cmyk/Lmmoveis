@@ -375,6 +375,7 @@ export const supabaseService = {
         return (data || []).map((s: any) => ({
             id: s.id,
             date: s.date,
+            createdAt: s.created_at,
             customerName: s.customer_name,
             customerCpf: s.customer_cpf,
             customerPhone: s.customer_phone,
@@ -457,6 +458,7 @@ export const supabaseService = {
         return allData.map((s: any) => ({
             id: s.id,
             date: s.date,
+            createdAt: s.created_at,
             customerName: s.customer_name,
             customerCpf: s.customer_cpf,
             customerPhone: s.customer_phone,
@@ -557,6 +559,7 @@ export const supabaseService = {
             seller_id: sale.sellerId || null,
             total: sale.total,
             status: status,
+            delivery_date: sale.deliveryDate || null,
             delivery_address: sale.deliveryAddress,
             delivery_obs: sale.deliveryObs,
             assembly_required: sale.assemblyRequired,
@@ -980,6 +983,13 @@ export const supabaseService = {
             .in('status', ['PENDENTE_ENTREGA', 'AGUARDANDO_ACERTO', 'PAGO_EM_LOJA']);
 
         if (error) throw error;
+        
+        // Atualiza a data da venda para o dia em que o pagamento foi recebido
+        const { data: saleData } = await supabase.from('sales').select('created_at').eq('id', saleId).single();
+        if (saleData) {
+            await supabase.from('sales').update({ date: new Date().toISOString() }).eq('id', saleId);
+        }
+
         return true;
     },
 
@@ -993,6 +1003,13 @@ export const supabaseService = {
             .in('status', ['PENDENTE_ENTREGA', 'AGUARDANDO_ACERTO']);
 
         if (error) throw error;
+
+        // Atualiza a data da venda para o dia em que o pagamento foi recebido
+        const { data: saleData } = await supabase.from('sales').select('created_at').eq('id', saleId).single();
+        if (saleData) {
+            await supabase.from('sales').update({ date: new Date().toISOString() }).eq('id', saleId);
+        }
+
         return true;
     },
 

@@ -103,7 +103,9 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         ibge: settings.issuer.ibge || '3304557'
       };
 
-      const items: NFeItem[] = sale.items.map(item => {
+      const items: NFeItem[] = sale.items
+        .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
+        .map(item => {
         const prod = products.find(p => p.id === item.productId);
         return {
           description: prod?.name || 'Produto',
@@ -243,7 +245,9 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         ibge: settings.issuer.ibge || '3304557'
       };
 
-      const items: NFeItem[] = sale.items.map(item => {
+      const items: NFeItem[] = sale.items
+        .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
+        .map(item => {
         const prod = products.find(p => p.id === item.productId);
         return {
           description: prod?.name || 'Produto',
@@ -1041,16 +1045,27 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
               </div>
             </div>
 
-            {/* Card OBSERVAÇÕES */}
-            <div className="bg-slate-900 rounded-2xl p-5">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Observações de Entrega</p>
-              <textarea
-                rows={4}
-                placeholder="Instruções para o entregador..."
-                className="w-full bg-transparent text-slate-300 text-xs font-medium placeholder-slate-600 resize-none outline-none"
-                value={newSale.deliveryObs || ''}
-                onChange={e => setNewSale({ ...newSale, deliveryObs: e.target.value })}
-              />
+            {/* Card OBSERVAÇÕES E DATA DE ENTREGA */}
+            <div className="bg-slate-900 rounded-2xl p-5 space-y-4">
+              <div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Data de Entrega Prevista</p>
+                <input 
+                  type="date"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-300 text-xs font-bold outline-none"
+                  value={newSale.deliveryDate || ''}
+                  onChange={e => setNewSale({ ...newSale, deliveryDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Observações de Entrega</p>
+                <textarea
+                  rows={4}
+                  placeholder="Instruções para o entregador..."
+                  className="w-full bg-transparent text-slate-300 text-xs font-medium placeholder-slate-600 resize-none outline-none"
+                  value={newSale.deliveryObs || ''}
+                  onChange={e => setNewSale({ ...newSale, deliveryObs: e.target.value })}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -1410,7 +1425,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                               <button
                                 onClick={() => setEditRequest({
                                   sale,
-                                  editedItems: sale.items ? [...sale.items] : [],
+                                  editedItems: sale.items ? sale.items.filter(i => i.dispatchStatus !== 'DEVOLVER' && i.dispatchStatus !== 'CANCELADO' && i.dispatchStatus !== 'DEVOLVIDO') : [],
                                   editedPayments: sale.payments ? [...sale.payments] : [],
                                   justification: '',
                                   productSearch: '',

@@ -61,6 +61,15 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
   const filteredSales = useMemo(() => {
     let filtered = sales.filter(s => s.status !== 'Cancelada');
 
+    // Remove vendas cujo pagamento na entrega ainda não foi baixado
+    filtered = filtered.filter(s => {
+      const hasEntregaPending = s.payments?.some(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));
+      if (hasEntregaPending) {
+        return false;
+      }
+      return true;
+    });
+
     if (storeFilter !== 'all') filtered = filtered.filter(s => s.storeId === storeFilter);
     if (sellerFilter !== 'all') filtered = filtered.filter(s => s.sellerId === sellerFilter);
 
@@ -88,7 +97,9 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
   const categoryData = useMemo(() => {
     const categories: Record<string, number> = {};
     filteredSales.forEach(sale => {
-      sale.items.forEach(item => {
+      sale.items
+        .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
+        .forEach(item => {
         const product = products.find(p => p.id === item.productId);
         const category = product?.category || 'Outros';
         const itemTotal = item.price * item.quantity;
@@ -192,17 +203,29 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
             </thead>
             <tbody>
               ${filteredSales.map(sale => {
-      const itemsList = sale.items.map(item => {
+      const itemsList = sale.items
+        .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
+        .map(item => {
         const prod = products.find(p => p.id === item.productId);
-        return `${item.quantity}x ${prod?.name || item.productId}`;
+        const store = stores.find(s => s.id === item.locationId);
+        const cdName = store?.name || (item.locationId === 'ST-MOSTRUARIO' ? 'Mostruário' : (item.locationId === 'ST-ENCOMENDA' ? 'Encomenda' : item.locationId));
+        return `${item.quantity}x ${prod?.name || item.productId} [${cdName}]`;
       }).join(', ');
 
       const paymentsStr = (sale.payments || []).map(p => `${getPaymentLabel(p.method)}: R$ ${p.amount.toFixed(2)}`).join(' / ');
 
+      let dateDisplay = new Date(sale.date).toLocaleDateString('pt-BR');
+      if (sale.createdAt) {
+        const createdStr = new Date(sale.createdAt).toLocaleDateString('pt-BR');
+        if (createdStr !== dateDisplay) {
+          dateDisplay = `${dateDisplay} <br><span style="font-size: 9px; color: #666;">(Venda Efetuada em: ${createdStr})</span>`;
+        }
+      }
+
       return `
                   <tr>
                     <td>${sale.id}</td>
-                    <td>${new Date(sale.date).toLocaleDateString('pt-BR')}</td>
+                    <td>${dateDisplay}</td>
                     <td>${sale.customerName}</td>
                     <td>${getSellerName(sale.sellerId)}</td>
                     <td>${itemsList}</td>
@@ -286,9 +309,13 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
             <tbody>
               {filteredSales.map((sale, idx) => {
                 const rowBg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
-                const itemsList = sale.items.map(item => {
+                const itemsList = sale.items
+                  .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
+                  .map(item => {
                   const prod = products.find(p => p.id === item.productId);
-                  return `QTD${item.quantity}: ${prod?.name || item.productId} - R$ ${(item.price * item.quantity).toFixed(2)} /`;
+                  const store = stores.find(s => s.id === item.locationId);
+                  const cdName = store?.name || (item.locationId === 'ST-MOSTRUARIO' ? 'Mostruário' : (item.locationId === 'ST-ENCOMENDA' ? 'Encomenda' : item.locationId));
+                  return `QTD${item.quantity}: ${prod?.name || item.productId} [${cdName}] - R$ ${(item.price * item.quantity).toFixed(2)} /`;
                 }).join(' ');
 
                 const paymentsStr = (sale.payments || []).map(p => {
@@ -296,11 +323,21 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
                   return `${label}: $ ${p.amount.toFixed(2)}`;
                 }).join(' / ');
 
+                let dateDisplay = new Date(sale.date).toLocaleDateString('pt-BR');
+                let obsNode = null;
+                if (sale.createdAt) {
+                  const createdStr = new Date(sale.createdAt).toLocaleDateString('pt-BR');
+                  if (createdStr !== dateDisplay) {
+                    obsNode = <div className="text-[9px] text-gray-500 font-medium mt-1 uppercase">(Venda Efetuada em: {createdStr})</div>;
+                  }
+                }
+
                 return (
                   <tr key={sale.id} style={{ backgroundColor: rowBg }}>
                     <td className="border border-gray-300 px-3 py-2 font-bold text-xs text-gray-800 align-top">{sale.id}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top whitespace-nowrap">
-                      {new Date(sale.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-600 align-top">
+                      {dateDisplay}
+                      {obsNode}
                     </td>
                     <td className="border border-gray-300 px-3 py-2 text-xs text-gray-800 font-medium align-top">{sale.customerName}</td>
                     <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top">{getSellerName(sale.sellerId)}</td>

@@ -137,6 +137,7 @@ export interface SaleItem {
 export interface Sale {
   id: string;
   date: string;
+  createdAt?: string;
   customerName: string;
   customerCpf: string;
   customerPhone: string;
