@@ -61,10 +61,12 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
   const filteredSales = useMemo(() => {
     let filtered = sales.filter(s => s.status !== 'Cancelada');
 
-    // Remove vendas cujo pagamento na entrega ainda não foi baixado
+    // Remove vendas cujo ÚNICO pagamento seja na entrega e ainda não foi baixado
     filtered = filtered.filter(s => {
       const hasEntregaPending = s.payments?.some(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));
-      if (hasEntregaPending) {
+      const hasConfirmedPayment = s.payments?.some(p => p.method !== 'Entrega' || (p.method === 'Entrega' && p.status !== 'PENDENTE_ENTREGA' && p.status !== 'AGUARDANDO_ACERTO'));
+      
+      if (hasEntregaPending && !hasConfirmedPayment) {
         return false;
       }
       return true;

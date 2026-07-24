@@ -984,10 +984,16 @@ export const supabaseService = {
 
         if (error) throw error;
         
-        // Atualiza a data da venda para o dia em que o pagamento foi recebido
-        const { data: saleData } = await supabase.from('sales').select('created_at').eq('id', saleId).single();
-        if (saleData) {
-            await supabase.from('sales').update({ date: new Date().toISOString() }).eq('id', saleId);
+        // Verifica se a venda tinha apenas pagamentos na Entrega
+        const { data: paymentsData } = await supabase.from('sale_payments').select('method').eq('sale_id', saleId);
+        const hasOnlyEntrega = paymentsData && paymentsData.every((p: any) => p.method === 'Entrega');
+
+        if (hasOnlyEntrega) {
+            // Atualiza a data da venda para o dia em que o pagamento foi recebido
+            const { data: saleData } = await supabase.from('sales').select('created_at').eq('id', saleId).single();
+            if (saleData) {
+                await supabase.from('sales').update({ date: new Date().toISOString() }).eq('id', saleId);
+            }
         }
 
         return true;
@@ -1004,10 +1010,16 @@ export const supabaseService = {
 
         if (error) throw error;
 
-        // Atualiza a data da venda para o dia em que o pagamento foi recebido
-        const { data: saleData } = await supabase.from('sales').select('created_at').eq('id', saleId).single();
-        if (saleData) {
-            await supabase.from('sales').update({ date: new Date().toISOString() }).eq('id', saleId);
+        // Verifica se a venda tinha apenas pagamentos na Entrega
+        const { data: paymentsData } = await supabase.from('sale_payments').select('method').eq('sale_id', saleId);
+        const hasOnlyEntrega = paymentsData && paymentsData.every((p: any) => p.method === 'Entrega');
+
+        if (hasOnlyEntrega) {
+            // Atualiza a data da venda para o dia em que o pagamento foi recebido
+            const { data: saleData } = await supabase.from('sales').select('created_at').eq('id', saleId).single();
+            if (saleData) {
+                await supabase.from('sales').update({ date: new Date().toISOString() }).eq('id', saleId);
+            }
         }
 
         return true;
