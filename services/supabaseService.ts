@@ -979,8 +979,7 @@ export const supabaseService = {
             .update({ status: 'CONFERIDO' })
             .eq('sale_id', saleId)
             .eq('method', 'Entrega')
-            .eq('amount', amount)
-            .in('status', ['PENDENTE_ENTREGA', 'AGUARDANDO_ACERTO', 'PAGO_EM_LOJA']);
+            .eq('amount', amount);
 
         if (error) throw error;
         
@@ -1005,8 +1004,7 @@ export const supabaseService = {
             .update({ status: 'PAGO_EM_LOJA' })
             .eq('sale_id', saleId)
             .eq('method', 'Entrega')
-            .eq('amount', amount)
-            .in('status', ['PENDENTE_ENTREGA', 'AGUARDANDO_ACERTO']);
+            .eq('amount', amount);
 
         if (error) throw error;
 

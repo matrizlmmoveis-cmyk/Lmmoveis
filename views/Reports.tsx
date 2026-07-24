@@ -63,8 +63,8 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
 
     // Remove vendas cujo ÚNICO pagamento seja na entrega e ainda não foi baixado
     filtered = filtered.filter(s => {
-      const hasEntregaPending = s.payments?.some(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));
-      const hasConfirmedPayment = s.payments?.some(p => p.method !== 'Entrega' || (p.method === 'Entrega' && p.status !== 'PENDENTE_ENTREGA' && p.status !== 'AGUARDANDO_ACERTO'));
+      const hasEntregaPending = s.payments?.some(p => p.method === 'Entrega' && (!p.status || p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));
+      const hasConfirmedPayment = s.payments?.some(p => p.method !== 'Entrega' || (p.method === 'Entrega' && (p.status === 'PAGO_EM_LOJA' || p.status === 'CONFERIDO')));
       
       if (hasEntregaPending && !hasConfirmedPayment) {
         return false;
