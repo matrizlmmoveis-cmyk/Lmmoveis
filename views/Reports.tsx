@@ -475,7 +475,7 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
       `;
     };
 
-    const { total: totalBruto, pTotals: pTotalsBruto } = getBlockTotals(normalSales);
+    const { total: totalBruto, pTotals: pTotalsBruto } = getBlockTotals(filteredSales);
 
     const html = `
       <!DOCTYPE html>
@@ -501,7 +501,7 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
             ${sellerFilter !== 'all' ? `<div class="subtitle">Vendedor: ${getSellerName(sellerFilter)}</div>` : ''}
           </div>
           
-          ${renderHtmlBlock(normalSales, 'Todas as Vendas')}
+          ${renderHtmlBlock(filteredSales, 'Todas as Vendas')}
           
           <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
             <table style="width: 50%; margin-top: 0;">

@@ -561,7 +561,8 @@ export const supabaseService = {
             payments: (s.payments || []).map((p: any) => ({
                 method: p.method,
                 amount: p.amount,
-                status: p.status
+                status: p.status,
+                details: p.details || undefined
             })),
             nfeId: s.nfe_id || undefined,
             nfeNumber: s.nfe_number || undefined,

@@ -1997,10 +1997,16 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                   
                   try {
                     await supabaseService.markPaymentPaidAtStoreWithSplit(storePaymentSale.sale.id, storePaymentSale.originalAmount, storeNewPayments);
+                    
+                    const paymentsWithDetails = storeNewPayments.map(p => ({
+                      ...p,
+                      details: { paid_at: new Date().toISOString() }
+                    }));
+
                     setSales(prev => prev.map(s => {
                       if (s.id === storePaymentSale.sale.id) {
                         const otherPayments = (s.payments || []).filter(p => !(p.method === 'Entrega' && p.amount === storePaymentSale.originalAmount && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO')));
-                        return { ...s, payments: [...otherPayments, ...storeNewPayments] };
+                        return { ...s, payments: [...otherPayments, ...paymentsWithDetails] };
                       }
                       return s;
                     }));
