@@ -194,10 +194,10 @@ export const supabaseService = {
         const limit = 1000;
 
         while (hasMore) {
-            const { data, error } = await supabase
-                .from('products')
-                .select('id, sku')
-                .range(page * limit, (page + 1) * limit - 1);
+            let query = supabase.from('products').select('id, sku');
+            query = query.range(page * limit, (page + 1) * limit - 1);
+
+            const { data, error } = await query;
                 
             if (error) throw error;
             
@@ -407,6 +407,78 @@ export const supabaseService = {
                 method: p.method,
                 amount: p.amount,
                 status: p.status
+            })),
+            nfeId: s.nfe_id || undefined,
+            nfeNumber: s.nfe_number || undefined,
+            nfeStatus: s.nfe_status || undefined,
+            nfeKey: s.nfe_key || undefined
+        })) as Sale[];
+    },
+
+    async getSalesPaidOnDate(startDate: string, endDate: string) {
+        // Fetch payments that were paid in this date range
+        // Since details is JSON, we can query it using Supabase text search or directly
+        const { data: paymentsData, error } = await supabase
+            .from('sale_payments')
+            .select('sale_id')
+            .gte('details->>paid_at', startDate)
+            .lte('details->>paid_at', endDate + 'T23:59:59.999Z');
+            
+        if (error) {
+            console.error(error);
+            return [];
+        }
+
+        const saleIds = Array.from(new Set(paymentsData?.map(p => p.sale_id) || []));
+        if (saleIds.length === 0) return [];
+
+        // Fetch those sales
+        const { data: salesData, error: salesError } = await supabase
+            .from('sales')
+            .select('*, items:sale_items(*), payments:sale_payments(*)')
+            .in('id', saleIds);
+
+        if (salesError) {
+            console.error(salesError);
+            return [];
+        }
+
+        return salesData.map((s: any) => ({
+            id: s.id,
+            date: s.date,
+            createdAt: s.created_at,
+            customerName: s.customer_name,
+            customerCpf: s.customer_cpf,
+            customerPhone: s.customer_phone,
+            customerEmail: s.customer_email,
+            customerReference: s.customer_reference,
+            storeId: s.store_id,
+            sellerId: s.seller_id,
+            total: s.total,
+            status: s.status,
+            deliveryAddress: s.delivery_address,
+            deliveryObs: s.delivery_obs,
+            assemblyRequired: s.assembly_required,
+            assignedDriverId: s.assigned_driver_id,
+            assignedAssemblerId: s.assigned_assembler_id,
+            assemblyCompletedAt: s.assembly_completed_at || null,
+            deliveryDate: s.delivery_date || null,
+            items: (s.items || []).map((i: any) => ({
+                id: i.id,
+                productId: i.product_id,
+                quantity: i.quantity,
+                price: i.price,
+                discount: i.discount,
+                originalPrice: i.original_price,
+                locationId: i.location_id,
+                assemblyRequired: i.assembly_required,
+                dispatchStatus: i.dispatch_status
+            })),
+            payments: (s.payments || []).map((p: any) => ({
+                method: p.method,
+                amount: p.amount,
+                status: p.status,
+                details: p.details
             })),
             nfeId: s.nfe_id || undefined,
             nfeNumber: s.nfe_number || undefined,
@@ -976,49 +1048,61 @@ export const supabaseService = {
     async confirmPaymentStatus(saleId: string, amount: number) {
         const { error } = await supabase
             .from('sale_payments')
-            .update({ status: 'CONFERIDO' })
+            .update({ 
+                status: 'CONFERIDO',
+                details: { paid_at: new Date().toISOString() }
+            })
             .eq('sale_id', saleId)
             .eq('method', 'Entrega')
             .eq('amount', amount);
 
         if (error) throw error;
         
-        // Verifica se a venda tinha apenas pagamentos na Entrega
-        const { data: paymentsData } = await supabase.from('sale_payments').select('method').eq('sale_id', saleId);
-        const hasOnlyEntrega = paymentsData && paymentsData.every((p: any) => p.method === 'Entrega');
-
-        if (hasOnlyEntrega) {
-            // Atualiza a data da venda para o dia em que o pagamento foi recebido
-            const { data: saleData } = await supabase.from('sales').select('created_at').eq('id', saleId).single();
-            if (saleData) {
-                await supabase.from('sales').update({ date: new Date().toISOString() }).eq('id', saleId);
-            }
-        }
-
         return true;
     },
 
     async markPaymentPaidAtStore(saleId: string, amount: number) {
         const { error } = await supabase
             .from('sale_payments')
-            .update({ status: 'PAGO_EM_LOJA' })
+            .update({ 
+                status: 'PAGO_EM_LOJA',
+                details: { paid_at: new Date().toISOString() }
+            })
             .eq('sale_id', saleId)
             .eq('method', 'Entrega')
             .eq('amount', amount);
 
         if (error) throw error;
 
-        // Verifica se a venda tinha apenas pagamentos na Entrega
-        const { data: paymentsData } = await supabase.from('sale_payments').select('method').eq('sale_id', saleId);
-        const hasOnlyEntrega = paymentsData && paymentsData.every((p: any) => p.method === 'Entrega');
+        return true;
+    },
 
-        if (hasOnlyEntrega) {
-            // Atualiza a data da venda para o dia em que o pagamento foi recebido
-            const { data: saleData } = await supabase.from('sales').select('created_at').eq('id', saleId).single();
-            if (saleData) {
-                await supabase.from('sales').update({ date: new Date().toISOString() }).eq('id', saleId);
-            }
-        }
+    async markPaymentPaidAtStoreWithSplit(saleId: string, originalAmount: number, newPayments: Payment[]) {
+        // 1. Delete the old pending 'Entrega' payment
+        const { error: deleteError } = await supabase
+            .from('sale_payments')
+            .delete()
+            .eq('sale_id', saleId)
+            .eq('method', 'Entrega')
+            .eq('amount', originalAmount)
+            .in('status', ['PENDENTE_ENTREGA', 'AGUARDANDO_ACERTO']);
+
+        if (deleteError) throw deleteError;
+
+        // 2. Insert the new payments, adding paid_at to their details
+        const paymentsToInsert = newPayments.map(p => ({
+            sale_id: saleId,
+            method: p.method,
+            amount: p.amount,
+            status: 'CONFERIDO',
+            details: { paid_at: new Date().toISOString() }
+        }));
+
+        const { error: insertError } = await supabase
+            .from('sale_payments')
+            .insert(paymentsToInsert);
+
+        if (insertError) throw insertError;
 
         return true;
     },

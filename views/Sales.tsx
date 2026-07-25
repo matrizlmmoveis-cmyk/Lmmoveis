@@ -50,6 +50,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [nfeStatuses, setNfeStatuses] = useState<Record<string, { status: 'idle' | 'success' | 'error', errorMessage: string, isEmitting: boolean }>>({});
+  const [storePaymentSale, setStorePaymentSale] = useState<{sale: Sale, originalAmount: number} | null>(null);
+  const [storeNewPayments, setStoreNewPayments] = useState<Payment[]>([]);
 
   const handleEmitNFeList = async (sale: Sale, isNfce: boolean = false) => {
     setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'idle', errorMessage: '', isEmitting: true } }));
@@ -439,7 +441,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   };
 
   const filteredSales = (sales || []).filter(s => {
-    const saleDate = getSaoPauloDateString(s.date);
+    const dateToUse = s.createdAt ? s.createdAt : s.date;
+    const saleDate = getSaoPauloDateString(dateToUse);
     const isInDateRange = (!startDate || saleDate >= startDate) && (!endDate || saleDate <= endDate);
     if (!isInDateRange) return false;
 
@@ -1322,7 +1325,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4"><p className="font-medium text-slate-700 text-sm uppercase">{sale.customerName}</p><p className="text-[10px] text-slate-400">{new Date(sale.date).toLocaleDateString()}</p></td>
+                      <td className="px-6 py-4"><p className="font-medium text-slate-700 text-sm uppercase">{sale.customerName}</p><p className="text-[10px] text-slate-400">{new Date(sale.createdAt || sale.date).toLocaleDateString()}</p></td>
                       <td className="px-6 py-4"><span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{stores.find(s => s.id === sale.storeId)?.name}</span></td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
@@ -1402,11 +1405,8 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                                 onClick={async () => {
                                   const p = sale.payments.find(p => p.method === 'Entrega' && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));
                                   if (!p) return;
-                                  if (!window.confirm(`Confirmar que o cliente pagou R$ ${p.amount.toFixed(2)} na loja? O motorista NÃO deve cobrar na entrega.`)) return;
-                                  try {
-                                    await supabaseService.markPaymentPaidAtStore(sale.id, p.amount);
-                                    setSales(prev => prev.map(s => s.id === sale.id ? { ...s, payments: s.payments.map(pay => pay.method === 'Entrega' && pay.amount === p.amount ? { ...pay, status: 'PAGO_EM_LOJA' as any } : pay) } : s));
-                                  } catch { alert('Erro ao registrar pagamento na loja.'); }
+                                  setStorePaymentSale({ sale, originalAmount: p.amount });
+                                  setStoreNewPayments([{ method: 'Dinheiro', amount: p.amount, status: 'CONFERIDO' }]);
                                 }}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-xs font-black uppercase border border-violet-200"
                               >
@@ -1920,9 +1920,106 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
           </div>
         </div>
       )}
-    </div >
+
+      {/* StorePaymentModal */}
+      {storePaymentSale && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
+              <h2 className="font-black text-lg text-slate-800">Receber Pagamento da Entrega na Loja</h2>
+              <button onClick={() => setStorePaymentSale(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <div className="mb-4 bg-violet-50 p-4 rounded-xl border border-violet-100">
+                <p className="text-violet-800 font-bold text-sm">Valor total a receber: R$ {storePaymentSale.originalAmount.toFixed(2)}</p>
+              </div>
+              <div className="space-y-4">
+                {storeNewPayments.map((payment, index) => (
+                  <div key={index} className="flex gap-2 items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <select
+                      value={payment.method}
+                      onChange={(e) => {
+                        const newP = [...storeNewPayments];
+                        newP[index].method = e.target.value as any;
+                        setStoreNewPayments(newP);
+                      }}
+                      className="flex-1 px-3 py-2 border rounded-lg font-bold text-slate-700 uppercase focus:ring-2 focus:ring-violet-500"
+                    >
+                      <option value="Dinheiro">Dinheiro</option>
+                      <option value="PIX">PIX</option>
+                      <option value="Cartão de Crédito">Cartão de Crédito</option>
+                      <option value="Cartão de Débito">Cartão de Débito</option>
+                    </select>
+                    <input
+                      type="number"
+                      value={payment.amount || ''}
+                      onChange={(e) => {
+                        const newP = [...storeNewPayments];
+                        newP[index].amount = parseFloat(e.target.value) || 0;
+                        setStoreNewPayments(newP);
+                      }}
+                      className="w-32 px-3 py-2 border rounded-lg font-bold text-slate-700 focus:ring-2 focus:ring-violet-500"
+                      placeholder="Valor"
+                      step="0.01"
+                    />
+                    {storeNewPayments.length > 1 && (
+                      <button
+                        onClick={() => setStoreNewPayments(storeNewPayments.filter((_, i) => i !== index))}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  onClick={() => setStoreNewPayments([...storeNewPayments, { method: 'Dinheiro', amount: 0, status: 'CONFERIDO' }])}
+                  className="w-full py-2 border-2 border-dashed border-slate-300 text-slate-500 font-bold uppercase rounded-xl hover:bg-slate-50 hover:border-slate-400"
+                >
+                  + Adicionar Forma de Pagamento
+                </button>
+              </div>
+            </div>
+            <div className="p-6 border-t bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setStorePaymentSale(null)}
+                className="px-6 py-2.5 rounded-xl font-black uppercase text-sm text-slate-600 bg-white border shadow-sm hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  const total = storeNewPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                  if (Math.abs(total - storePaymentSale.originalAmount) > 0.01) {
+                    alert(`A soma dos pagamentos (R$ ${total.toFixed(2)}) deve ser igual a R$ ${storePaymentSale.originalAmount.toFixed(2)}`);
+                    return;
+                  }
+                  
+                  try {
+                    await supabaseService.markPaymentPaidAtStoreWithSplit(storePaymentSale.sale.id, storePaymentSale.originalAmount, storeNewPayments);
+                    setSales(prev => prev.map(s => {
+                      if (s.id === storePaymentSale.sale.id) {
+                        const otherPayments = (s.payments || []).filter(p => !(p.method === 'Entrega' && p.amount === storePaymentSale.originalAmount && (p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO')));
+                        return { ...s, payments: [...otherPayments, ...storeNewPayments] };
+                      }
+                      return s;
+                    }));
+                    setStorePaymentSale(null);
+                    alert('Pagamento registrado com sucesso!');
+                  } catch (e) {
+                    alert('Erro ao registrar pagamento na loja.');
+                  }
+                }}
+                className="px-6 py-2.5 rounded-xl font-black uppercase text-sm text-white bg-violet-600 hover:bg-violet-700 shadow-sm"
+              >
+                Confirmar Recebimento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
 export default Sales;
-

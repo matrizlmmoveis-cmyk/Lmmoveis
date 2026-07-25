@@ -22,6 +22,7 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [showPdf, setShowPdf] = useState(false);
+  const [extraSales, setExtraSales] = useState<Sale[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Efeito para refazer a consulta ao banco quando o filtro de data mudar.
@@ -55,11 +56,28 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
 
     if (dateFilter !== 'custom' || (dateFilter === 'custom' && customStart && customEnd)) {
       refreshData('sales', start, end);
+      
+      // Fetch extra sales paid in this date range
+      if (start && end) {
+        import('../services/supabaseService.ts').then(({ supabaseService }) => {
+            supabaseService.getSalesPaidOnDate(start, end).then(data => {
+                setExtraSales(data);
+            });
+        });
+      } else {
+        setExtraSales([]);
+      }
     }
   }, [dateFilter, customStart, customEnd, refreshData]);
 
   const filteredSales = useMemo(() => {
-    let filtered = sales.filter(s => s.status !== 'Cancelada');
+    // Combine regular sales with extraSales, avoiding duplicates
+    const allSalesMap = new Map<string, Sale>();
+    sales.forEach(s => allSalesMap.set(s.id, s));
+    extraSales.forEach(s => allSalesMap.set(s.id, s));
+    const allSales = Array.from(allSalesMap.values());
+
+    let filtered = allSales.filter(s => s.status !== 'Cancelada');
 
     // Remove vendas cujo ÚNICO pagamento seja na entrega e ainda não foi baixado
     filtered = filtered.filter(s => {
@@ -75,26 +93,92 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
     if (storeFilter !== 'all') filtered = filtered.filter(s => s.storeId === storeFilter);
     if (sellerFilter !== 'all') filtered = filtered.filter(s => s.sellerId === sellerFilter);
 
-    const now = new Date();
-    if (dateFilter === 'today') {
-      const todayStr = getSaoPauloDateString(now);
-      filtered = filtered.filter(s => getSaoPauloDateString(s.date) === todayStr);
-    } else if (dateFilter === 'this_week') {
-      const start = new Date(now); start.setDate(now.getDate() - now.getDay());
-      const startStr = getSaoPauloDateString(start);
-      filtered = filtered.filter(s => getSaoPauloDateString(s.date) >= startStr);
-    } else if (dateFilter === 'this_month') {
-      const currentMonthStr = getSaoPauloDateString(now).substring(0, 7);
-      filtered = filtered.filter(s => getSaoPauloDateString(s.date).substring(0, 7) === currentMonthStr);
-    } else if (dateFilter === 'custom' && customStart && customEnd) {
-      filtered = filtered.filter(s => {
-        const sDate = getSaoPauloDateString(s.date);
-        return sDate >= customStart && sDate <= customEnd;
-      });
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      let startStr = '';
+      let endStr = '';
+
+      if (dateFilter === 'today') {
+        startStr = getSaoPauloDateString(now);
+        endStr = startStr;
+      } else if (dateFilter === 'this_week') {
+        const start = new Date(now); start.setDate(now.getDate() - now.getDay());
+        startStr = getSaoPauloDateString(start);
+        endStr = getSaoPauloDateString(now);
+      } else if (dateFilter === 'this_month') {
+        const startD = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endD = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        startStr = getSaoPauloDateString(startD);
+        endStr = getSaoPauloDateString(endD);
+      } else if (dateFilter === 'custom' && customStart && customEnd) {
+        startStr = customStart;
+        endStr = customEnd;
+      }
+
+      if (startStr && endStr) {
+        filtered = filtered.filter(s => {
+            const saleDate = getSaoPauloDateString(s.date);
+            if (saleDate >= startStr && saleDate <= endStr) return true;
+            
+            // Check if any payment was paid in this date range
+            const hasPaymentInRange = s.payments?.some(p => {
+                if (p.details?.paid_at) {
+                    const paidDate = getSaoPauloDateString(new Date(p.details.paid_at));
+                    return paidDate >= startStr && paidDate <= endStr;
+                }
+                return false;
+            });
+
+            return hasPaymentInRange;
+        });
+      }
     }
 
-    return filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [sales, storeFilter, sellerFilter, dateFilter, customStart, customEnd]);
+    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [sales, extraSales, storeFilter, sellerFilter, dateFilter, customStart, customEnd]);
+
+  const { normalSales, extraSalesGroup } = useMemo(() => {
+    let startStr = '';
+    let endStr = '';
+
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      if (dateFilter === 'today') {
+        startStr = getSaoPauloDateString(now);
+        endStr = startStr;
+      } else if (dateFilter === 'this_week') {
+        const start = new Date(now); start.setDate(now.getDate() - now.getDay());
+        startStr = getSaoPauloDateString(start);
+        endStr = getSaoPauloDateString(now);
+      } else if (dateFilter === 'this_month') {
+        const startD = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endD = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        startStr = getSaoPauloDateString(startD);
+        endStr = getSaoPauloDateString(endD);
+      } else if (dateFilter === 'custom' && customStart && customEnd) {
+        startStr = customStart;
+        endStr = customEnd;
+      }
+    }
+
+    const normal: Sale[] = [];
+    const extra: Sale[] = [];
+
+    filteredSales.forEach(s => {
+      if (dateFilter === 'all') {
+        normal.push(s);
+      } else {
+        const createdDateStr = s.createdAt ? getSaoPauloDateString(s.createdAt) : getSaoPauloDateString(s.date);
+        if (startStr && endStr && createdDateStr >= startStr && createdDateStr <= endStr) {
+          normal.push(s);
+        } else {
+          extra.push(s);
+        }
+      }
+    });
+
+    return { normalSales: normal, extraSalesGroup: extra };
+  }, [filteredSales, dateFilter, customStart, customEnd]);
 
   const categoryData = useMemo(() => {
     const categories: Record<string, number> = {};
@@ -160,6 +244,18 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
   const getSellerName = (sellerId: string) => employees.find(e => e.id === sellerId)?.name || '—';
   const getStoreName = (storeId: string) => stores.find(s => s.id === storeId)?.name || '—';
 
+  const getBlockTotals = (salesList: Sale[]) => {
+    const total = salesList.reduce((acc, s) => acc + s.total, 0);
+    const pTotals: Record<string, number> = {};
+    salesList.forEach(sale => {
+      (sale.payments || []).forEach(p => {
+        const method = p.method || 'Outros';
+        pTotals[method] = (pTotals[method] || 0) + (p.amount || 0);
+      });
+    });
+    return { total, pTotals };
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -167,6 +263,82 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
   const handlePrintHtml = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
+    const renderTableRows = (salesList: Sale[]) => {
+      return salesList.map(sale => {
+        const itemsList = sale.items
+          .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
+          .map(item => {
+          const prod = products.find(p => p.id === item.productId);
+          const store = stores.find(s => s.id === item.locationId);
+          const cdName = store?.name || (item.locationId === 'ST-MOSTRUARIO' ? 'Mostruário' : (item.locationId === 'ST-ENCOMENDA' ? 'Encomenda' : item.locationId));
+          return `QTD${item.quantity}: ${prod?.name || item.productId} [${cdName}] - R$ ${(item.price * item.quantity).toFixed(2)} /`;
+        }).join(' ');
+
+        const paymentsStr = (sale.payments || []).map(p => `${getPaymentLabel(p.method)}: R$ ${p.amount.toFixed(2)}`).join(' / ');
+
+        let dateDisplay = new Date(sale.date).toLocaleDateString('pt-BR');
+        if (sale.createdAt) {
+          const createdStr = new Date(sale.createdAt).toLocaleDateString('pt-BR');
+          if (createdStr !== dateDisplay) {
+            dateDisplay = `${dateDisplay} <br><span style="font-size: 9px; color: #666;">(Venda Efetuada em: ${createdStr})</span>`;
+          }
+        }
+
+        return `
+          <tr>
+            <td>${sale.id}</td>
+            <td>${dateDisplay}</td>
+            <td>${sale.customerName}</td>
+            <td>${getSellerName(sale.sellerId)}</td>
+            <td>${itemsList}</td>
+            <td style="text-align: right">R$ ${sale.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+            <td>${paymentsStr}</td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    const renderHtmlBlock = (salesList: Sale[], title: string) => {
+      if (salesList.length === 0) return '';
+      const { total, pTotals } = getBlockTotals(salesList);
+      return `
+        <h2 style="font-size: 14px; text-transform: uppercase; margin-bottom: 5px; margin-top: 20px;">${title}</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>Data</th>
+              <th>Cliente</th>
+              <th>Vendedor</th>
+              <th>Produtos</th>
+              <th style="text-align: right">Total</th>
+              <th>Pagamento</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderTableRows(salesList)}
+          </tbody>
+        </table>
+        
+        <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+          <table style="width: 50%; margin-top: 0;">
+            <tbody>
+              <tr class="total-row">
+                <td style="text-align: right">SUBTOTAL</td>
+                <td style="text-align: right; width: 33%;">R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="footer" style="margin-top: 10px;">
+          ${Object.entries(pTotals).map(([method, amount]) => `
+            <div>${getPaymentLabel(method)}: R$ ${Number(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          `).join('')}
+        </div>
+      `;
+    };
 
     const html = `
       <!DOCTYPE html>
@@ -191,59 +363,23 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
             <div class="subtitle">${storeFilter !== 'all' ? getStoreName(storeFilter) : 'Todas as Lojas'} | ${getDateLabel()}</div>
             ${sellerFilter !== 'all' ? `<div class="subtitle">Vendedor: ${getSellerName(sellerFilter)}</div>` : ''}
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Pedido</th>
-                <th>Data</th>
-                <th>Cliente</th>
-                <th>Vendedor</th>
-                <th>Produtos</th>
-                <th style="text-align: right">Total</th>
-                <th>Pagamento</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredSales.map(sale => {
-      const itemsList = sale.items
-        .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
-        .map(item => {
-        const prod = products.find(p => p.id === item.productId);
-        const store = stores.find(s => s.id === item.locationId);
-        const cdName = store?.name || (item.locationId === 'ST-MOSTRUARIO' ? 'Mostruário' : (item.locationId === 'ST-ENCOMENDA' ? 'Encomenda' : item.locationId));
-        return `${item.quantity}x ${prod?.name || item.productId} [${cdName}]`;
-      }).join(', ');
-
-      const paymentsStr = (sale.payments || []).map(p => `${getPaymentLabel(p.method)}: R$ ${p.amount.toFixed(2)}`).join(' / ');
-
-      let dateDisplay = new Date(sale.date).toLocaleDateString('pt-BR');
-      if (sale.createdAt) {
-        const createdStr = new Date(sale.createdAt).toLocaleDateString('pt-BR');
-        if (createdStr !== dateDisplay) {
-          dateDisplay = `${dateDisplay} <br><span style="font-size: 9px; color: #666;">(Venda Efetuada em: ${createdStr})</span>`;
-        }
-      }
-
-      return `
-                  <tr>
-                    <td>${sale.id}</td>
-                    <td>${dateDisplay}</td>
-                    <td>${sale.customerName}</td>
-                    <td>${getSellerName(sale.sellerId)}</td>
-                    <td>${itemsList}</td>
-                    <td style="text-align: right">R$ ${sale.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                    <td>${paymentsStr}</td>
-                  </tr>
-                `;
-    }).join('')}
-              <tr class="total-row">
-                <td colspan="5" style="text-align: right">TOTAL GERAL</td>
-                <td style="text-align: right">R$ ${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="footer">
+          </div>
+          
+          ${normalSales.length > 0 || extraSalesGroup.length === 0 ? renderHtmlBlock(normalSales, 'Vendas do Período') : ''}
+          ${extraSalesGroup.length > 0 ? renderHtmlBlock(extraSalesGroup, 'Recebimentos de Entregas (Vendas Anteriores)') : ''}
+          
+          <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
+            <table style="width: 50%; margin-top: 0;">
+              <tbody>
+                <tr class="total-row" style="background-color: #c5cae9;">
+                  <td style="text-align: right">TOTAL GERAL</td>
+                  <td style="text-align: right; width: 33%;">R$ ${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="footer" style="margin-top: 10px;">
             ${Object.entries(paymentTotals).map(([method, amount]) => `
               <div>${getPaymentLabel(method)}: R$ ${Number(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
             `).join('')}
@@ -257,6 +393,238 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
 
     printWindow.document.write(html);
     printWindow.document.close();
+  };
+
+  const handlePrintHtmlBruto = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const renderTableRows = (salesList: Sale[]) => {
+      return salesList.map(sale => {
+        const itemsList = sale.items
+          .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
+          .map(item => {
+          const prod = products.find(p => p.id === item.productId);
+          const store = stores.find(s => s.id === item.locationId);
+          const cdName = store?.name || (item.locationId === 'ST-MOSTRUARIO' ? 'Mostruário' : (item.locationId === 'ST-ENCOMENDA' ? 'Encomenda' : item.locationId));
+          return `QTD${item.quantity}: ${prod?.name || item.productId} [${cdName}] - R$ ${(item.price * item.quantity).toFixed(2)} /`;
+        }).join(' ');
+
+        const paymentsStr = (sale.payments || []).map(p => `${getPaymentLabel(p.method)}: R$ ${p.amount.toFixed(2)}`).join(' / ');
+
+        let dateDisplay = new Date(sale.date).toLocaleDateString('pt-BR');
+        if (sale.createdAt) {
+          const createdStr = new Date(sale.createdAt).toLocaleDateString('pt-BR');
+          if (createdStr !== dateDisplay) {
+            dateDisplay = `${dateDisplay} <br><span style="font-size: 9px; color: #666;">(Venda Efetuada em: ${createdStr})</span>`;
+          }
+        }
+
+        return `
+          <tr>
+            <td>${sale.id}</td>
+            <td>${dateDisplay}</td>
+            <td>${sale.customerName}</td>
+            <td>${getSellerName(sale.sellerId)}</td>
+            <td>${itemsList}</td>
+            <td style="text-align: right">R$ ${sale.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+            <td>${paymentsStr}</td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    const renderHtmlBlock = (salesList: Sale[], title: string) => {
+      if (salesList.length === 0) return '';
+      const { total, pTotals } = getBlockTotals(salesList);
+      return `
+        <h2 style="font-size: 14px; text-transform: uppercase; margin-bottom: 5px; margin-top: 20px;">${title}</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>Data</th>
+              <th>Cliente</th>
+              <th>Vendedor</th>
+              <th>Produtos</th>
+              <th style="text-align: right">Total</th>
+              <th>Pagamento</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderTableRows(salesList)}
+          </tbody>
+        </table>
+        
+        <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+          <table style="width: 50%; margin-top: 0;">
+            <tbody>
+              <tr class="total-row">
+                <td style="text-align: right">SUBTOTAL</td>
+                <td style="text-align: right; width: 33%;">R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="footer" style="margin-top: 10px;">
+          ${Object.entries(pTotals).map(([method, amount]) => `
+            <div>${getPaymentLabel(method)}: R$ ${Number(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          `).join('')}
+        </div>
+      `;
+    };
+
+    const { total: totalBruto, pTotals: pTotalsBruto } = getBlockTotals(filteredSales);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Relatório de Vendas (Completo) - Móveis LM</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; color: #333; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; font-weight: bold; text-transform: uppercase; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            .footer { margin-top: 30px; text-align: right; font-weight: bold; }
+            .total-row { background-color: #eee; font-weight: bold; }
+            h1 { margin: 0; font-size: 24px; }
+            .subtitle { color: #666; margin-top: 5px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Relatório de Vendas (Sem Separação)</h1>
+            <div class="subtitle">${storeFilter !== 'all' ? getStoreName(storeFilter) : 'Todas as Lojas'} | ${getDateLabel()}</div>
+            ${sellerFilter !== 'all' ? `<div class="subtitle">Vendedor: ${getSellerName(sellerFilter)}</div>` : ''}
+          </div>
+          
+          ${renderHtmlBlock(filteredSales, 'Todas as Vendas')}
+          
+          <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
+            <table style="width: 50%; margin-top: 0;">
+              <tbody>
+                <tr class="total-row" style="background-color: #c5cae9;">
+                  <td style="text-align: right">TOTAL GERAL</td>
+                  <td style="text-align: right; width: 33%;">R$ ${totalBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="footer" style="margin-top: 10px;">
+            ${Object.entries(pTotalsBruto).map(([method, amount]) => `
+              <div>${getPaymentLabel(method)}: R$ ${Number(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            `).join('')}
+          </div>
+          <script>
+            window.onload = function() { window.print(); window.close(); };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  // Helper para renderizar a tabela no PDF View
+  const renderPdfTable = (salesList: Sale[]) => (
+    <table className="w-full border-collapse text-sm mb-0" style={{ borderCollapse: 'collapse' }}>
+      <thead>
+        <tr style={{ backgroundColor: '#e8eaf6' }}>
+          <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Pedido</th>
+          <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Data</th>
+          <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Cliente</th>
+          <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Vendedor</th>
+          <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Produtos</th>
+          <th className="border border-gray-400 px-3 py-2 text-right font-black text-black text-xs uppercase">Total</th>
+          <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Pagamento</th>
+        </tr>
+      </thead>
+      <tbody>
+        {salesList.map((sale, idx) => {
+          const rowBg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+          const itemsList = sale.items
+            .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
+            .map(item => {
+            const prod = products.find(p => p.id === item.productId);
+            const store = stores.find(s => s.id === item.locationId);
+            const cdName = store?.name || (item.locationId === 'ST-MOSTRUARIO' ? 'Mostruário' : (item.locationId === 'ST-ENCOMENDA' ? 'Encomenda' : item.locationId));
+            return `QTD${item.quantity}: ${prod?.name || item.productId} [${cdName}] - R$ ${(item.price * item.quantity).toFixed(2)} /`;
+          }).join(' ');
+
+          const paymentsStr = (sale.payments || []).map(p => {
+            const label = getPaymentLabel(p.method);
+            return `${label}: $ ${p.amount.toFixed(2)}`;
+          }).join(' / ');
+
+          let dateDisplay = new Date(sale.date).toLocaleDateString('pt-BR');
+          let obsNode = null;
+          if (sale.createdAt) {
+            const createdStr = new Date(sale.createdAt).toLocaleDateString('pt-BR');
+            if (createdStr !== dateDisplay) {
+              obsNode = <div className="text-[9px] text-gray-500 font-medium mt-1 uppercase">(Venda Efetuada em: {createdStr})</div>;
+            }
+          }
+
+          return (
+            <tr key={sale.id} style={{ backgroundColor: rowBg }}>
+              <td className="border border-gray-300 px-3 py-2 font-bold text-xs text-gray-800 align-top">{sale.id}</td>
+              <td className="border border-gray-300 px-3 py-2 text-xs text-gray-600 align-top">
+                {dateDisplay}
+                {obsNode}
+              </td>
+              <td className="border border-gray-300 px-3 py-2 text-xs text-gray-800 font-medium align-top">{sale.customerName}</td>
+              <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top">{getSellerName(sale.sellerId)}</td>
+              <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top">{itemsList}</td>
+              <td className="border border-gray-300 px-3 py-2 text-xs font-bold text-gray-900 text-right align-top whitespace-nowrap">
+                R$ {sale.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </td>
+              <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top">{paymentsStr}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+
+  const renderPdfBlock = (salesList: Sale[], title: string) => {
+    if (salesList.length === 0) return null;
+    const { total, pTotals } = getBlockTotals(salesList);
+    return (
+      <div className="mb-6">
+        <h2 className="text-base font-black text-slate-800 mb-2 uppercase">{title}</h2>
+        {renderPdfTable(salesList)}
+        
+        {/* Resumo de Totais do Bloco */}
+        <div className="flex justify-end mb-4 mt-2">
+          <table className="w-1/2 border-collapse text-sm" style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              <tr style={{ backgroundColor: '#e8eaf6' }}>
+                <td className="border border-gray-400 px-3 py-2 text-right font-black text-sm text-black uppercase" style={{ textAlign: 'right' }}>
+                  SUBTOTAL
+                </td>
+                <td className="border border-gray-400 px-3 py-2 text-right font-black text-sm text-black whitespace-nowrap w-1/3">
+                  R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Totais por forma de pagamento do Bloco */}
+        <div className="text-right text-sm space-y-0.5">
+          {Object.entries(pTotals).map(([method, amount]) => (
+            <p key={method} className="text-gray-700 font-medium">
+              {getPaymentLabel(method)}: <span className="font-bold text-gray-900">R$ {Number(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </p>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   // Print PDF view
@@ -282,90 +650,47 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
           </button>
         </div>
 
-        {/* PDF Content */}
-        <div ref={printRef} className="bg-white p-8 print:p-6 max-w-[1100px] mx-auto shadow-xl rounded-2xl print:shadow-none print:rounded-none">
-          {/* Header */}
-          <div className="text-center mb-6 border-b-2 border-black pb-4">
-            <h1 className="text-3xl font-black text-black">Relatório de Vendas</h1>
-            <p className="text-sm text-gray-600 mt-1 font-medium">
-              {storeFilter !== 'all' ? getStoreName(storeFilter) : 'Todas as Lojas'} &nbsp;·&nbsp; {getDateLabel()}
-            </p>
-            {sellerFilter !== 'all' && (
-              <p className="text-xs text-gray-500 mt-0.5">Vendedor: {getSellerName(sellerFilter)}</p>
+          {/* PDF Content */}
+          <div ref={printRef} className="bg-white p-8 print:p-6 max-w-[1100px] mx-auto shadow-xl rounded-2xl print:shadow-none print:rounded-none">
+            {/* Header */}
+            <div className="text-center mb-6 border-b-2 border-black pb-4">
+              <h1 className="text-3xl font-black text-black">Relatório de Vendas</h1>
+              <p className="text-sm text-gray-600 mt-1 font-medium">
+                {storeFilter !== 'all' ? getStoreName(storeFilter) : 'Todas as Lojas'} &nbsp;·&nbsp; {getDateLabel()}
+              </p>
+              {sellerFilter !== 'all' && (
+                <p className="text-xs text-gray-500 mt-0.5">Vendedor: {getSellerName(sellerFilter)}</p>
+              )}
+            </div>
+
+            {/* Tabela Vendas do Período */}
+            {(normalSales.length > 0 || extraSalesGroup.length === 0) && (
+              renderPdfBlock(normalSales, 'Vendas do Período')
             )}
-          </div>
 
-          {/* Tabela principal */}
-          <table className="w-full border-collapse text-sm mb-6" style={{ borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#e8eaf6' }}>
-                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Pedido</th>
-                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Data</th>
-                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Cliente</th>
-                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Vendedor</th>
-                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Produtos</th>
-                <th className="border border-gray-400 px-3 py-2 text-right font-black text-black text-xs uppercase">Total</th>
-                <th className="border border-gray-400 px-3 py-2 text-left font-black text-black text-xs uppercase">Pagamento</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSales.map((sale, idx) => {
-                const rowBg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
-                const itemsList = sale.items
-                  .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
-                  .map(item => {
-                  const prod = products.find(p => p.id === item.productId);
-                  const store = stores.find(s => s.id === item.locationId);
-                  const cdName = store?.name || (item.locationId === 'ST-MOSTRUARIO' ? 'Mostruário' : (item.locationId === 'ST-ENCOMENDA' ? 'Encomenda' : item.locationId));
-                  return `QTD${item.quantity}: ${prod?.name || item.productId} [${cdName}] - R$ ${(item.price * item.quantity).toFixed(2)} /`;
-                }).join(' ');
+            {/* Tabela Recebimentos de Entregas */}
+            {extraSalesGroup.length > 0 && (
+              renderPdfBlock(extraSalesGroup, 'Recebimentos de Entregas (Vendas Anteriores)')
+            )}
 
-                const paymentsStr = (sale.payments || []).map(p => {
-                  const label = getPaymentLabel(p.method);
-                  return `${label}: $ ${p.amount.toFixed(2)}`;
-                }).join(' / ');
-
-                let dateDisplay = new Date(sale.date).toLocaleDateString('pt-BR');
-                let obsNode = null;
-                if (sale.createdAt) {
-                  const createdStr = new Date(sale.createdAt).toLocaleDateString('pt-BR');
-                  if (createdStr !== dateDisplay) {
-                    obsNode = <div className="text-[9px] text-gray-500 font-medium mt-1 uppercase">(Venda Efetuada em: {createdStr})</div>;
-                  }
-                }
-
-                return (
-                  <tr key={sale.id} style={{ backgroundColor: rowBg }}>
-                    <td className="border border-gray-300 px-3 py-2 font-bold text-xs text-gray-800 align-top">{sale.id}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-600 align-top">
-                      {dateDisplay}
-                      {obsNode}
+            {/* Resumo de Totais */}
+            <div className="flex justify-end mb-6">
+              <table className="w-1/2 border-collapse text-sm" style={{ borderCollapse: 'collapse' }}>
+                <tbody>
+                  {/* Linha de TOTAL */}
+                  <tr style={{ backgroundColor: '#c5cae9' }}>
+                    <td className="border border-gray-400 px-3 py-2 text-right font-black text-sm text-black uppercase" style={{ textAlign: 'right' }}>
+                      TOTAL GERAL
                     </td>
-                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-800 font-medium align-top">{sale.customerName}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top">{getSellerName(sale.sellerId)}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top">{itemsList}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-xs font-bold text-gray-900 text-right align-top whitespace-nowrap">
-                      R$ {sale.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    <td className="border border-gray-400 px-3 py-2 text-right font-black text-sm text-black whitespace-nowrap w-1/3">
+                      R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="border border-gray-300 px-3 py-2 text-xs text-gray-700 align-top">{paymentsStr}</td>
                   </tr>
-                );
-              })}
+                </tbody>
+              </table>
+            </div>
 
-              {/* Linha de TOTAL */}
-              <tr style={{ backgroundColor: '#c5cae9' }}>
-                <td colSpan={5} className="border border-gray-400 px-3 py-2 text-right font-black text-sm text-black uppercase" style={{ textAlign: 'right' }}>
-                  TOTAL
-                </td>
-                <td className="border border-gray-400 px-3 py-2 text-right font-black text-sm text-black whitespace-nowrap">
-                  R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </td>
-                <td className="border border-gray-400 px-3 py-2"></td>
-              </tr>
-            </tbody>
-          </table>
-
-          {/* Totais por forma de pagamento */}
+            {/* Totais por forma de pagamento */}
           <div className="text-right text-sm space-y-0.5">
             {Object.entries(paymentTotals).map(([method, amount]) => (
               <p key={method} className="text-gray-700 font-medium">
@@ -435,7 +760,15 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
             className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-900 transition-all shadow-lg shadow-slate-200"
           >
             <Printer className="w-4 h-4" />
-            <span>Imprimir HTML</span>
+            <span>Imprimir Separado</span>
+          </button>
+
+          <button
+            onClick={handlePrintHtmlBruto}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Imprimir Único (Original)</span>
           </button>
 
           <button
