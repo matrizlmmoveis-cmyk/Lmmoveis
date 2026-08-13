@@ -591,7 +591,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
           return {
             ...s,
             payments: s.payments.map(p =>
-              (p.method === 'Entrega' && p.amount === amount) ? { ...p, status: 'CONFERIDO' } : p
+              (p.method === 'Entrega' && p.amount === amount) ? { ...p, status: 'CONFERIDO', details: { paid_at: new Date().toISOString() } } : p
             )
           }
         }
@@ -1621,7 +1621,17 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                     <div className="space-y-2">
                       {er.editedPayments.map((pay, idx) => (
                         <div key={idx} className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                          <select value={pay.method} onChange={e => { const p = [...er.editedPayments]; p[idx] = { ...p[idx], method: e.target.value as any }; setEditRequest({ ...er, editedPayments: p }); }}
+                          <select value={pay.method} onChange={e => { 
+                              const p = [...er.editedPayments]; 
+                              const newMethod = e.target.value as any;
+                              p[idx] = { ...p[idx], method: newMethod };
+                              if (newMethod === 'Entrega') {
+                                p[idx].status = 'PENDENTE_ENTREGA';
+                              } else if (!p[idx].status || p[idx].status === 'PENDENTE_ENTREGA' || p[idx].status === 'AGUARDANDO_ACERTO') {
+                                p[idx].status = 'CONFERIDO';
+                              }
+                              setEditRequest({ ...er, editedPayments: p }); 
+                            }}
                             className="flex-1 py-2 px-3 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-amber-400">
                             {['Dinheiro', 'PIX', 'Cartão de Crédito', 'Cartão de Débito', 'Boleto', 'Crediário', 'Entrega'].map(m => <option key={m}>{m}</option>)}
                           </select>
@@ -1631,7 +1641,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           <button onClick={() => setEditRequest({ ...er, editedPayments: er.editedPayments.filter((_, i) => i !== idx) })} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"><X className="w-4 h-4" /></button>
                         </div>
                       ))}
-                      <button onClick={() => setEditRequest({ ...er, editedPayments: [...er.editedPayments, { method: 'Dinheiro', amount: 0 }] })}
+                      <button onClick={() => setEditRequest({ ...er, editedPayments: [...er.editedPayments, { method: 'Dinheiro', amount: 0, status: 'CONFERIDO' }] })}
                         className="text-xs font-black text-amber-700 border border-dashed border-amber-300 rounded-xl px-4 py-2 hover:bg-amber-50 w-full">
                         + Adicionar Pagamento
                       </button>

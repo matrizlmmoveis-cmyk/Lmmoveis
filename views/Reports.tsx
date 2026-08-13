@@ -79,8 +79,8 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
 
     let filtered = allSales.filter(s => s.status !== 'Cancelada');
 
-    // Remove vendas cujo ÚNICO pagamento seja na entrega e ainda não foi baixado
-    filtered = filtered.filter(s => {
+    // Remove vendas cujo ÚNICO pagamento seja na entrega e ainda não foi baixado - REMOVIDO A PEDIDO DO CLIENTE
+    /* filtered = filtered.filter(s => {
       const hasEntregaPending = s.payments?.some(p => p.method === 'Entrega' && (!p.status || p.status === 'PENDENTE_ENTREGA' || p.status === 'AGUARDANDO_ACERTO'));
       const hasConfirmedPayment = s.payments?.some(p => p.method !== 'Entrega' || (p.method === 'Entrega' && (p.status === 'PAGO_EM_LOJA' || p.status === 'CONFERIDO')));
       
@@ -88,7 +88,7 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
         return false;
       }
       return true;
-    });
+    }); */
 
     if (storeFilter !== 'all') filtered = filtered.filter(s => s.storeId === storeFilter);
     if (sellerFilter !== 'all') filtered = filtered.filter(s => s.sellerId === sellerFilter);
@@ -125,6 +125,16 @@ const Reports: React.FC<ReportsProps> = ({ user, sales, stores, products, employ
                 if (p.details?.paid_at) {
                     const paidDate = getSaoPauloDateString(new Date(p.details.paid_at));
                     return paidDate >= startStr && paidDate <= endStr;
+                }
+                // Fallback for sales updated before the paid_at fix
+                if (p.status === 'CONFERIDO' || p.status === 'PAGO_EM_LOJA' || p.status === 'AGUARDANDO_ACERTO') {
+                    if (s.createdAt && s.date) {
+                        const createdStr = getSaoPauloDateString(s.createdAt);
+                        const modifiedStr = getSaoPauloDateString(s.date);
+                        if (createdStr !== modifiedStr && modifiedStr >= startStr && modifiedStr <= endStr) {
+                            return true;
+                        }
+                    }
                 }
                 return false;
             });

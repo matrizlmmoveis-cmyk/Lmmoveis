@@ -68,7 +68,7 @@ const ReceiptSettlement: React.FC<ReceiptSettlementProps> = ({ sales, setSales, 
                         ...s,
                         payments: s.payments.map(p =>
                             (p.method === 'Entrega' && p.amount === amount)
-                                ? { ...p, status: 'CONFERIDO' }
+                                ? { ...p, status: 'CONFERIDO', details: { paid_at: new Date().toISOString() } }
                                 : p
                         )
                     }
