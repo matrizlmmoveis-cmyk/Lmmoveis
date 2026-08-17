@@ -9,6 +9,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 import { supabaseService } from '../services/supabaseService.ts';
+import { supabase } from '../services/supabase.ts';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
 import { getSaoPauloDateString, formatSaoPauloDateBR } from '../utils/dateUtils.ts';
 import { nfEmailService } from '../services/nfe/nfeService.ts';
@@ -401,12 +402,16 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         };
       });
 
-      let currentNumber = parseInt(window.prompt("Número da NF-e Especial:", "1") || "0", 10);
-      if (!currentNumber) {
-        setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'idle', errorMessage: 'Cancelado', isEmitting: false } }));
-        return;
-      }
-      let currentSeries = 1;
+      const { data: lastNFe } = await supabase
+        .from('sales')
+        .select('nfe_number')
+        .eq('nfe_series', 3)
+        .order('nfe_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let currentNumber = (lastNFe?.nfe_number || 0) + 1;
+      let currentSeries = 3;
 
       nfEmailService.setConfig({ cnpj: "39357816000102", apiKey: "4rbIXmbPsmZ86RPmcnvmfKZL7TETKls9LXiBdgj" });
 
@@ -440,7 +445,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
           status: finalStatus,
           nfeId: nfeId,
           settingsId: settings.id,
-          isNfce: false
+          isNfce: true // Bypass para NÃO incrementar a nfe_settings do 1º CNPJ
         });
 
         setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'success', errorMessage: '', isEmitting: false } }));
