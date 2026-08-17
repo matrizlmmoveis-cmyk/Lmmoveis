@@ -406,11 +406,20 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         .from('sales')
         .select('nfe_number')
         .eq('nfe_series', 3)
+        .not('nfe_number', 'is', null)
         .order('nfe_number', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      let currentNumber = (lastNFe?.nfe_number || 0) + 1;
+      let currentNumber = lastNFe?.nfe_number ? lastNFe.nfe_number + 1 : 0;
+      
+      if (currentNumber === 0) {
+        currentNumber = parseInt(window.prompt("Numeração automática vazia. Qual o número da próxima NF-e série 3? (Isso só será pedido na primeira vez)", "1") || "0", 10);
+        if (!currentNumber) {
+          setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'idle', errorMessage: 'Cancelado', isEmitting: false } }));
+          return;
+        }
+      }
       let currentSeries = 3;
 
       nfEmailService.setConfig({ cnpj: "39357816000102", apiKey: "4rbIXmbPsmZ86RPmcnvmfKZL7TETKls9LXiBdgj" });
