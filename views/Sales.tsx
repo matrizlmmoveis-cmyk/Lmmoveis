@@ -14,6 +14,7 @@ import { getSaoPauloDateString, formatSaoPauloDateBR } from '../utils/dateUtils.
 import { nfEmailService } from '../services/nfe/nfeService.ts';
 import { SEFAZTxtGenerator } from '../services/nfe/sefazGenerator.ts';
 import { SEFAZTxtGeneratorSimples } from '../services/nfe/sefazGeneratorSimples.ts';
+import { SEFAZTxtGeneratorEspecialNFe } from '../services/nfe/sefazGeneratorEspecialNFe.ts';
 import { NFeIssuer, NFeDest, NFeItem } from '../services/nfe/types.ts';
 import { FileText, Receipt, Loader2 } from 'lucide-react';
 
@@ -323,6 +324,129 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         alert(`Nota emitida com sucesso! (Chave: ${finalKey})`);
       } else {
         throw new Error(`NF-e: ${response.rawResponse || response.message || "Sem ID de retorno"}`);
+      }
+
+    } catch (error: any) {
+      console.error(error);
+      setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'error', errorMessage: error.message || "Erro desconhecido", isEmitting: false } }));
+      alert(`Erro na emissão: ${error.message || "Erro desconhecido"}`);
+    }
+  };
+
+  const handleEmitNFeListSpecialNFe = async (sale: Sale) => {
+    setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'idle', errorMessage: '', isEmitting: true } }));
+
+    try {
+      const settings = await supabaseService.getNFeSettings();
+      if (!settings) throw new Error("As configurações de NF-e não foram encontradas.");
+
+      const customer = customers.find(c => c.document === sale.customerCpf);
+      if (!customer) throw new Error("Dados do cliente não encontrados no cadastro.");
+
+      const store = stores.find(s => s.id === sale.storeId);
+
+      const issuer: NFeIssuer = {
+        name: settings.issuer.name || store?.name || 'Móveis LM',
+        cnpj: "39357816000102",
+        state: settings.issuer.state || 'RJ',
+        ibge: settings.issuer.ibge || '3304557',
+        street: settings.issuer.street || store?.location || 'Rua Principal',
+        number: settings.issuer.number || '0',
+        neighborhood: settings.issuer.neighborhood || 'Centro',
+        city: settings.issuer.city || 'Rio de Janeiro',
+        cep: settings.issuer.cep || '00000000'
+      };
+
+      let street = customer.address || '';
+      let number = customer.number || 'S/N';
+      let neighborhood = customer.neighborhood || '';
+      let city = customer.city || '';
+      let state = customer.state || '';
+      let cep = customer.zipCode || '';
+
+      if (customer.address?.startsWith('{')) {
+        try {
+          const addrObj = JSON.parse(customer.address);
+          street = addrObj.street || street;
+          number = addrObj.number || number;
+          neighborhood = addrObj.neighborhood || neighborhood;
+          city = addrObj.city || city;
+          state = addrObj.state || state;
+          cep = addrObj.cep || addrObj.zipCode || cep;
+        } catch (e) { }
+      }
+
+      const dest: NFeDest = {
+        name: customer.name,
+        document: customer.document,
+        type: customer.type === 'PJ' ? 'CNPJ' : 'CPF',
+        email: customer.email,
+        street, number, neighborhood, city, state, cep,
+        ibge: settings.issuer.ibge || '3304557'
+      };
+
+      const items: NFeItem[] = sale.items
+        .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
+        .map(item => {
+        const prod = products.find(p => p.id === item.productId);
+        return {
+          description: prod?.name || 'Produto',
+          ncm: prod?.ncm || '94036000',
+          cfop: prod?.cfop || '5102',
+          unit: prod?.unidade || 'UN',
+          qty: item.quantity,
+          unitValue: item.price,
+          totalValue: item.price * item.quantity * (1 - (item.discount || 0) / 100),
+          code: prod?.productCode?.toString() || prod?.id || '0'
+        };
+      });
+
+      let currentNumber = parseInt(window.prompt("Número da NF-e Especial:", "1") || "0", 10);
+      if (!currentNumber) {
+        setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'idle', errorMessage: 'Cancelado', isEmitting: false } }));
+        return;
+      }
+      let currentSeries = 1;
+
+      nfEmailService.setConfig({ cnpj: "39357816000102", apiKey: "4rbIXmbPsmZ86RPmcnvmfKZL7TETKls9LXiBdgj" });
+
+      let txtContent = SEFAZTxtGeneratorEspecialNFe.generate(
+        issuer, dest, items, currentNumber, currentSeries, settings.environment, 1 // 1-Simples Nacional
+      );
+
+      const response = await nfEmailService.sendNFe(txtContent);
+      const nfeId = response.id || response.nfe_id;
+
+      if (response && nfeId) {
+        let finalKey = response.chave || '';
+        let finalStatus = response.status || 'Enviada';
+
+        if (!finalKey) {
+          try {
+            const statusRaw = await nfEmailService.getNFeStatus(nfeId);
+            const statusData = JSON.parse(statusRaw);
+            const nfeDetails = statusData?.ListaNotaFiscal?.[0];
+            if (nfeDetails) {
+              finalKey = nfeDetails.nfe_chave || '';
+              finalStatus = nfeDetails.dsc_processo || 'Processando';
+            }
+          } catch (e) { }
+        }
+
+        await supabaseService.updateSaleNFe(sale.id, {
+          number: currentNumber,
+          series: currentSeries,
+          key: finalKey,
+          status: finalStatus,
+          nfeId: nfeId,
+          settingsId: settings.id,
+          isNfce: false
+        });
+
+        setNfeStatuses(prev => ({ ...prev, [sale.id]: { status: 'success', errorMessage: '', isEmitting: false } }));
+        alert(`Nota emitida com sucesso! (Chave: ${finalKey})`);
+      } else {
+        throw new Error(`NF-e Especial: ${response.rawResponse || response.message || "Sem ID de retorno"}`);
       }
 
     } catch (error: any) {
@@ -1273,7 +1397,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                               Montagem
                             </span>
                           )}
-                          <div className="flex gap-1 mt-2 w-full">
+                          <div className="grid grid-cols-2 gap-1 mt-2 w-full max-w-[140px]">
                             <button
                               onClick={() => handleEmitNFeList(sale, false)}
                               disabled={nfeStatuses[sale.id]?.isEmitting || nfeStatuses[sale.id]?.status === 'success' || !!sale.nfeId}
@@ -1318,6 +1442,22 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                               </div>
                               {sale.nfeId && sale.nfeNumber && (
                                 <span className="text-[7px] font-bold text-red-100 mt-0.5 tracking-wider">
+                                  Nº {sale.nfeNumber}
+                                </span>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleEmitNFeListSpecialNFe(sale)}
+                              disabled={nfeStatuses[sale.id]?.isEmitting || nfeStatuses[sale.id]?.status === 'success' || !!sale.nfeId}
+                              className="flex flex-col items-center justify-center flex-1 bg-orange-600 hover:bg-orange-700 text-white px-1 py-1 rounded disabled:opacity-50 transition-colors"
+                              title={nfeStatuses[sale.id]?.errorMessage || "Emitir NF-e (55) Especial"}
+                            >
+                              <div className="flex items-center gap-1 text-[8px] font-black uppercase">
+                                {nfeStatuses[sale.id]?.isEmitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <FileText className="w-2.5 h-2.5" />}
+                                NF-e Esp
+                              </div>
+                              {sale.nfeId && sale.nfeNumber && (
+                                <span className="text-[7px] font-bold text-orange-100 mt-0.5 tracking-wider">
                                   Nº {sale.nfeNumber}
                                 </span>
                               )}
