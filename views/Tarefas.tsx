@@ -592,7 +592,7 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSal
                                             <p className="text-xs text-slate-500">Total: <span className="font-black text-slate-800">R$ {(orig.total || 0).toFixed(2)}</span></p>
                                             <div className="space-y-1 mt-1">
                                                 {(orig.payments || []).map((p: any, i: number) => (
-                                                    <p key={i} className="text-xs text-slate-500">{p.method}: R$ {(p.amount || 0).toFixed(2)}</p>
+                                                    <p key={i} className="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded-lg">{p.method}: <span className="text-slate-800">R$ {(p.amount || 0).toFixed(2)}</span></p>
                                                 ))}
                                             </div>
                                         </div>
@@ -626,11 +626,44 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSal
                                         </div>
                                         <div className="mt-3 pt-3 border-t border-slate-100">
                                             <p className="text-xs text-slate-500">Total: <span className="font-black text-amber-700">R$ {(prop.total || 0).toFixed(2)}</span></p>
-                                            <div className="space-y-1 mt-1">
-                                                {(prop.payments || []).map((p: any, i: number) => (
-                                                    <p key={i} className="text-xs text-slate-500">{p.method}: R$ {(p.amount || 0).toFixed(2)}</p>
-                                                ))}
-                                            </div>
+                                            {(() => {
+                                                const origPays: any[] = orig.payments || [];
+                                                const propPays: any[] = prop.payments || [];
+                                                const paymentsChanged = JSON.stringify(origPays.map((p:any) => ({m: p.method, a: p.amount}))) !== JSON.stringify(propPays.map((p:any) => ({m: p.method, a: p.amount})));
+                                                return (
+                                                    <div className="space-y-1 mt-1">
+                                                        {paymentsChanged && (
+                                                            <span className="inline-flex items-center gap-1 text-[9px] font-black text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full uppercase mb-1">
+                                                                ⚠️ Forma de pagamento alterada
+                                                            </span>
+                                                        )}
+                                                        {propPays.map((p: any, i: number) => {
+                                                            const orig_p = origPays[i];
+                                                            const methodChanged = orig_p && orig_p.method !== p.method;
+                                                            const amountChanged = orig_p && Math.abs(orig_p.amount - p.amount) > 0.01;
+                                                            const isNew = i >= origPays.length;
+                                                            return (
+                                                                <div key={i} className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${
+                                                                    isNew ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' :
+                                                                    (methodChanged || amountChanged) ? 'bg-orange-50 border border-orange-200 text-orange-700' :
+                                                                    'bg-slate-50 text-slate-600'
+                                                                }`}>
+                                                                    <span className="flex-1">{p.method}: R$ {(p.amount || 0).toFixed(2)}</span>
+                                                                    {isNew && <span className="text-[9px] font-black text-emerald-700 uppercase">NOVO</span>}
+                                                                    {!isNew && methodChanged && <span className="text-[9px] font-black text-orange-700 uppercase">MÉTODO ↑</span>}
+                                                                    {!isNew && !methodChanged && amountChanged && <span className="text-[9px] font-black text-orange-700 uppercase">VALOR ↑</span>}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        {origPays.slice(propPays.length).map((p: any, i: number) => (
+                                                            <div key={`rem-${i}`} className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg bg-red-50 border border-red-200 text-red-600">
+                                                                <span className="flex-1 line-through">{p.method}: R$ {(p.amount || 0).toFixed(2)}</span>
+                                                                <span className="text-[9px] font-black uppercase">REMOVIDO</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
