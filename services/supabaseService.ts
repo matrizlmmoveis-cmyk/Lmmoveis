@@ -53,6 +53,11 @@ const base64ToBlob = (base64: string) => {
 };
 
 export const supabaseService = {
+    cacheInvalidateAll() {
+        ['products', 'products_v4', 'stores', 'suppliers', 'employees'].forEach(k =>
+            localStorage.removeItem(`lm_cache_${k}`)
+        );
+    },
     // STORES
     async getStores(bypassCache = false) {
         if (!bypassCache) {
