@@ -109,6 +109,18 @@ const App: React.FC = () => {
     const resolvedScope = scope === true || scope === false ? 'all' : scope;
     const bypassCache = scope === true; // force=true => bypass cache
 
+    if (bypassCache && !isFieldRole) {
+      supabaseService.cacheInvalidateAll();
+      try {
+        if ('caches' in window) {
+          caches.keys().then(names => {
+            names.forEach(name => caches.delete(name));
+          });
+        }
+      } catch (e) {
+        console.error('Erro ao limpar cache do PWA:', e);
+      }
+    }
     if (resolvedScope === 'all' || resolvedScope === 'static') {
       setIsLoading(true);
     }
