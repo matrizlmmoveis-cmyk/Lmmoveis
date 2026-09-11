@@ -1197,6 +1197,7 @@ export const supabaseService = {
                 .from('customers')
                 .select('*')
                 .order('name', { ascending: true })
+                .order('id', { ascending: true })
                 .range(from, from + step - 1);
 
             if (error) throw error;

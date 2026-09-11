@@ -977,12 +977,19 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                     {(customers || [])
                       .filter(c => {
                         const q = customerSearch.toLowerCase();
-                        return !q ||
-                          c.name.toLowerCase().includes(q) ||
+                        if (!q) return true;
+                        
+                        const qNum = q.replace(/\D/g, '');
+                        const docNum = (c.document || '').replace(/\D/g, '');
+                        const phoneNum = (c.phone || '').replace(/\D/g, '');
+                        
+                        return c.name.toLowerCase().includes(q) ||
                           (c.document || '').toLowerCase().includes(q) ||
-                          (c.phone || '').toLowerCase().includes(q);
+                          (c.phone || '').toLowerCase().includes(q) ||
+                          (qNum && docNum && docNum.includes(qNum)) ||
+                          (qNum && phoneNum && phoneNum.includes(qNum));
                       })
-                      .slice(0, 30)
+                      .slice(0, 100)
                       .map(c => (
                         <button
                           key={c.id}
