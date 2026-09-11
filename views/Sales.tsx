@@ -581,11 +581,17 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
   const filteredSales = (sales || []).filter(s => {
     const dateToUse = s.createdAt ? s.createdAt : s.date;
     const saleDate = getSaoPauloDateString(dateToUse);
-    const isInDateRange = (!startDate || saleDate >= startDate) && (!endDate || saleDate <= endDate);
+    
+    const matchesSearch = (s.customerName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (s.id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (s.customerCpf?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+
+    const isInDateRange = searchTerm 
+      ? true 
+      : (!startDate || saleDate >= startDate) && (!endDate || saleDate <= endDate);
+
     if (!isInDateRange) return false;
 
-    const matchesSearch = (s.customerName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (s.id?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
     const matchesStore = storeFilter === 'all' || s.storeId === storeFilter;
 
@@ -595,6 +601,29 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
 
     return matchesSearch && matchesStatus && matchesStore && matchesRole;
   });
+
+  const [isSearchingOnline, setIsSearchingOnline] = useState(false);
+  const handleSearchOnline = async () => {
+    if (!searchTerm || searchTerm.length < 3) return;
+    setIsSearchingOnline(true);
+    try {
+      const results = await supabaseService.searchSalesOnline(searchTerm);
+      if (results.length > 0) {
+        setSales(prev => {
+          const map = new Map(prev.map(s => [s.id, s]));
+          results.forEach(r => map.set(r.id, r));
+          return Array.from(map.values());
+        });
+      } else {
+        alert('Nenhuma venda antiga encontrada para este termo.');
+      }
+    } catch (e) {
+      console.error('Erro na busca online:', e);
+      alert('Erro ao buscar vendas no histórico.');
+    } finally {
+      setIsSearchingOnline(false);
+    }
+  };
 
   useEffect(() => {
     setSelectedSaleIds([]);
@@ -1328,7 +1357,27 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         <div className="p-4 border-b border-slate-100 flex flex-col lg:flex-row gap-4 lg:items-end">
           <div className="flex-1 space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Busca Geral</label>
-            <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" placeholder="Buscar venda ou cliente..." className="w-full pl-10 pr-4 py-2 bg-slate-50 rounded-xl text-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Buscar venda ou cliente..." 
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 rounded-xl text-sm" 
+                value={searchTerm} 
+                onChange={e => setSearchTerm(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && handleSearchOnline()} 
+              />
+            </div>
+            {searchTerm.length >= 3 && (
+              <button 
+                onClick={handleSearchOnline} 
+                disabled={isSearchingOnline} 
+                className="mt-1 w-full text-xs bg-blue-50 text-blue-600 font-bold py-1.5 rounded-lg hover:bg-blue-100 flex justify-center items-center gap-1 transition-colors"
+              >
+                {isSearchingOnline ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+                Buscar no Histórico Completo (Enter)
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-4 items-end">
             <div className="space-y-1">
