@@ -140,14 +140,28 @@ const App: React.FC = () => {
         setEmployees(eItems);
 
         if (user || bypassCache) {
-          const results = await Promise.allSettled([
-            supabaseService.getSales(startDate, endDate),
-            supabaseService.getInventory(),
+          // Puxando dados estáticos primeiro
+          const staticResults = await Promise.allSettled([
             supabaseService.getStores(bypassCache),
             supabaseService.getProducts(bypassCache),
-            supabaseService.getCustomers(),
             supabaseService.getSuppliers(bypassCache)
           ]);
+
+          // Depois puxando os dinâmicos (pesados)
+          const dynamicResults = await Promise.allSettled([
+            supabaseService.getSales(startDate, endDate),
+            supabaseService.getInventory(),
+            supabaseService.getCustomers()
+          ]);
+
+          const results = [
+            dynamicResults[0], // 0: sales
+            dynamicResults[1], // 1: inventory
+            staticResults[0],  // 2: stores
+            staticResults[1],  // 3: products
+            dynamicResults[2], // 4: customers
+            staticResults[2]   // 5: suppliers
+          ];
 
           results.forEach((result, index) => {
             if (result.status === 'rejected') {

@@ -22,9 +22,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, sales, stores, refreshData 
     return sales;
   }, [user, sales]);
 
-  // Calculate dynamic data based on filteredSales (simplified for now)
-  const totalSalesToday = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
-  const totalDeliveriesToday = filteredSales.filter(sale => sale.status === 'Em Rota' || sale.status === 'Entregue').length;
+  // Filtra apenas as vendas de HOJE para os totalizadores do Dashboard
+  const todayStr = new Date().toISOString().split('T')[0];
+  const salesToday = filteredSales.filter(sale => {
+    const saleDate = sale.date?.split('T')[0] || sale.createdAt?.split('T')[0];
+    return saleDate === todayStr;
+  });
+
+  const totalSalesToday = salesToday.reduce((sum, sale) => sum + sale.total, 0);
+  const totalDeliveriesToday = salesToday.filter(sale => sale.status === 'Em Rota' || sale.status === 'Entregue').length;
 
   const data = [
     { name: 'Seg', vendas: totalSalesToday * 0.8, entregas: totalDeliveriesToday * 0.7 },

@@ -167,7 +167,7 @@ export const supabaseService = {
         let allItems: Product[] = [];
         let hasMore = true;
         let page = 0;
-        const limit = 1000;
+        const limit = 200;
 
         while (hasMore) {
             const { data, error } = await supabase.from('products').select('*').order('id', { ascending: true }).range(page * limit, (page + 1) * limit - 1);
@@ -191,7 +191,7 @@ export const supabaseService = {
         let allIdentifiers: number[] = [];
         let hasMore = true;
         let page = 0;
-        const limit = 1000;
+        const limit = 200;
 
         while (hasMore) {
             let query = supabase.from('products').select('id, sku');
@@ -344,7 +344,7 @@ export const supabaseService = {
         let allItems: any[] = [];
         let hasMore = true;
         let page = 0;
-        const limit = 1000;
+        const limit = 200;
 
         while (hasMore) {
             const { data, error } = await supabase.from('inventory').select('*').order('product_id', { ascending: true }).range(page * limit, (page + 1) * limit - 1);
@@ -491,7 +491,7 @@ export const supabaseService = {
         let allData: any[] = [];
         let hasMore = true;
         let page = 0;
-        const limit = 1000;
+        const limit = 200;
 
         while (hasMore) {
             let query = supabase
@@ -503,9 +503,9 @@ export const supabaseService = {
             if (startDate) {
                 query = query.gte('date', startDate);
             } else {
-                // Padrão: Últimos 30 dias OU status não finalizado
+                // Padrão: Últimos 7 dias OU status não finalizado
                 const defaultDate = new Date();
-                defaultDate.setDate(defaultDate.getDate() - 30);
+                defaultDate.setDate(defaultDate.getDate() - 7);
                 const dateStr = defaultDate.toISOString().split('T')[0];
                 query = query.or(`date.gte.${dateStr},and(status.not.in.("${OrderStatus.COMPLETED}","${OrderStatus.FINISHED}","${OrderStatus.CANCELED}"))`);
             }
@@ -576,7 +576,7 @@ export const supabaseService = {
         let allIds: number[] = [];
         let hasMore = true;
         let page = 0;
-        const limit = 1000;
+        const limit = 200;
 
         while (hasMore) {
             const { data, error } = await supabase
