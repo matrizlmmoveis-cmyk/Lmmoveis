@@ -140,7 +140,7 @@ const App: React.FC = () => {
         setEmployees(eItems);
 
         if (user || bypassCache) {
-          const [sItems, iItems, stItems, pItems, cItems, supItems] = await Promise.all([
+          const results = await Promise.allSettled([
             supabaseService.getSales(startDate, endDate),
             supabaseService.getInventory(),
             supabaseService.getStores(bypassCache),
@@ -148,15 +148,22 @@ const App: React.FC = () => {
             supabaseService.getCustomers(),
             supabaseService.getSuppliers(bypassCache)
           ]);
-          setSales(sItems);
-          setInventory(iItems);
-          setStores(stItems);
-          setProducts(pItems);
-          setCustomers(cItems);
-          setSuppliers(supItems);
 
-          // Salvar em cache de campo
-          if (isFieldRole) offlineSyncService.saveSalesCache(sItems);
+          results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+              console.error(`Erro ao carregar dados do Supabase (índice ${index}):`, result.reason);
+            }
+          });
+
+          if (results[0].status === 'fulfilled') {
+            setSales(results[0].value);
+            if (isFieldRole) offlineSyncService.saveSalesCache(results[0].value);
+          }
+          if (results[1].status === 'fulfilled') setInventory(results[1].value);
+          if (results[2].status === 'fulfilled') setStores(results[2].value);
+          if (results[3].status === 'fulfilled') setProducts(results[3].value);
+          if (results[4].status === 'fulfilled') setCustomers(results[4].value);
+          if (results[5].status === 'fulfilled') setSuppliers(results[5].value);
         }
       }
     } catch (err) {

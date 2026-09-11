@@ -124,15 +124,24 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
                     <h1 className="text-2xl font-bold text-slate-900">Consulta de Produtos</h1>
                     <p className="text-slate-500 text-sm">Catálogo otimizado ({filteredProducts.length} itens)</p>
                 </div>
-                {canEdit && (
+                <div className="flex items-center gap-2">
                     <button
-                        onClick={handleNewProduct}
-                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl shadow-slate-200"
+                        onClick={() => refreshData(true)}
+                        className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-3 rounded-2xl text-sm font-bold hover:bg-slate-50 transition-all shadow-sm"
                     >
-                        <Box className="w-4 h-4" />
-                        Novo Produto
+                        <RefreshCw className="w-4 h-4" />
+                        <span className="hidden sm:inline">Atualizar</span>
                     </button>
-                )}
+                    {canEdit && (
+                        <button
+                            onClick={handleNewProduct}
+                            className="flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl shadow-slate-200"
+                        >
+                            <Box className="w-4 h-4" />
+                            Novo Produto
+                        </button>
+                    )}
+                </div>
             </header>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
