@@ -34,7 +34,7 @@ export function cacheInvalidate(key: string): void {
 }
 
 export function cacheInvalidateAll(): void {
-    ['products', 'stores', 'suppliers', 'employees'].forEach(k =>
+    ['products', 'products_v4', 'stores', 'suppliers', 'employees'].forEach(k =>
         localStorage.removeItem(`lm_cache_${k}`)
     );
 }
