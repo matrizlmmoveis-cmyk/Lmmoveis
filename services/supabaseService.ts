@@ -512,7 +512,7 @@ export const supabaseService = {
                 const defaultDate = new Date();
                 defaultDate.setDate(defaultDate.getDate() - 7);
                 const dateStr = defaultDate.toISOString().split('T')[0];
-                query = query.or(`date.gte.${dateStr},and(status.not.in.("${OrderStatus.COMPLETED}","${OrderStatus.FINISHED}","${OrderStatus.CANCELED}"))`);
+                query = query.or(`date.gte.${dateStr},status.not.in.(${OrderStatus.COMPLETED},${OrderStatus.FINISHED},${OrderStatus.CANCELED})`);
             }
 
             if (endDate) {

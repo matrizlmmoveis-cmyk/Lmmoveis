@@ -184,6 +184,12 @@ const App: React.FC = () => {
           if (results[0].status === 'fulfilled') {
             setSales(results[0].value);
             if (isFieldRole) offlineSyncService.saveSalesCache(results[0].value);
+          } else if (isFieldRole) {
+            const cachedSales = offlineSyncService.getSalesCache();
+            if (cachedSales) {
+              console.log("[Offline/Erro] Carregando dados do cache local...");
+              setSales(cachedSales);
+            }
           }
           if (results[1].status === 'fulfilled') setInventory(results[1].value);
           if (results[2].status === 'fulfilled') setStores(results[2].value);
