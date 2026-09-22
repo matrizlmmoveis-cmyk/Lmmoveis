@@ -163,6 +163,7 @@ export interface Sale {
   nfeNumber?: number;
   nfeStatus?: string;
   nfeKey?: string;
+  customer_signature_url?: string;
 }
 
 export interface InventoryMovement {

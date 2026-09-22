@@ -2165,6 +2165,32 @@ export const supabaseService = {
             password: data.password,
             active: data.active
         };
+    },
+
+    // Whatsapp Settings
+    async getWhatsappSettings() {
+        try {
+            const { data, error } = await supabase.from('whatsapp_settings').select('*').limit(1).single();
+            if (error) {
+                if (error.code === 'PGRST116') return null; // No rows found
+                throw error;
+            }
+            return data;
+        } catch (err) {
+            console.error('Erro ao buscar whatsapp settings:', err);
+            return null;
+        }
+    },
+
+    async saveWhatsappSettings(settings: { api_url: string, api_key: string, instance_name: string }) {
+        const { data: existing } = await supabase.from('whatsapp_settings').select('id').limit(1).single();
+        if (existing) {
+            const { error } = await supabase.from('whatsapp_settings').update(settings).eq('id', existing.id);
+            if (error) throw error;
+        } else {
+            const { error } = await supabase.from('whatsapp_settings').insert([settings]);
+            if (error) throw error;
+        }
     }
 };
 

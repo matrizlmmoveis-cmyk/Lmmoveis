@@ -13,6 +13,8 @@ import Customers from './views/Customers.tsx';
 import EmployeesView from './views/Employees.tsx';
 import Romaneios from './views/Romaneios.tsx';
 import Products from './views/Products.tsx';
+import { DeliveryDriverApp } from './views/DeliveryDriverApp';
+import { PublicReceipt } from './views/PublicReceipt';
 import SuppliersView from './views/Suppliers.tsx';
 import Expedicao from './views/Expedicao.tsx';
 import Tarefas from './views/Tarefas.tsx';
@@ -21,6 +23,7 @@ import NFeManagement from './views/NFeManagement.tsx';
 import WholesaleManagement from './views/WholesaleManagement.tsx';
 import WholesaleCatalog from './views/WholesaleCatalog.tsx';
 import StockTransfer from './views/StockTransfer.tsx';
+import ConfigWhats from './views/ConfigWhats.tsx';
 import { Bell, Search, User, Lock, Store as StoreIcon, AlertCircle, X, Menu, Loader2, LogOut } from 'lucide-react';
 import { Employee, UserRole, Sale, InventoryItem, Store, Product, Customer, Supplier } from './types.ts';
 import { CartProvider } from './components/CartContext.tsx';
@@ -443,6 +446,7 @@ const App: React.FC = () => {
       case 'wholesale-management': return <WholesaleManagement user={user!} refreshData={initData} />;
       case 'wholesale-catalog': return <WholesaleCatalog user={user!} products={products} inventory={inventory} stores={stores} refreshData={initData} />;
       case 'transfer': return <StockTransfer user={user} products={products} inventory={inventory} stores={stores} employees={employees} refreshData={initData} />;
+      case 'config-whats': return <ConfigWhats />;
       default: return <Dashboard user={user!} sales={sales} stores={stores} />;
     }
   };
@@ -556,10 +560,20 @@ const App: React.FC = () => {
   );
 };
 
-const AppWrapper: React.FC = () => (
-  <CartProvider>
-    <App />
-  </CartProvider>
-);
+const AppWrapper: React.FC = () => {
+  const path = window.location.pathname;
+  if (path.startsWith('/pedido/')) {
+    const id = path.split('/')[2];
+    if (id) {
+      return <PublicReceipt id={id} />;
+    }
+  }
+  
+  return (
+    <CartProvider>
+      <App />
+    </CartProvider>
+  );
+};
 
 export default AppWrapper;

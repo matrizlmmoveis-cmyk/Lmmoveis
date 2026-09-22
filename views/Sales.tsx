@@ -10,6 +10,7 @@ import html2canvas from 'html2canvas';
 
 import { supabaseService } from '../services/supabaseService.ts';
 import { supabase } from '../services/supabase.ts';
+import { whatsappService } from '../services/whatsappService.ts';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
 import { getSaoPauloDateString, formatSaoPauloDateBR } from '../utils/dateUtils.ts';
 import { nfEmailService } from '../services/nfe/nfeService.ts';
@@ -880,6 +881,36 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         });
       }
 
+      // Envio automático via WhatsApp (Evolution API)
+      if (sale.customerPhone) {
+        const storeName = stores.find(s => s.id === sale.storeId)?.name || 'Móveis LM';
+        
+        // Enriquecer sale.items com os nomes dos produtos para o recibo ficar completo
+        const enrichedSale = {
+          ...sale,
+          items: sale.items.map(item => {
+            const p = products.find(prod => prod.id === item.productId);
+            return {
+              ...item,
+              productName: p ? p.name : 'Produto Indisponível'
+            };
+          })
+        };
+
+        const productImages = sale.items
+          .map(item => {
+            const p = products.find(prod => prod.id === item.productId);
+            const rawUrl = p ? (p.imageUrl || p.imageUrl2 || p.images?.[0]?.url) : null;
+            const finalUrl = rawUrl ? getDirectImageUrl(rawUrl) : null;
+            return p && finalUrl && finalUrl.startsWith('http') ? { name: p.name, url: finalUrl } : null;
+          })
+          .filter(Boolean);
+        
+        whatsappService.sendSaleSummary(enrichedSale, storeName, sale.customerPhone, productImages).catch(err => {
+          console.error("Falha ao enviar whatsapp automático:", err);
+        });
+      }
+
       // Avisos automáticos de cross-store removidos:
       // Tarefas são criadas SOMENTE para itens de Encomenda Avulsa (ST-ENCOMENDA)
 
@@ -1588,6 +1619,11 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           <button onClick={() => setSelectedRomaneioHistory(sale)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Histórico de Logística">
                             <Calendar className="w-4 h-4" />
                           </button>
+                          {sale.customer_signature_url && (
+                            <a href={sale.customer_signature_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 text-purple-600 rounded-lg text-xs font-black uppercase" title="Ver Assinatura">
+                              <User className="w-4 h-4" /> Assinado
+                            </a>
+                          )}
                           <button onClick={() => setSelectedSale(sale)} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-black uppercase"><Eye className="w-4 h-4" /> Ver</button>
                           {/* Botão Retirada — cliente retira na loja sem precisar de entrega */}
                           {(user?.role === 'GERENTE' || isAdminOrSupervisor) &&

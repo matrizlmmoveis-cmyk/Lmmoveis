@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Employee, Store, OrderStatus, Sale, Product } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
 import { supabaseService } from '../services/supabaseService.ts';
+import { getDirectImageUrl } from '../utils/imageUtils';
+import { sendSaleCancelled, sendSaleUpdated } from '../services/whatsappService';
 import {
     CheckCircle, Clock, AlertTriangle, Package, RefreshCw, Search,
     ChevronDown, ChevronUp, Clipboard, XCircle, Plus, Send, MessageSquare,
@@ -713,13 +715,32 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSal
                                             if (setSales && task.sale_id && snap?.proposed) {
                                                 const prop = snap.proposed;
                                                 const prevStatus = snap.original?.prevStatus || OrderStatus.PENDING;
-                                                setSales(prev => prev.map(s => s.id === task.sale_id ? {
-                                                    ...s,
-                                                    items: prop.items,
-                                                    payments: prop.payments,
-                                                    total: prop.total,
-                                                    status: prevStatus
-                                                } : s));
+                                                
+                                                let updatedSaleForWhatsapp = null;
+                                                
+                                                setSales(prev => {
+                                                    const newSales = prev.map(s => {
+                                                        if (s.id === task.sale_id) {
+                                                            const updated = {
+                                                                ...s,
+                                                                items: prop.items,
+                                                                payments: prop.payments,
+                                                                total: prop.total,
+                                                                status: prevStatus
+                                                            };
+                                                            updatedSaleForWhatsapp = updated;
+                                                            return updated;
+                                                        }
+                                                        return s;
+                                                    });
+                                                    
+                                                    // Dispara whatsapp da atualização
+                                                    if (updatedSaleForWhatsapp) {
+                                                        setTimeout(() => sendSaleUpdated(updatedSaleForWhatsapp), 500);
+                                                    }
+                                                    
+                                                    return newSales;
+                                                });
                                             }
 
                                             setEditApprovalModal(null);
@@ -812,6 +833,14 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSal
                                                 if (props.setSales && stockReturnModal.task.sale_id) {
                                                     // @ts-ignore
                                                     props.setSales(prev => prev.map(s => s.id === stockReturnModal.task.sale_id ? { ...s, status: OrderStatus.CANCELED } : s));
+                                                    
+                                                    // Dispara WhatsApp
+                                                    if (props.sales) {
+                                                        const cancelledSale = props.sales.find(s => s.id === stockReturnModal.task.sale_id);
+                                                        if (cancelledSale) {
+                                                            sendSaleCancelled(cancelledSale);
+                                                        }
+                                                    }
                                                 }
                                                 setStockReturnModal(null);
                                                 showToast('✅ Cancelamento autorizado e saldo devolvido!');

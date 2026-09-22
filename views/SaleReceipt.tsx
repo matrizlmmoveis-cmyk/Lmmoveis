@@ -1,10 +1,12 @@
 import React from 'react';
 import { Sale, Customer, Store, Product, Employee } from '../types.ts';
-import { Printer, ArrowLeft, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Printer, ArrowLeft, FileText, Loader2, CheckCircle, AlertCircle, MessageCircle } from 'lucide-react';
 import { nfEmailService } from '../services/nfe/nfeService';
 import { SEFAZTxtGenerator } from '../services/nfe/sefazGenerator';
 import { NFeIssuer, NFeDest, NFeItem } from '../services/nfe/types';
 import { supabaseService } from '../services/supabaseService';
+import { whatsappService } from '../services/whatsappService';
+import { getDirectImageUrl } from '../utils/imageUtils';
 
 interface SaleReceiptProps {
   user?: any;
@@ -25,6 +27,7 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ user, sale, onBack, stores, p
   const [isEditingSeller, setIsEditingSeller] = React.useState(false);
   const [newSellerId, setNewSellerId] = React.useState(sale.sellerId);
   const [isUpdatingSeller, setIsUpdatingSeller] = React.useState(false);
+  const [isSendingWhatsapp, setIsSendingWhatsapp] = React.useState(false);
 
   const isAdminOrSupervisor = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.username === 'Master';
   const isManagerOfStore = user?.role === 'GERENTE' && user?.storeId === sale.storeId;
@@ -57,6 +60,25 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ user, sale, onBack, stores, p
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleSendWhatsapp = async () => {
+    setIsSendingWhatsapp(true);
+    try {
+      const productImages = sale.items
+        .map(item => {
+          const p = products.find(prod => prod.id === item.productId);
+          return p && p.image_url ? { name: p.name, url: getDirectImageUrl(p.image_url) } : null;
+        })
+        .filter(Boolean);
+
+      await whatsappService.sendSaleSummary(sale, store?.name || 'Móveis LM', sale.customerPhone, productImages);
+      alert('Resumo enviado com sucesso via WhatsApp!');
+    } catch (error: any) {
+      alert(error.message || 'Erro ao enviar resumo via WhatsApp');
+    } finally {
+      setIsSendingWhatsapp(false);
+    }
   };
 
   const formatAddress = (address: any) => {
@@ -278,6 +300,15 @@ const SaleReceipt: React.FC<SaleReceiptProps> = ({ user, sale, onBack, stores, p
                   Emitir NF-e
                 </>
               )}
+            </button>
+
+            <button
+              onClick={handleSendWhatsapp}
+              disabled={isSendingWhatsapp || !sale.customerPhone}
+              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all disabled:opacity-70"
+            >
+              {isSendingWhatsapp ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+              WhatsApp
             </button>
 
             <button
