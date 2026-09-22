@@ -103,9 +103,7 @@ export const whatsappService = {
       console.error("Erro no envio WhatsApp:", error);
       throw error;
     }
-  }
   },
-
   async sendSaleCancelled(sale: any) {
     try {
       const { data: settings } = await supabase.from('whatsapp_settings').select('*').single();
