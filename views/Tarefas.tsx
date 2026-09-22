@@ -3,7 +3,7 @@ import { Employee, Store, OrderStatus, Sale, Product } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
 import { supabaseService } from '../services/supabaseService.ts';
 import { getDirectImageUrl } from '../utils/imageUtils';
-import { sendSaleCancelled, sendSaleUpdated } from '../services/whatsappService';
+import { whatsappService } from '../services/whatsappService';
 import {
     CheckCircle, Clock, AlertTriangle, Package, RefreshCw, Search,
     ChevronDown, ChevronUp, Clipboard, XCircle, Plus, Send, MessageSquare,
@@ -736,7 +736,7 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSal
                                                     
                                                     // Dispara whatsapp da atualização
                                                     if (updatedSaleForWhatsapp) {
-                                                        setTimeout(() => sendSaleUpdated(updatedSaleForWhatsapp), 500);
+                                                        setTimeout(() => whatsappService.sendSaleUpdated(updatedSaleForWhatsapp), 500);
                                                     }
                                                     
                                                     return newSales;
@@ -838,7 +838,7 @@ const Tarefas: React.FC<TarefasProps> = ({ user, stores, products, sales, setSal
                                                     if (props.sales) {
                                                         const cancelledSale = props.sales.find(s => s.id === stockReturnModal.task.sale_id);
                                                         if (cancelledSale) {
-                                                            sendSaleCancelled(cancelledSale);
+                                                            whatsappService.sendSaleCancelled(cancelledSale);
                                                         }
                                                     }
                                                 }
