@@ -396,6 +396,7 @@ export const supabaseService = {
             assignedDriverId: s.assigned_driver_id,
             assignedAssemblerId: s.assigned_assembler_id,
             assemblyCompletedAt: s.assembly_completed_at || null,
+            customer_signature_url: s.customer_signature_url,
             deliveryDate: s.delivery_date || null,
             items: (s.items || []).map((i: any) => ({
                 id: i.id,
@@ -467,6 +468,7 @@ export const supabaseService = {
             assignedDriverId: s.assigned_driver_id,
             assignedAssemblerId: s.assigned_assembler_id,
             assemblyCompletedAt: s.assembly_completed_at || null,
+            customer_signature_url: s.customer_signature_url,
             deliveryDate: s.delivery_date || null,
             items: (s.items || []).map((i: any) => ({
                 id: i.id,
@@ -551,6 +553,7 @@ export const supabaseService = {
             assignedDriverId: s.assigned_driver_id,
             assignedAssemblerId: s.assigned_assembler_id,
             assemblyCompletedAt: s.assembly_completed_at || null,
+            customer_signature_url: s.customer_signature_url,
             deliveryDate: s.delivery_date || null,
             items: (s.items || []).map((i: any) => ({
                 id: i.id,
@@ -607,6 +610,7 @@ export const supabaseService = {
             assignedDriverId: s.assigned_driver_id,
             assignedAssemblerId: s.assigned_assembler_id,
             assemblyCompletedAt: s.assembly_completed_at || null,
+            customer_signature_url: s.customer_signature_url,
             deliveryDate: s.delivery_date || null,
             items: (s.items || []).map((i: any) => ({
                 id: i.id,
