@@ -4,9 +4,10 @@ import { supabaseService } from '../services/supabaseService.ts';
 
 interface ConfigWhatsProps {
   user: any;
+  stores?: any[];
 }
 
-const ConfigWhats: React.FC<ConfigWhatsProps> = ({ user }) => {
+const ConfigWhats: React.FC<ConfigWhatsProps> = ({ user, stores = [] }) => {
   const [apiUrl, setApiUrl] = useState('https://evolution-api-d8bj-production.up.railway.app');
   const [apiKey, setApiKey] = useState('046ac732c84e016dcb525f29e7e947766b4aa33d047b362aea84e07b8528097d');
   const [instanceName, setInstanceName] = useState('lm-moveis');
@@ -25,7 +26,16 @@ const ConfigWhats: React.FC<ConfigWhatsProps> = ({ user }) => {
         if (data && data.api_url) {
           setApiUrl(data.api_url);
           setApiKey(data.api_key || '');
-          setInstanceName(data.instance_name || '');
+          
+          if (data.instance_name && data.store_id) {
+            setInstanceName(data.instance_name);
+          } else if (storeId && stores.length > 0) {
+            const store = stores.find(s => s.id === storeId);
+            if (store) {
+              const formattedName = 'lm-moveis-' + store.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+              setInstanceName(formattedName);
+            }
+          }
         }
       } catch (error) {
         console.error('Erro ao carregar configurações do WhatsApp', error);
