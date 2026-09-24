@@ -53,7 +53,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, role, onLo
     { id: 'nfe', label: 'Notas Fiscais', icon: FileText, roles: ['ADMIN', 'MASTER', 'GERENTE'] },
     { id: 'wholesale-management', label: 'Gestão Atacado', icon: Grid, roles: ['ADMIN'] },
     { id: 'wholesale-catalog', label: 'Catálogo Atacado', icon: ShoppingBag, roles: ['LOGISTA'] },
-    { id: 'config-whats', label: 'API Whats', icon: MessageSquare, roles: ['ADMIN', 'MASTER'] },
+    { id: 'config-whats', label: 'API Whats', icon: MessageSquare, roles: ['ADMIN', 'MASTER', 'GERENTE', 'VENDEDOR'] },
   ];
 
   const menuItems = allItems.filter(item => item.roles.includes(role));
