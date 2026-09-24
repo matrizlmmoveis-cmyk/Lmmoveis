@@ -2172,9 +2172,26 @@ export const supabaseService = {
     },
 
     // Whatsapp Settings
-    async getWhatsappSettings() {
+    async getWhatsappSettings(storeId?: string) {
         try {
-            const { data, error } = await supabase.from('whatsapp_settings').select('*').limit(1).single();
+            let query = supabase.from('whatsapp_settings').select('*');
+            if (storeId) {
+                query = query.eq('store_id', storeId);
+            } else {
+                query = query.is('store_id', null);
+            }
+            
+            let { data, error } = await query.limit(1).single();
+            
+            // Se não encontrou da loja, pega a global (onde store_id é null) como fallback
+            if (error && error.code === 'PGRST116' && storeId) {
+                const { data: globalData, error: globalError } = await supabase.from('whatsapp_settings').select('*').is('store_id', null).limit(1).single();
+                if (!globalError) {
+                    data = globalData;
+                    error = null;
+                }
+            }
+            
             if (error) {
                 if (error.code === 'PGRST116') return null; // No rows found
                 throw error;
@@ -2186,8 +2203,15 @@ export const supabaseService = {
         }
     },
 
-    async saveWhatsappSettings(settings: { api_url: string, api_key: string, instance_name: string }) {
-        const { data: existing } = await supabase.from('whatsapp_settings').select('id').limit(1).single();
+    async saveWhatsappSettings(settings: { api_url: string, api_key: string, instance_name: string, store_id?: string }) {
+        let query = supabase.from('whatsapp_settings').select('id');
+        if (settings.store_id) {
+            query = query.eq('store_id', settings.store_id);
+        } else {
+            query = query.is('store_id', null);
+        }
+
+        const { data: existing } = await query.limit(1).single();
         if (existing) {
             const { error } = await supabase.from('whatsapp_settings').update(settings).eq('id', existing.id);
             if (error) throw error;

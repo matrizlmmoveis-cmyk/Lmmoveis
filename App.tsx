@@ -446,7 +446,7 @@ const App: React.FC = () => {
       case 'wholesale-management': return <WholesaleManagement user={user!} refreshData={initData} />;
       case 'wholesale-catalog': return <WholesaleCatalog user={user!} products={products} inventory={inventory} stores={stores} refreshData={initData} />;
       case 'transfer': return <StockTransfer user={user} products={products} inventory={inventory} stores={stores} employees={employees} refreshData={initData} />;
-      case 'config-whats': return <ConfigWhats />;
+      case 'config-whats': return <ConfigWhats user={user!} />;
       default: return <Dashboard user={user!} sales={sales} stores={stores} />;
     }
   };

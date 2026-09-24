@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { MessageSquare, Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService.ts';
 
-const ConfigWhats: React.FC = () => {
+interface ConfigWhatsProps {
+  user: any;
+}
+
+const ConfigWhats: React.FC<ConfigWhatsProps> = ({ user }) => {
   const [apiUrl, setApiUrl] = useState('https://evolution-api-d8bj-production.up.railway.app');
   const [apiKey, setApiKey] = useState('046ac732c84e016dcb525f29e7e947766b4aa33d047b362aea84e07b8528097d');
   const [instanceName, setInstanceName] = useState('lm-moveis');
@@ -16,7 +20,8 @@ const ConfigWhats: React.FC = () => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const data = await supabaseService.getWhatsappSettings();
+        const storeId = user?.storeId;
+        const data = await supabaseService.getWhatsappSettings(storeId);
         if (data && data.api_url) {
           setApiUrl(data.api_url);
           setApiKey(data.api_key || '');
@@ -39,7 +44,8 @@ const ConfigWhats: React.FC = () => {
       await supabaseService.saveWhatsappSettings({
         api_url: apiUrl,
         api_key: apiKey,
-        instance_name: instanceName
+        instance_name: instanceName,
+        store_id: user?.storeId
       });
       setStatusMessage({ type: 'success', text: 'Configurações salvas com sucesso!' });
     } catch (error) {
@@ -133,7 +139,7 @@ const ConfigWhats: React.FC = () => {
           <MessageSquare className="w-6 h-6 text-emerald-600" />
         </div>
         <div>
-          <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Configuração WhatsApp</h1>
+          <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Configuração WhatsApp {user?.storeId ? '- Por Unidade' : ''}</h1>
           <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Evolution API</p>
         </div>
       </div>

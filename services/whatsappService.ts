@@ -2,10 +2,11 @@ import { supabaseService } from './supabaseService';
 
 export const whatsappService = {
   async sendSaleSummary(sale: any, storeName: string, customerPhone: string, productImages?: {name: string, url: string}[]): Promise<boolean> {
-    const settings = await supabaseService.getWhatsappSettings();
+    const storeId = sale.storeId || sale.store_id;
+    const settings = await supabaseService.getWhatsappSettings(storeId);
 
     if (!settings || !settings.api_url || !settings.api_key || !settings.instance_name) {
-      console.warn("Evolution API não configurada no banco de dados.");
+      console.warn("Evolution API não configurada no banco de dados para a loja.");
       return false;
     }
 
@@ -25,30 +26,43 @@ export const whatsappService = {
     try {
       // Mensagem 1: Introdução
       const publicLink = `https://lmmoveis.vercel.app/pedido/${sale.id}`;
-      const introText = `*Oba! Seu pedido no Grupo LM Móveis foi concluído com sucesso!* 🎉\n\n*Pedido:* ${sale.id}\n*Data:* ${new Date(sale.date).toLocaleDateString('pt-BR')}\n*Cliente:* ${sale.customerName}\n\n*Assinatura do Pedido:*\nPor favor, assine digitalmente o seu pedido através do link abaixo para liberar a separação e entrega:\n🔗 ${publicLink}\n\n*🛒 Itens do Pedido:*`;
+      const sellerInfo = sale.sellerName ? `\n*Vendedor:* ${sale.sellerName}` : '';
+      const introText = `*Oba! Seu pedido no Grupo LM Móveis foi concluído com sucesso!* 🎉\n\n*Pedido:* ${sale.id}\n*Data:* ${new Date(sale.date).toLocaleDateString('pt-BR')}\n*Unidade:* ${storeName}${sellerInfo}\n*Cliente:* ${sale.customerName}\n\n*Assinatura do Pedido:*\nPor favor, assine digitalmente o seu pedido através do link abaixo para liberar a separação e entrega:\n🔗 ${publicLink}\n\n*🛒 Itens do Pedido:*`;
       
-      const sendText = async (txt: string) => {
+      const sendText = async (txt: string, targetPhone: string) => {
         const textRes = await fetch(`${api_url}/message/sendText/${instance_name}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': api_key },
-          body: JSON.stringify({ number: phone, text: txt })
+          body: JSON.stringify({ number: targetPhone, text: txt })
         });
         if (!textRes.ok) throw new Error(`Erro ao enviar mensagem de texto: ${textRes.statusText}`);
       };
 
-      const sendMedia = async (url: string, caption: string) => {
+      const sendMedia = async (url: string, caption: string, targetPhone: string) => {
         const mediaRes = await fetch(`${api_url}/message/sendMedia/${instance_name}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': api_key },
-          body: JSON.stringify({ number: phone, mediatype: "image", caption, media: url })
+          body: JSON.stringify({ number: targetPhone, mediatype: "image", caption, media: url })
         });
         if (!mediaRes.ok) {
           console.error(`Erro ao enviar mídia. Fallback para texto.`, await mediaRes.text().catch(()=>''));
-          await sendText(caption);
+          await sendText(caption, targetPhone);
         }
       };
 
-      await sendText(introText);
+      // Wrapper para enviar para o cliente e para o dono
+      const sendToBoth = async (type: 'text' | 'media', content1: string, content2?: string) => {
+        const ownerPhone = '5521964582179';
+        if (type === 'text') {
+           await sendText(content1, phone);
+           await sendText(content1, ownerPhone).catch(e => console.error("Erro dono", e));
+        } else if (type === 'media') {
+           await sendMedia(content1, content2!, phone);
+           await sendMedia(content1, content2!, ownerPhone).catch(e => console.error("Erro dono", e));
+        }
+      };
+
+      await sendToBoth('text', introText);
 
       // Mensagens do meio: Uma para cada produto
       for (const item of sale.items) {
@@ -58,9 +72,9 @@ export const whatsappService = {
         const imgObj = productImages?.find(img => img.name === item.productName);
         
         if (imgObj && imgObj.url && imgObj.url.startsWith('http')) {
-          await sendMedia(imgObj.url, caption);
+          await sendToBoth('media', imgObj.url, caption);
         } else {
-          await sendText(caption);
+          await sendToBoth('text', caption);
         }
       }
 
@@ -96,7 +110,7 @@ export const whatsappService = {
       }
       finalMsg += `\nAgradecemos a preferência!`;
 
-      await sendText(finalMsg);
+      await sendToBoth('text', finalMsg);
 
       return true;
     } catch (error) {
@@ -106,7 +120,8 @@ export const whatsappService = {
   },
   async sendSaleCancelled(sale: any) {
     try {
-      const { data: settings } = await supabase.from('whatsapp_settings').select('*').single();
+      const storeId = sale.storeId || sale.store_id;
+      const settings = await supabaseService.getWhatsappSettings(storeId);
       if (!settings) return;
 
       let phone = sale.customerPhone || sale.customer_phone || '';
@@ -130,7 +145,8 @@ export const whatsappService = {
 
   async sendSaleUpdated(sale: any) {
     try {
-      const { data: settings } = await supabase.from('whatsapp_settings').select('*').single();
+      const storeId = sale.storeId || sale.store_id;
+      const settings = await supabaseService.getWhatsappSettings(storeId);
       if (!settings) return;
 
       let phone = sale.customerPhone || sale.customer_phone || '';
