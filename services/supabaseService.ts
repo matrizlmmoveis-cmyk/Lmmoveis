@@ -2183,15 +2183,7 @@ export const supabaseService = {
             
             let { data, error } = await query.limit(1).single();
             
-            // Se não encontrou da loja, pega a global (onde store_id é null) como fallback
-            if (error && error.code === 'PGRST116' && storeId) {
-                const { data: globalData, error: globalError } = await supabase.from('whatsapp_settings').select('*').is('store_id', null).limit(1).single();
-                if (!globalError) {
-                    data = globalData;
-                    error = null;
-                }
-            }
-            
+            // Sem fallback: se a loja não tem whatsapp configurado, não envia mensagem.
             if (error) {
                 if (error.code === 'PGRST116') return null; // No rows found
                 throw error;
