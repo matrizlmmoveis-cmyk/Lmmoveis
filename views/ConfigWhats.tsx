@@ -23,18 +23,27 @@ const ConfigWhats: React.FC<ConfigWhatsProps> = ({ user, stores = [] }) => {
       try {
         const storeId = user?.storeId;
         const data = await supabaseService.getWhatsappSettings(storeId);
-        if (data && data.api_url) {
-          setApiUrl(data.api_url);
-          setApiKey(data.api_key || '');
-          
-          if (data.instance_name && data.store_id) {
-            setInstanceName(data.instance_name);
-          } else if (storeId && stores.length > 0) {
-            const store = stores.find(s => s.id === storeId);
-            if (store) {
-              const formattedName = 'lm-moveis-' + store.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-              setInstanceName(formattedName);
-            }
+        
+        let settingsToUse = data;
+        if (!settingsToUse) {
+           settingsToUse = await supabaseService.getWhatsappSettings(); // busca global para preencher URL e Key
+        }
+
+        if (settingsToUse && settingsToUse.api_url) {
+          setApiUrl(settingsToUse.api_url);
+          setApiKey(settingsToUse.api_key || '');
+        }
+
+        // Definir nome da instância
+        if (data && data.instance_name && data.store_id) {
+          // Já salvou a própria instância no banco
+          setInstanceName(data.instance_name);
+        } else if (storeId && stores.length > 0) {
+          // Primeira vez ou estava usando a global: forçar nome da loja
+          const store = stores.find(s => s.id === storeId);
+          if (store) {
+            const formattedName = 'lm-moveis-' + store.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            setInstanceName(formattedName);
           }
         }
       } catch (error) {
