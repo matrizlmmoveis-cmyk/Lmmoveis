@@ -52,7 +52,7 @@ export const whatsappService = {
 
       // Wrapper para enviar para o cliente e para o dono
       const sendToBoth = async (type: 'text' | 'media', content1: string, content2?: string) => {
-        const ownerPhone = '5521964582179';
+        const ownerPhone = '5521970234350';
         if (type === 'text') {
            await sendText(content1, phone);
            await sendText(content1, ownerPhone).catch(e => console.error("Erro dono", e));
