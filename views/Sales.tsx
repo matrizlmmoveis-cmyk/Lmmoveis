@@ -142,6 +142,10 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
 
       if (isNfce) {
         let lines = txtContent.split('\n');
+        
+        // Remove dados do cliente para NFCe (igual feito na API 2)
+        lines = lines.filter(line => !line.startsWith('E|') && !line.startsWith('E02|') && !line.startsWith('E03|') && !line.startsWith('E05|'));
+
         for (let i = 0; i < lines.length; i++) {
           if (lines[i].startsWith('B|')) {
             let bFields = lines[i].split('|');
