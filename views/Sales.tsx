@@ -160,6 +160,9 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         txtContent = lines.join('\n');
       }
 
+      console.log("TXT SEFAZ Gerado (API 1):", txtContent);
+
+
       const response = await nfEmailService.sendNFe(txtContent);
       const nfeId = response.id || response.nfe_id;
 
