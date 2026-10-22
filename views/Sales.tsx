@@ -12,7 +12,7 @@ import { supabaseService } from '../services/supabaseService.ts';
 import { supabase } from '../services/supabase.ts';
 import { whatsappService } from '../services/whatsappService.ts';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
-import { getSaoPauloDateString, formatSaoPauloDateBR } from '../utils/dateUtils.ts';
+import { getSaoPauloDateString, formatSaoPauloDateBR, getAssemblyDeadlineInfo } from '../utils/dateUtils.ts';
 import { nfEmailService } from '../services/nfe/nfeService.ts';
 import { SEFAZTxtGenerator } from '../services/nfe/sefazGenerator.ts';
 import { SEFAZTxtGeneratorSimples } from '../services/nfe/sefazGeneratorSimples.ts';
@@ -1484,6 +1484,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 const hasAssembly = sale.assemblyRequired || sale.items?.some(i => i.assemblyRequired);
                 const isDelivered = sale.status === OrderStatus.COMPLETED || sale.status === OrderStatus.DELIVERED;
                 const showAguardandoMontagem = isDelivered && hasAssembly;
+                const assemblyDeadline = showAguardandoMontagem ? getAssemblyDeadlineInfo(sale.deliveryDate) : null;
                 return (
                   <React.Fragment key={sale.id}>
                     <tr className={`hover:bg-slate-50/50 transition-colors border-t border-slate-100 ${selectedSaleIds.includes(sale.id) ? 'bg-blue-50/30' : ''}`}>
@@ -1586,8 +1587,15 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           </span>
                           {/* Segunda tag: Aguardando Montagem */}
                           {showAguardandoMontagem && (
-                            <span className="px-2 py-1 rounded-lg text-[10px] font-black border uppercase w-fit bg-amber-50 text-amber-700 border-amber-200">
-                              Aguardando Montagem
+                            <span
+                              className={`px-2 py-1 rounded-lg text-[10px] font-black border uppercase w-fit ${
+                                assemblyDeadline?.isOverdue
+                                  ? 'bg-red-50 text-red-700 border-red-200 animate-pulse'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}
+                              title={`Limite de montagem: ${assemblyDeadline?.formattedDeadline} (6 dias úteis pós-entrega)`}
+                            >
+                              Aguardando Montagem {assemblyDeadline?.hasDeadline ? `(Lim: ${assemblyDeadline.formattedDeadline})` : ''}
                             </span>
                           )}
                           {sale.payments?.some(p => p.status === 'AGUARDANDO_ACERTO') && (

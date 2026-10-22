@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Truck, Wrench, Plus, Trash2, Printer, Search, User, ClipboardList, CheckCircle2, AlertCircle, History, ArrowLeft, Calendar, Package, Phone, MapPin, MessageSquare, RefreshCw } from 'lucide-react';
 import { OrderStatus, Sale, Employee, Romaneio, Product, Store } from '../types.ts';
 import { supabaseService } from '../services/supabaseService.ts';
+import { formatLocalDateBR, getAssemblyDeadlineInfo } from '../utils/dateUtils';
 
 interface RomaneiosProps {
   user: Employee | null;
@@ -329,7 +330,9 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
           </div>
 
           <div className="space-y-6">
-            {batchSales.map((sale, idx) => (
+            {batchSales.map((sale, idx) => {
+              const deadlineInfo = getAssemblyDeadlineInfo(sale.deliveryDate);
+              return (
               <div key={sale.id} className="border-2 border-black">
                 <div className={`px-4 py-2 flex items-center justify-between ${isEntrega ? 'bg-gray-100' : 'bg-gray-50'}`}>
                   <div className="flex items-center gap-3">
@@ -348,6 +351,29 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                     {sale.customerReference && <p className="text-[10px] text-gray-600 font-bold uppercase mt-0.5">Ref: {sale.customerReference}</p>}
                     {sale.customerPhone && <p className="text-xs font-bold mt-0.5">📞 {sale.customerPhone}</p>}
                     {sale.customerCpf && <p className="text-[10px] text-gray-600 font-bold mt-0.5">CPF: {sale.customerCpf}</p>}
+                    <div className="mt-2 pt-2 border-t border-dashed border-gray-300 flex flex-wrap items-center gap-2 text-[10px]">
+                      <span className="bg-gray-100 border border-gray-300 px-2 py-0.5 rounded font-black uppercase">
+                        📅 Venda: {formatLocalDateBR(sale.date)}
+                      </span>
+                      {sale.deliveryDate ? (
+                        <span className="bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded font-black uppercase">
+                          🚚 Entrega: {formatLocalDateBR(sale.deliveryDate)}
+                        </span>
+                      ) : (
+                        <span className="bg-gray-50 text-gray-500 border border-gray-200 px-2 py-0.5 rounded font-bold uppercase">
+                          🚚 Entrega: Aguardando
+                        </span>
+                      )}
+                      {!isEntrega && (
+                        <span className={`px-2 py-0.5 rounded font-black border uppercase ${
+                          deadlineInfo.isOverdue 
+                            ? 'bg-red-100 text-red-900 border-red-300' 
+                            : 'bg-amber-100 text-amber-900 border-amber-300'
+                        }`}>
+                          ⏰ Limite Montagem: {deadlineInfo.formattedDeadline} ({deadlineInfo.statusText})
+                        </span>
+                      )}
+                    </div>
                     {sale.deliveryObs && (
                       <div className="mt-1 bg-gray-100 border border-gray-300 rounded px-2 py-1">
                         <p className="text-[9px] font-black uppercase">Obs da Venda:</p>
@@ -391,7 +417,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                   )}
                 </div>
               </div>
-            ))}
+            );})}
           </div>
 
           <div className="grid grid-cols-2 gap-8 mt-12">
@@ -721,13 +747,30 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {batchSales.map(sale => (
+                    {batchSales.map(sale => {
+                      const deadline = getAssemblyDeadlineInfo(sale.deliveryDate);
+                      return (
                       <div key={sale.id} className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-200 relative group animate-in slide-in-from-right-2 duration-300">
                         <div className="flex items-center gap-3 mb-2">
                           <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-black">#{sale.id}</span>
                           <span className="text-[10px] font-black text-slate-500 uppercase truncate flex-1">{sale.customerName}</span>
                         </div>
                         <p className="text-[10px] text-slate-600 font-bold uppercase line-clamp-2 leading-relaxed">{formatAddress(sale.deliveryAddress)}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] font-bold">
+                          <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-600">
+                            Venda: {formatLocalDateBR(sale.date)}
+                          </span>
+                          {sale.deliveryDate && (
+                            <span className="bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded">
+                              Entrega: {formatLocalDateBR(sale.deliveryDate)}
+                            </span>
+                          )}
+                          {type === 'montagem' && (
+                            <span className={`px-1.5 py-0.5 rounded font-black border ${deadline.isOverdue ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
+                              Limite: {deadline.formattedDeadline}
+                            </span>
+                          )}
+                        </div>
                         <button
                           onClick={() => removeSale(sale.id)}
                           className="absolute -top-2 -right-2 bg-white text-red-500 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all border border-slate-100"
@@ -735,7 +778,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    ))}
+                    );})}
                   </div>
                 )}
               </div>

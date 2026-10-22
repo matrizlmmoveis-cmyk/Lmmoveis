@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { OrderStatus, Sale, Product, Employee, Store } from '../types.ts';
 import { supabaseService } from '../services/supabaseService';
 import { offlineSyncService } from '../services/offlineSyncService';
-import { Wrench, MapPin, CheckCircle, Clock, Printer, Phone, History, WifiOff, CloudOff, RefreshCw } from 'lucide-react';
+import { Wrench, MapPin, CheckCircle, Clock, Printer, Phone, History, WifiOff, CloudOff, RefreshCw, AlertTriangle, Calendar } from 'lucide-react';
+import { formatLocalDateBR, getAssemblyDeadlineInfo } from '../utils/dateUtils';
 
 interface AssemblyProps {
   user: Employee | { id: string, name: string, role: string, storeId?: string } | null;
@@ -38,6 +39,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
   }, []);
 
   // Tarefas pendentes (aguardando entrega ou liberadas para montagem)
+  // Ordenadas priorizando as liberadas para montagem e com limite mais próximo/urgente
   const myTasks = sales.filter(s =>
     s.assemblyRequired &&
     (s.status === OrderStatus.DELIVERED || 
@@ -46,7 +48,19 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
      s.status === OrderStatus.AWAITING_LOAD ||
      s.status === OrderStatus.ASSEMBLY_PENDING) &&
     (user?.id === 'admin' || user?.id === 'master' || s.assignedAssemblerId === user?.id || (user?.role === 'GERENTE' && s.storeId === user.storeId))
-  );
+  ).sort((a, b) => {
+    const aDelivered = a.status === OrderStatus.DELIVERED ? 1 : 0;
+    const bDelivered = b.status === OrderStatus.DELIVERED ? 1 : 0;
+    if (aDelivered !== bDelivered) return bDelivered - aDelivered;
+
+    if (a.deliveryDate && b.deliveryDate) {
+      return new Date(a.deliveryDate).getTime() - new Date(b.deliveryDate).getTime();
+    }
+    if (a.deliveryDate) return -1;
+    if (b.deliveryDate) return 1;
+
+    return new Date(a.date).getTime() - new Date(b.date).getTime();
+  });
 
   // Histórico: montagens concluídas (ordenado pela data de conclusão da montagem)
   const myHistory = sales.filter(s =>
@@ -146,7 +160,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
             .customer-name { font-size: 20px; font-weight: bold; text-transform: uppercase; margin: 10px 0; }
             .address { font-weight: bold; color: #555; margin-bottom: 8px; }
             .phone { color: #0284c7; font-weight: bold; margin-bottom: 15px; }
-            .dates { font-size: 11px; color: #666; margin-bottom: 10px; }
+            .dates { font-size: 11px; color: #334155; margin-bottom: 12px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
             .store-info { font-size: 10px; display: flex; gap: 15px; margin-bottom: 15px; color: #444; font-weight: bold; text-transform: uppercase; }
             .items { background: #f9f9f9; padding: 15px; border-radius: 10px; }
             .items-title { font-size: 10px; font-weight: bold; color: #999; text-transform: uppercase; margin-bottom: 5px; }
@@ -160,6 +174,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
       const store = stores.find(s => s.id === task.storeId);
       const seller = employees.find(e => e.id === task.sellerId);
       const assemblyItems = task.items.filter(item => item.assemblyRequired);
+      const deadline = getAssemblyDeadlineInfo(task.deliveryDate, task.status === OrderStatus.COMPLETED, task.assemblyCompletedAt);
 
       const itemsHtml = assemblyItems.map(item => {
         const p = products.find(prod => prod.id === item.productId);
@@ -177,8 +192,11 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
                 ${task.customerReference ? `<div class="address" style="color: #666; margin-top: -5px; margin-bottom: 8px;">📍 Ref: ${task.customerReference}</div>` : ''}
                 ${task.customerPhone ? `<div class="phone">📞 ${task.customerPhone}</div>` : ''}
                 <div class="dates">
-                  Venda: ${new Date(task.date).toLocaleDateString('pt-BR')}
-                  ${task.deliveryDate ? ` | Entrega: ${new Date(task.deliveryDate).toLocaleDateString('pt-BR')}` : ''}
+                  <span><strong>📅 Venda:</strong> ${formatLocalDateBR(task.date)}</span>
+                  <span><strong>🚚 Entrega:</strong> ${task.deliveryDate ? formatLocalDateBR(task.deliveryDate) : 'Aguardando'}</span>
+                  <span style="background: ${deadline.isOverdue ? '#fee2e2' : '#fef3c7'}; color: ${deadline.isOverdue ? '#991b1b' : '#92400e'}; border: 1px solid ${deadline.isOverdue ? '#fca5a5' : '#fde68a'}; padding: 3px 8px; border-radius: 6px; font-weight: 900; text-transform: uppercase;">
+                    ⏰ Limite Montagem: ${deadline.formattedDeadline} (${deadline.statusText})
+                  </span>
                 </div>
                 <div class="store-info">
                    <span>LOJA: ${store?.name || 'N/A'}</span>
@@ -208,23 +226,29 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
     const store = stores.find(s => s.id === task.storeId);
     const seller = employees.find(e => e.id === task.sellerId);
     const assemblyItems = task.items.filter(item => item.assemblyRequired);
+    const deadlineInfo = getAssemblyDeadlineInfo(task.deliveryDate, isCompleted, task.assemblyCompletedAt);
 
     return (
       <div key={task.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
         <div className="flex justify-between items-start">
-          {isCompleted ? (
-            <div className="bg-emerald-50 px-3 py-1 rounded-lg text-emerald-600 font-black text-[10px] uppercase flex items-center gap-1">
-              <CheckCircle className="w-3 h-3" /> Montagem Concluída
-            </div>
-          ) : task.status === OrderStatus.DELIVERED ? (
-            <div className="bg-amber-50 px-3 py-1 rounded-lg text-amber-600 font-black text-[10px] uppercase flex items-center gap-1">
-              <CheckCircle className="w-3 h-3" /> Liberado p/ Montagem
-            </div>
-          ) : (
-            <div className="bg-slate-100 px-3 py-1 rounded-lg text-slate-500 font-black text-[10px] uppercase flex items-center gap-1">
-              <Clock className="w-3 h-3" /> Aguardando Entrega
-            </div>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="bg-slate-900 text-white px-2.5 py-1 rounded-lg font-black text-xs">
+              #{task.id}
+            </span>
+            {isCompleted ? (
+              <div className="bg-emerald-50 px-3 py-1 rounded-lg text-emerald-600 font-black text-[10px] uppercase flex items-center gap-1 border border-emerald-100">
+                <CheckCircle className="w-3 h-3" /> Montagem Concluída
+              </div>
+            ) : task.status === OrderStatus.DELIVERED ? (
+              <div className="bg-amber-50 px-3 py-1 rounded-lg text-amber-600 font-black text-[10px] uppercase flex items-center gap-1 border border-amber-200">
+                <CheckCircle className="w-3 h-3" /> Liberado p/ Montagem
+              </div>
+            ) : (
+              <div className="bg-slate-100 px-3 py-1 rounded-lg text-slate-500 font-black text-[10px] uppercase flex items-center gap-1 border border-slate-200">
+                <Clock className="w-3 h-3" /> Aguardando Entrega
+              </div>
+            )}
+          </div>
           <div className="text-right">
             <p className="text-[10px] font-black text-slate-400">COMISSÃO</p>
             <p className="text-sm font-black text-emerald-600">R$ {val.toFixed(2)}</p>
@@ -280,15 +304,51 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
             </div>
           )}
 
-          {/* Datas */}
-          <div className="flex flex-wrap gap-3 mt-2">
-            <span className="text-[10px] font-black text-slate-500 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-              📅 Venda: {new Date(task.date).toLocaleDateString('pt-BR')}
-            </span>
-            {task.deliveryDate && (
-              <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">
-                🚚 Entrega: {new Date(task.deliveryDate).toLocaleDateString('pt-BR')}
+          {/* Datas e Limite de Montagem */}
+          <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-black text-slate-700 bg-slate-100/90 px-3 py-1.5 rounded-xl border border-slate-200 flex items-center gap-1.5 shadow-xs">
+                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                <span>Venda: {formatLocalDateBR(task.date)}</span>
               </span>
+
+              {task.deliveryDate ? (
+                <span className="text-[11px] font-black text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 flex items-center gap-1.5 shadow-xs">
+                  <span>🚚 Entrega: {formatLocalDateBR(task.deliveryDate)}</span>
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-dashed border-slate-200 flex items-center gap-1.5">
+                  <span>🚚 Entrega: Aguardando</span>
+                </span>
+              )}
+            </div>
+
+            {/* Limite de Montagem Destacado */}
+            <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs transition-all ${deadlineInfo.badgeClass}`}>
+              <div className="flex items-center gap-2 min-w-0">
+                {deadlineInfo.isOverdue ? (
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 animate-bounce" />
+                ) : (
+                  <Clock className="w-4 h-4 shrink-0" />
+                )}
+                <div className="text-xs leading-tight">
+                  <span className="font-extrabold uppercase tracking-tight">Limite de Montagem: </span>
+                  <span className="font-black underline decoration-2">{deadlineInfo.formattedDeadline}</span>
+                  <span className="text-[10px] font-medium opacity-90 ml-1.5 block sm:inline">
+                    (6 dias úteis após entrega)
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg bg-black/10 shrink-0 self-start sm:self-auto">
+                {deadlineInfo.statusText}
+              </span>
+            </div>
+
+            {isCompleted && task.assemblyCompletedAt && (
+              <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Montagem finalizada em: {formatLocalDateBR(task.assemblyCompletedAt)}</span>
+              </div>
             )}
           </div>
         </div>
@@ -322,6 +382,13 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
       </div>
     );
   };
+
+  const readyTasksCount = myTasks.filter(t => t.status === OrderStatus.DELIVERED).length;
+  const overdueTasksCount = myTasks.filter(t => {
+    if (!t.deliveryDate) return false;
+    const info = getAssemblyDeadlineInfo(t.deliveryDate);
+    return info.isOverdue;
+  }).length;
 
   return (
     <div className="space-y-6 animate-in slide-in-from-left duration-500 pb-20">
@@ -382,13 +449,24 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4 mt-6">
-          <div className="bg-white/10 p-4 rounded-2xl">
-            <p className="text-[10px] font-black text-white/40 uppercase">Pendentes</p>
-            <p className="text-2xl font-black">{myTasks.length}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+          <div className="bg-white/10 p-3 sm:p-4 rounded-2xl">
+            <p className="text-[10px] font-black text-white/60 uppercase">Liberadas p/ Montar</p>
+            <p className="text-2xl font-black">{readyTasksCount}</p>
           </div>
-          <div className="bg-white/10 p-4 rounded-2xl">
-            <p className="text-[10px] font-black text-white/40 uppercase">Concluídas</p>
+          <div className="bg-white/10 p-3 sm:p-4 rounded-2xl">
+            <p className="text-[10px] font-black text-white/60 uppercase">Aguardando Entrega</p>
+            <p className="text-2xl font-black">{myTasks.length - readyTasksCount}</p>
+          </div>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${overdueTasksCount > 0 ? 'bg-red-500/30 border-red-400 text-white' : 'bg-white/10 border-transparent'}`}>
+            <p className="text-[10px] font-black uppercase flex items-center gap-1 text-white/80">
+              {overdueTasksCount > 0 && <AlertTriangle className="w-3 h-3 text-red-300 animate-bounce" />}
+              Atrasadas (&gt; 6 dias)
+            </p>
+            <p className={`text-2xl font-black ${overdueTasksCount > 0 ? 'text-red-200' : 'text-white'}`}>{overdueTasksCount}</p>
+          </div>
+          <div className="bg-white/10 p-3 sm:p-4 rounded-2xl">
+            <p className="text-[10px] font-black text-white/60 uppercase">Concluídas</p>
             <p className="text-2xl font-black">{myHistory.length}</p>
           </div>
         </div>
