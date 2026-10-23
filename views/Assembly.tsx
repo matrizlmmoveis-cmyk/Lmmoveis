@@ -53,12 +53,6 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
     const bDelivered = b.status === OrderStatus.DELIVERED ? 1 : 0;
     if (aDelivered !== bDelivered) return bDelivered - aDelivered;
 
-    if (a.deliveryDate && b.deliveryDate) {
-      return new Date(a.deliveryDate).getTime() - new Date(b.deliveryDate).getTime();
-    }
-    if (a.deliveryDate) return -1;
-    if (b.deliveryDate) return 1;
-
     return new Date(a.date).getTime() - new Date(b.date).getTime();
   });
 
@@ -174,7 +168,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
       const store = stores.find(s => s.id === task.storeId);
       const seller = employees.find(e => e.id === task.sellerId);
       const assemblyItems = task.items.filter(item => item.assemblyRequired);
-      const deadline = getAssemblyDeadlineInfo(task.deliveryDate, task.status === OrderStatus.COMPLETED, task.assemblyCompletedAt);
+      const deadline = getAssemblyDeadlineInfo(task.date, task.status === OrderStatus.COMPLETED, task.assemblyCompletedAt);
 
       const itemsHtml = assemblyItems.map(item => {
         const p = products.find(prod => prod.id === item.productId);
@@ -193,7 +187,6 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
                 ${task.customerPhone ? `<div class="phone">📞 ${task.customerPhone}</div>` : ''}
                 <div class="dates">
                   <span><strong>📅 Venda:</strong> ${formatLocalDateBR(task.date)}</span>
-                  <span><strong>🚚 Entrega:</strong> ${task.deliveryDate ? formatLocalDateBR(task.deliveryDate) : 'Aguardando'}</span>
                   <span style="background: ${deadline.isOverdue ? '#fee2e2' : '#fef3c7'}; color: ${deadline.isOverdue ? '#991b1b' : '#92400e'}; border: 1px solid ${deadline.isOverdue ? '#fca5a5' : '#fde68a'}; padding: 3px 8px; border-radius: 6px; font-weight: 900; text-transform: uppercase;">
                     ⏰ Limite Montagem: ${deadline.formattedDeadline} (${deadline.statusText})
                   </span>
@@ -226,7 +219,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
     const store = stores.find(s => s.id === task.storeId);
     const seller = employees.find(e => e.id === task.sellerId);
     const assemblyItems = task.items.filter(item => item.assemblyRequired);
-    const deadlineInfo = getAssemblyDeadlineInfo(task.deliveryDate, isCompleted, task.assemblyCompletedAt);
+    const deadlineInfo = getAssemblyDeadlineInfo(task.date, isCompleted, task.assemblyCompletedAt);
 
     return (
       <div key={task.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
@@ -311,16 +304,6 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
                 <Calendar className="w-3.5 h-3.5 text-slate-500" />
                 <span>Venda: {formatLocalDateBR(task.date)}</span>
               </span>
-
-              {task.deliveryDate ? (
-                <span className="text-[11px] font-black text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 flex items-center gap-1.5 shadow-xs">
-                  <span>🚚 Entrega: {formatLocalDateBR(task.deliveryDate)}</span>
-                </span>
-              ) : (
-                <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-dashed border-slate-200 flex items-center gap-1.5">
-                  <span>🚚 Entrega: Aguardando</span>
-                </span>
-              )}
             </div>
 
             {/* Limite de Montagem Destacado */}
@@ -335,7 +318,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
                   <span className="font-extrabold uppercase tracking-tight">Limite de Montagem: </span>
                   <span className="font-black underline decoration-2">{deadlineInfo.formattedDeadline}</span>
                   <span className="text-[10px] font-medium opacity-90 ml-1.5 block sm:inline">
-                    (6 dias úteis após entrega)
+                    (6 dias úteis após venda)
                   </span>
                 </div>
               </div>
@@ -385,8 +368,8 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
 
   const readyTasksCount = myTasks.filter(t => t.status === OrderStatus.DELIVERED).length;
   const overdueTasksCount = myTasks.filter(t => {
-    if (!t.deliveryDate) return false;
-    const info = getAssemblyDeadlineInfo(t.deliveryDate);
+    if (!t.date) return false;
+    const info = getAssemblyDeadlineInfo(t.date);
     return info.isOverdue;
   }).length;
 

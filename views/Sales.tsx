@@ -1505,7 +1505,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 const hasAssembly = sale.assemblyRequired || sale.items?.some(i => i.assemblyRequired);
                 const isDelivered = sale.status === OrderStatus.COMPLETED || sale.status === OrderStatus.DELIVERED;
                 const showAguardandoMontagem = isDelivered && hasAssembly;
-                const assemblyDeadline = showAguardandoMontagem ? getAssemblyDeadlineInfo(sale.deliveryDate) : null;
+                const assemblyDeadline = showAguardandoMontagem ? getAssemblyDeadlineInfo(sale.date) : null;
                 return (
                   <React.Fragment key={sale.id}>
                     <tr className={`hover:bg-slate-50/50 transition-colors border-t border-slate-100 ${selectedSaleIds.includes(sale.id) ? 'bg-blue-50/30' : ''}`}>
@@ -1614,7 +1614,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                                   ? 'bg-red-50 text-red-700 border-red-200 animate-pulse'
                                   : 'bg-amber-50 text-amber-700 border-amber-200'
                               }`}
-                              title={`Limite de montagem: ${assemblyDeadline?.formattedDeadline} (6 dias úteis pós-entrega)`}
+                              title={`Limite de montagem: ${assemblyDeadline?.formattedDeadline} (6 dias úteis pós-venda)`}
                             >
                               Aguardando Montagem {assemblyDeadline?.hasDeadline ? `(Lim: ${assemblyDeadline.formattedDeadline})` : ''}
                             </span>

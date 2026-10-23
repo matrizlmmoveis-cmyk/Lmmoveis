@@ -331,7 +331,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
 
           <div className="space-y-6">
             {batchSales.map((sale, idx) => {
-              const deadlineInfo = getAssemblyDeadlineInfo(sale.deliveryDate);
+              const deadlineInfo = getAssemblyDeadlineInfo(sale.date);
               return (
               <div key={sale.id} className="border-2 border-black">
                 <div className={`px-4 py-2 flex items-center justify-between ${isEntrega ? 'bg-gray-100' : 'bg-gray-50'}`}>
@@ -355,14 +355,16 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                       <span className="bg-gray-100 border border-gray-300 px-2 py-0.5 rounded font-black uppercase">
                         📅 Venda: {formatLocalDateBR(sale.date)}
                       </span>
-                      {sale.deliveryDate ? (
-                        <span className="bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded font-black uppercase">
-                          🚚 Entrega: {formatLocalDateBR(sale.deliveryDate)}
-                        </span>
-                      ) : (
-                        <span className="bg-gray-50 text-gray-500 border border-gray-200 px-2 py-0.5 rounded font-bold uppercase">
-                          🚚 Entrega: Aguardando
-                        </span>
+                      {isEntrega && (
+                        sale.deliveryDate ? (
+                          <span className="bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded font-black uppercase">
+                            🚚 Entrega: {formatLocalDateBR(sale.deliveryDate)}
+                          </span>
+                        ) : (
+                          <span className="bg-gray-50 text-gray-500 border border-gray-200 px-2 py-0.5 rounded font-bold uppercase">
+                            🚚 Entrega: Aguardando
+                          </span>
+                        )
                       )}
                       {!isEntrega && (
                         <span className={`px-2 py-0.5 rounded font-black border uppercase ${
@@ -748,7 +750,7 @@ const Romaneios: React.FC<RomaneiosProps> = ({ user, sales, setSales, employees:
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {batchSales.map(sale => {
-                      const deadline = getAssemblyDeadlineInfo(sale.deliveryDate);
+                      const deadline = getAssemblyDeadlineInfo(sale.date);
                       return (
                       <div key={sale.id} className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-200 relative group animate-in slide-in-from-right-2 duration-300">
                         <div className="flex items-center gap-3 mb-2">

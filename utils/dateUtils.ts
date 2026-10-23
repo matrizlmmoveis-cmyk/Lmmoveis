@@ -74,10 +74,10 @@ export const addBusinessDays = (startDate: Date, businessDays: number): Date => 
 };
 
 /**
- * Calcula o limite de montagem: 6 dias úteis após a entrega.
+ * Calcula o limite de montagem: 6 dias úteis após a venda.
  */
-export const calculateAssemblyDeadline = (deliveryDateInput?: string | Date | null, businessDays: number = 6): Date | null => {
-  const parsed = parseLocalDate(deliveryDateInput);
+export const calculateAssemblyDeadline = (saleDateInput?: string | Date | null, businessDays: number = 6): Date | null => {
+  const parsed = parseLocalDate(saleDateInput);
   if (!parsed) return null;
   return addBusinessDays(parsed, businessDays);
 };
@@ -94,24 +94,24 @@ export interface AssemblyDeadlineInfo {
 }
 
 /**
- * Retorna informações completas e estilização destacada para o prazo de montagem.
+ * Retorna informações completas e estilização destacada para o prazo de montagem (6 dias úteis após a venda).
  */
 export const getAssemblyDeadlineInfo = (
-  deliveryDateInput?: string | Date | null,
+  saleDateInput?: string | Date | null,
   isCompleted?: boolean,
   completedAtInput?: string | Date | null,
   businessDays: number = 6
 ): AssemblyDeadlineInfo => {
-  const deadline = calculateAssemblyDeadline(deliveryDateInput, businessDays);
+  const deadline = calculateAssemblyDeadline(saleDateInput, businessDays);
 
   if (!deadline) {
     return {
       hasDeadline: false,
       deadlineDate: null,
-      formattedDeadline: `${businessDays} dias úteis pós-entrega`,
+      formattedDeadline: `${businessDays} dias úteis pós-venda`,
       isOverdue: false,
       daysRemaining: 0,
-      statusText: 'Aguardando Entrega',
+      statusText: 'Sem Data de Venda',
       badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
       alertType: 'pending_delivery'
     };
