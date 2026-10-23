@@ -6,6 +6,7 @@ import { Search, Plus, X, Truck, Box, ShoppingCart, Trash2, CheckCircle2, Edit2,
 import { useCart } from '../components/CartContext.tsx';
 import { supabaseService } from '../services/supabaseService';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
+import { isStoreSaoPaulo } from '../utils/storeUtils.ts';
 
 interface ProductCatalogProps {
   user: Employee | { id: 'admin', name: 'Lucas', role: 'ADMIN', storeId?: string } | null;
@@ -242,13 +243,17 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                       const norteStock = (inventory || [])
                         .filter(i => i.productId === product.id && i.locationId === norteId)
                         .reduce((acc, curr) => acc + (curr.quantity || 0), 0);
+
+                      const spStock = (inventory || [])
+                        .filter(i => i.productId === product.id && isStoreSaoPaulo(i.locationId, stores))
+                        .reduce((acc, curr) => acc + (curr.quantity || 0), 0);
                         
                       const lojasStock = (inventory || [])
-                        .filter(i => i.productId === product.id && i.locationId !== norteId && (i.type === 'STORE_STOCK' || i.type === 'CD_LOJA'))
+                        .filter(i => i.productId === product.id && i.locationId !== norteId && !isStoreSaoPaulo(i.locationId, stores) && (i.type === 'STORE_STOCK' || i.type === 'CD_LOJA'))
                         .reduce((acc, curr) => acc + (curr.quantity || 0), 0);
                         
                       const totalStock = (inventory || [])
-                        .filter(i => i.productId === product.id)
+                        .filter(i => i.productId === product.id && !isStoreSaoPaulo(i.locationId, stores))
                         .reduce((acc, curr) => acc + (curr.quantity || 0), 0);
 
                       return (
@@ -261,13 +266,21 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ user, inventory, stores
                               {totalStock} UN
                             </span>
                           </div>
-                          <div className="grid grid-cols-2 gap-2 px-1">
+                          <div className={`grid ${spStock > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-2 px-1`}>
                             <div className="flex flex-col">
                               <span className="text-[8px] text-slate-400 font-black uppercase">CD Norte</span>
                               <span className={`text-[10px] font-black ${norteStock > 0 ? 'text-emerald-600' : 'text-slate-300'}`}>
                                 {norteStock} UN
                               </span>
                             </div>
+                            {spStock > 0 && (
+                              <div className="flex flex-col">
+                                <span className="text-[8px] text-purple-600 font-black uppercase">CD SP</span>
+                                <span className="text-[10px] font-black text-purple-700">
+                                  {spStock} UN
+                                </span>
+                              </div>
+                            )}
                             <div className="flex flex-col">
                               <span className="text-[8px] text-slate-400 font-black uppercase">Lojas</span>
                               <span className={`text-[10px] font-black ${lojasStock > 0 ? 'text-blue-600' : 'text-slate-300'}`}>

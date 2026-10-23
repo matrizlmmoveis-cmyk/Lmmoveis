@@ -5,6 +5,7 @@ import { InventoryItem, Product, Store, Supplier, Employee } from '../types.ts';
 import { supabaseService } from '../services/supabaseService.ts';
 import ProductModal from '../components/ProductModal.tsx';
 import { CATEGORIES } from '../constants.tsx';
+import { isSaoPauloStore } from '../utils/storeUtils.ts';
 
 interface InventoryProps {
   inventory: InventoryItem[];
@@ -124,7 +125,9 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
       const relevantStores = stores.filter(s => s.type === selectedStockType);
       relevantStores.forEach(loc => {
         const qty = inventory.find(i => i.productId === product.id && i.locationId === loc.id && i.type === selectedStockType)?.quantity || 0;
-        totalStock += qty;
+        if (!isSaoPauloStore(loc)) {
+          totalStock += qty;
+        }
       });
     } else {
       const qty = inventory.find(i => i.productId === product.id && i.locationId === selectedLocation && i.type === selectedStockType)?.quantity || 0;
@@ -260,7 +263,9 @@ const Inventory: React.FC<InventoryProps> = ({ inventory, setInventory, products
                     {selectedLocation === 'all' ? (
                       stores.filter(s => s.type === selectedStockType).map(loc => {
                         const qty = inventory.find(i => i.productId === product.id && i.locationId === loc.id && i.type === selectedStockType)?.quantity || 0;
-                        totalStock += qty;
+                        if (!isSaoPauloStore(loc)) {
+                          totalStock += qty;
+                        }
                         return (
                           <td key={loc.id} className="px-6 py-4 text-center">
                             <span className={`text-sm font-medium ${qty > 0 ? 'text-slate-900' : 'text-slate-300'}`}>{qty}</span>

@@ -5,6 +5,7 @@ import { supabaseService } from '../services/supabaseService.ts';
 import ProductModal from '../components/ProductModal.tsx';
 import { CATEGORIES } from '../constants.tsx';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
+import { isStoreSaoPaulo } from '../utils/storeUtils.ts';
 
 interface ProductsProps {
     user: Employee | any;
@@ -66,7 +67,10 @@ const Products: React.FC<ProductsProps> = ({ user, products, inventory, stores, 
     const getTotalStock = (productId: string) => {
         const productStocks = stockMap[productId];
         if (!productStocks) return 0;
-        return Object.values(productStocks).reduce((acc: number, curr: number) => acc + curr, 0);
+        return Object.entries(productStocks).reduce((acc: number, [storeId, qty]) => {
+            if (isStoreSaoPaulo(storeId, stores)) return acc;
+            return acc + (qty || 0);
+        }, 0);
     };
 
     const visibleProducts = filteredProducts.slice(0, displayCount);

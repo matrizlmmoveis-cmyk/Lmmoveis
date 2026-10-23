@@ -13,6 +13,7 @@ import { supabase } from '../services/supabase.ts';
 import { whatsappService } from '../services/whatsappService.ts';
 import { getDirectImageUrl } from '../utils/imageUtils.ts';
 import { getSaoPauloDateString, formatSaoPauloDateBR, getAssemblyDeadlineInfo } from '../utils/dateUtils.ts';
+import { isStoreSaoPaulo, isSaoPauloStore } from '../utils/storeUtils.ts';
 import { nfEmailService } from '../services/nfe/nfeService.ts';
 import { SEFAZTxtGenerator } from '../services/nfe/sefazGenerator.ts';
 import { SEFAZTxtGeneratorSimples } from '../services/nfe/sefazGeneratorSimples.ts';
@@ -554,7 +555,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
     if (locationId) {
       return inventory.find(i => i.productId === productId && i.locationId === locationId)?.quantity || 0;
     }
-    return inventory.filter(i => i.productId === productId).reduce((acc, i) => acc + i.quantity, 0);
+    return inventory.filter(i => i.productId === productId && !isStoreSaoPaulo(i.locationId, stores)).reduce((acc, i) => acc + i.quantity, 0);
   };
 
   const handlePriceChange = (productId: string, newPrice: number) => {
@@ -1066,10 +1067,13 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                 {products.filter(p => p.active !== false && (p.name.toLowerCase().includes(productSearch.toLowerCase()) || (p.sku || '').toLowerCase().includes(productSearch.toLowerCase()))).map(p => {
                   const norteStore = stores.find(s => s.type === 'CD' && s.name.toLowerCase().includes('norte'));
                   const norteId = norteStore?.id;
+                  const spStore = stores.find(s => isSaoPauloStore(s));
+                  const spId = spStore?.id || 'cd-sao-paulo';
                   const norteStock = inventory.find(i => i.productId === p.id && i.locationId === norteId)?.quantity || 0;
+                  const spStock = inventory.find(i => i.productId === p.id && isStoreSaoPaulo(i.locationId, stores))?.quantity || 0;
                   const lojaStock = inventory.find(i => i.productId === p.id && i.locationId === user.storeId)?.quantity || 0;
-                  const totalStock = inventory.filter(i => i.productId === p.id).reduce((acc: number, i) => acc + (i.quantity || 0), 0);
-                  const hasStock = totalStock > 0;
+                  const totalStock = inventory.filter(i => i.productId === p.id && !isStoreSaoPaulo(i.locationId, stores)).reduce((acc: number, i) => acc + (i.quantity || 0), 0);
+                  const hasStock = totalStock > 0 || spStock > 0;
 
                   return (
                     <div key={p.id} className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all ${hasStock ? 'bg-slate-50 border-slate-100 hover:border-blue-100 hover:bg-blue-50' : 'bg-slate-50/50 border-slate-100 opacity-60'}`}>
@@ -1093,8 +1097,20 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           </div>
                         )}
 
-                        {/* LOJA ATUAL (Se diferente do Norte e tiver saldo) */}
-                        {lojaStock > 0 && user.storeId !== norteId && (
+                        {/* CD SÃO PAULO */}
+                        {spStock > 0 && (
+                          <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-100">
+                            <span className="text-[8px] font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-md">
+                              {spStock} SP
+                            </span>
+                            <button onClick={() => handleAddItem(p, false, false, spId)} title="Adicionar do CD São Paulo" className="w-7 h-7 bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center justify-center transition-all shadow-sm active:scale-95">
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* LOJA ATUAL (Se diferente do Norte, de SP e tiver saldo) */}
+                        {lojaStock > 0 && user.storeId !== norteId && !isStoreSaoPaulo(user.storeId, stores) && (
                           <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-100">
                             <span className="text-[8px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md">
                               {lojaStock} LOJA
@@ -1105,7 +1121,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                           </div>
                         )}
 
-                        {!norteStock && !lojaStock && hasStock && (
+                        {!norteStock && !spStock && !lojaStock && hasStock && (
                           <span className="text-[8px] font-black uppercase px-2 py-1 rounded-lg text-slate-400 bg-slate-100 border border-slate-200">
                             EXTERNO: {totalStock}
                           </span>
@@ -1162,7 +1178,12 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
 
                               let filteredStocks = itemStocks;
                               if (isControlledUnit) {
-                                filteredStocks = itemStocks.filter(s => s.locationId === newSale.storeId || s.locationId === norteId);
+                                filteredStocks = itemStocks.filter(s => 
+                                  s.locationId === newSale.storeId || 
+                                  s.locationId === norteId || 
+                                  isStoreSaoPaulo(s.locationId, stores) ||
+                                  stores.find(st => st.id === s.locationId)?.type === 'CD'
+                                );
                               }
 
                               return (
@@ -1800,16 +1821,24 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                         {filteredProducts.length === 0 ? (
                           <p className="p-3 text-xs text-slate-400 text-center">Nenhum produto encontrado</p>
                         ) : filteredProducts.map(p => {
-                          const totalStock = inventory.filter(inv => inv.productId === p.id).reduce((a, b) => a + b.quantity, 0);
+                          const totalStock = inventory.filter(inv => inv.productId === p.id && !isStoreSaoPaulo(inv.locationId, stores)).reduce((a, b) => a + b.quantity, 0);
+                          const spStock = inventory.find(inv => inv.productId === p.id && isStoreSaoPaulo(inv.locationId, stores))?.quantity || 0;
                           return (
                             <button key={p.id} onClick={() => addProduct(p)} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-amber-50 border-b border-slate-100 text-left">
                               <div>
                                 <p className="text-xs font-bold text-slate-800">{p.name}</p>
                                 <p className="text-[10px] text-slate-400">SKU: {p.sku || '—'} · R$ {p.price.toFixed(2)}</p>
                               </div>
-                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${totalStock > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
-                                {totalStock > 0 ? `Saldo: ${totalStock}` : 'Sem estoque'}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                {spStock > 0 && (
+                                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                                    SP: {spStock}
+                                  </span>
+                                )}
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${totalStock > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                                  {totalStock > 0 ? `Saldo: ${totalStock}` : 'Sem estoque'}
+                                </span>
+                              </div>
                             </button>
                           );
                         })}
