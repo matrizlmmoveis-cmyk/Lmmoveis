@@ -74,12 +74,14 @@ export const addBusinessDays = (startDate: Date, businessDays: number): Date => 
 };
 
 /**
- * Calcula o limite de montagem: 6 dias úteis após a venda.
+ * Calcula o limite de montagem: 6 dias corridos após a venda.
  */
-export const calculateAssemblyDeadline = (saleDateInput?: string | Date | null, businessDays: number = 6): Date | null => {
+export const calculateAssemblyDeadline = (saleDateInput?: string | Date | null, days: number = 6): Date | null => {
   const parsed = parseLocalDate(saleDateInput);
   if (!parsed) return null;
-  return addBusinessDays(parsed, businessDays);
+  const result = new Date(parsed);
+  result.setDate(result.getDate() + days);
+  return result;
 };
 
 export interface AssemblyDeadlineInfo {
@@ -94,21 +96,21 @@ export interface AssemblyDeadlineInfo {
 }
 
 /**
- * Retorna informações completas e estilização destacada para o prazo de montagem (6 dias úteis após a venda).
+ * Retorna informações completas e estilização destacada para o prazo de montagem (6 dias corridos após a venda).
  */
 export const getAssemblyDeadlineInfo = (
   saleDateInput?: string | Date | null,
   isCompleted?: boolean,
   completedAtInput?: string | Date | null,
-  businessDays: number = 6
+  days: number = 6
 ): AssemblyDeadlineInfo => {
-  const deadline = calculateAssemblyDeadline(saleDateInput, businessDays);
+  const deadline = calculateAssemblyDeadline(saleDateInput, days);
 
   if (!deadline) {
     return {
       hasDeadline: false,
       deadlineDate: null,
-      formattedDeadline: `${businessDays} dias úteis pós-venda`,
+      formattedDeadline: `${days} dias corridos pós-venda`,
       isOverdue: false,
       daysRemaining: 0,
       statusText: 'Sem Data de Venda',

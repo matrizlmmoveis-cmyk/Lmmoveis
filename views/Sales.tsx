@@ -1617,7 +1617,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
                                   ? 'bg-red-50 text-red-700 border-red-200 animate-pulse'
                                   : 'bg-amber-50 text-amber-700 border-amber-200'
                               }`}
-                              title={`Limite de montagem: ${assemblyDeadline?.formattedDeadline} (6 dias úteis pós-venda)`}
+                              title={`Limite de montagem: ${assemblyDeadline?.formattedDeadline} (6 dias corridos pós-venda)`}
                             >
                               Aguardando Montagem {assemblyDeadline?.hasDeadline ? `(Lim: ${assemblyDeadline.formattedDeadline})` : ''}
                             </span>

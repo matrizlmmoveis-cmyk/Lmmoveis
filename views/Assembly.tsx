@@ -318,7 +318,7 @@ const Assembly: React.FC<AssemblyProps> = ({ user, sales, setSales, products, st
                   <span className="font-extrabold uppercase tracking-tight">Limite de Montagem: </span>
                   <span className="font-black underline decoration-2">{deadlineInfo.formattedDeadline}</span>
                   <span className="text-[10px] font-medium opacity-90 ml-1.5 block sm:inline">
-                    (6 dias úteis após venda)
+                    (6 dias corridos após venda)
                   </span>
                 </div>
               </div>
