@@ -25,8 +25,8 @@ export class SEFAZTxtGenerator {
      */
     public static generate(
         issuer: NFeIssuer,
-        dest: NFeDest,
-        items: NFeItem[],
+        dest?: NFeDest | null,
+        items: NFeItem[] = [],
         nfeNumber: number = 1,
         nfeSeries: number = 1,
         environment: number = 2, // 1-Prod, 2-Homol
@@ -48,10 +48,12 @@ export class SEFAZTxtGenerator {
         lines.push(`C05|${issuer.street}|${issuer.number}||${issuer.neighborhood}|${issuer.ibge}|${issuer.city}|${issuer.state}|${issuer.cep}|1058|BRASIL||`);
 
         // E - Destinatário
-        lines.push(`E|${this.formatField(dest.name, 60)}|9||||${this.formatField(dest.email, 60)}|`);
-        const docLine = dest.type === 'CNPJ' ? 'E02' : 'E03';
-        lines.push(`${docLine}|${this.cleanString(dest.document)}|`);
-        lines.push(`E05|${this.formatField(dest.street, 60)}|${dest.number}||${dest.neighborhood}|${dest.ibge}|${dest.city}|${dest.state}|${dest.cep}|1058|BRASIL||`);
+        if (dest) {
+            lines.push(`E|${this.formatField(dest.name, 60)}|9||||${this.formatField(dest.email, 60)}|`);
+            const docLine = dest.type === 'CNPJ' ? 'E02' : 'E03';
+            lines.push(`${docLine}|${this.cleanString(dest.document)}|`);
+            lines.push(`E05|${this.formatField(dest.street, 60)}|${dest.number}||${dest.neighborhood}|${dest.ibge}|${dest.city}|${dest.state}|${dest.cep}|1058|BRASIL||`);
+        }
 
         let totalVBC = 0;
         let totalVICMS = 0;

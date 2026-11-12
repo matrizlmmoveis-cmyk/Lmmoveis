@@ -65,7 +65,7 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       if (!settings) throw new Error("As configurações de NF-e não foram encontradas.");
 
       const customer = customers.find(c => c.document === sale.customerCpf);
-      if (!customer) throw new Error("Dados do cliente não encontrados no cadastro.");
+      if (!isNfce && !customer) throw new Error("Dados do cliente não encontrados no cadastro.");
 
       const store = stores.find(s => s.id === sale.storeId);
 
@@ -81,33 +81,36 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
         cep: settings.issuer.cep || '00000000'
       };
 
-      let street = customer.address || '';
-      let number = customer.number || 'S/N';
-      let neighborhood = customer.neighborhood || '';
-      let city = customer.city || '';
-      let state = customer.state || '';
-      let cep = customer.zipCode || '';
+      let dest: NFeDest | null = null;
+      if (customer) {
+        let street = customer.address || '';
+        let number = customer.number || 'S/N';
+        let neighborhood = customer.neighborhood || '';
+        let city = customer.city || '';
+        let state = customer.state || '';
+        let cep = customer.zipCode || '';
 
-      if (customer.address?.startsWith('{')) {
-        try {
-          const addrObj = JSON.parse(customer.address);
-          street = addrObj.street || street;
-          number = addrObj.number || number;
-          neighborhood = addrObj.neighborhood || neighborhood;
-          city = addrObj.city || city;
-          state = addrObj.state || state;
-          cep = addrObj.cep || addrObj.zipCode || cep;
-        } catch (e) { }
+        if (customer.address?.startsWith('{')) {
+          try {
+            const addrObj = JSON.parse(customer.address);
+            street = addrObj.street || street;
+            number = addrObj.number || number;
+            neighborhood = addrObj.neighborhood || neighborhood;
+            city = addrObj.city || city;
+            state = addrObj.state || state;
+            cep = addrObj.cep || addrObj.zipCode || cep;
+          } catch (e) { }
+        }
+
+        dest = {
+          name: customer.name,
+          document: customer.document,
+          type: customer.type === 'PJ' ? 'CNPJ' : 'CPF',
+          email: customer.email,
+          street, number, neighborhood, city, state, cep,
+          ibge: settings.issuer.ibge || '3304557'
+        };
       }
-
-      const dest: NFeDest = {
-        name: customer.name,
-        document: customer.document,
-        type: customer.type === 'PJ' ? 'CNPJ' : 'CPF',
-        email: customer.email,
-        street, number, neighborhood, city, state, cep,
-        ibge: settings.issuer.ibge || '3304557'
-      };
 
       const items: NFeItem[] = sale.items
         .filter(item => item.dispatchStatus !== 'DEVOLVER' && item.dispatchStatus !== 'CANCELADO' && item.dispatchStatus !== 'DEVOLVIDO')
@@ -138,21 +141,21 @@ const Sales: React.FC<SalesProps> = ({ user, sales, setSales, inventory, setInve
       nfEmailService.setConfig({ cnpj: settings.cnpj, apiKey: settings.apiKey });
 
       let txtContent = SEFAZTxtGenerator.generate(
-        issuer, dest, items, currentNumber, settings.currentSeries, settings.environment, settings.taxRegime
+        issuer, isNfce ? null : dest, items, currentNumber, settings.currentSeries, settings.environment, settings.taxRegime
       );
 
       if (isNfce) {
         let lines = txtContent.split('\n');
         
         // Remove dados do cliente para NFCe (igual feito na API 2)
-        lines = lines.filter(line => !line.startsWith('E|') && !line.startsWith('E02|') && !line.startsWith('E03|') && !line.startsWith('E05|'));
+        lines = lines.filter(line => !line.trim().startsWith('E|') && !line.trim().startsWith('E02|') && !line.trim().startsWith('E03|') && !line.trim().startsWith('E05|'));
 
         for (let i = 0; i < lines.length; i++) {
           if (lines[i].startsWith('B|')) {
             let bFields = lines[i].split('|');
             if (bFields[4] === '55') bFields[4] = '65'; // mod
             if (bFields.length > 12) bFields[12] = '4'; // tpImp
-            if (bFields.length > 18) bFields[18] = '4'; // indPres = 4 (Entrega a domicílio)
+            if (bFields.length > 18) bFields[18] = '1'; // indPres = 1 (Operação presencial, igual feito na API 2)
             if (bFields.length > 19) bFields[19] = '0'; // indIntermed = 0 (Sem intermediador)
             lines[i] = bFields.join('|');
             break;
